@@ -177,4 +177,29 @@ describe("EditionAudioPlayer", () => {
       await screen.findByRole("button", { name: "Play" }),
     ).toBeInTheDocument();
   });
+
+  test("keeps the player when a background refetch fails but cached recordings remain", async () => {
+    mockedFetch
+      .mockResolvedValueOnce([recording()])
+      .mockRejectedValueOnce(new Error("network"));
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    renderPlayer("ed-1", queryClient);
+
+    expect(
+      await screen.findByRole("button", { name: "Play" }),
+    ).toBeInTheDocument();
+
+    await waitFor(() =>
+      queryClient.refetchQueries(["editionRecordings", "ed-1"]),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole("button", { name: "Retry loading recordings" }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -109,7 +109,7 @@ const EditionAudioPlayer = ({ editionId }: EditionAudioPlayerProps) => {
     return null;
   }
 
-  if (isError) {
+  if (isError && !recordings?.length) {
     return (
       <Button
         variant="ghost"
