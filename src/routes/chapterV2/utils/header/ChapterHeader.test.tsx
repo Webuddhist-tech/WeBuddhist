@@ -17,6 +17,11 @@ vi.mock("./view-selector/ViewSelector.tsx", () => ({
   default: () => <div data-testid="view-selector">ViewSelector</div>,
 }));
 
+vi.mock("./EditionAudioPlayer.tsx", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 describe("ChapterHeader Component", () => {
   const defaultProps: any = {
     viewMode: "single",

@@ -32,3 +32,4 @@ export type {
   TextIndex,
 } from "./search.ts";
 export { clearAlignmentCache } from "./alignments.ts";
+export { fetchEditionRecordings, recordingAudioUrl } from "./api.ts";

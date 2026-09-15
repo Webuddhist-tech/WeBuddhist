@@ -4,6 +4,7 @@ import type {
   LibraryCategory,
   LibraryEdition,
   LibraryPage,
+  LibraryRecording,
   LibraryRelatedSegment,
   LibrarySegmentDetail,
   LibrarySegmentSpan,
@@ -76,6 +77,21 @@ export const fetchEdition = (editionId: string) =>
     undefined,
     "edition",
   );
+
+export const fetchEditionRecordings = async (
+  editionId: string,
+): Promise<LibraryRecording[]> => {
+  const recordings = await libraryGetOrNull<LibraryRecording[]>(
+    `/v2/editions/${editionId}/recordings`,
+    undefined,
+    "edition recordings",
+  );
+  return recordings ?? [];
+};
+
+/** Same-origin URL the browser can hand straight to an `<audio>` element. */
+export const recordingAudioUrl = (recordingId: string) =>
+  `/library/v2/recordings/${recordingId}/audio`;
 
 export const fetchEditionSegmentation = (editionId: string) =>
   libraryGetOrNull<LibrarySegmentation>(

@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
+import EditionAudioPlayer from "./EditionAudioPlayer.tsx";
 
 const ChapterHeader = (props: any) => {
   const {
@@ -28,6 +29,7 @@ const ChapterHeader = (props: any) => {
     totalChapters,
     versionSelected,
     canShowTableOfContents = true,
+    editionId,
   } = props;
   const {
     isResourcesPanelOpen,
@@ -86,29 +88,32 @@ const ChapterHeader = (props: any) => {
         >
           {textdetail?.title}
         </p>
-        <DropdownMenu
-          open={isViewSelectorOpen}
-          onOpenChange={handleViewSelectorOpenChange}
-        >
-          <DropdownMenuTrigger asChild>
-            <button className="flex cursor-pointer items-center justify-center">
-              <img
-                src={langicon}
-                alt="view selector"
-                className="h-4 w-[17px]"
+        <div className="flex items-center">
+          <EditionAudioPlayer editionId={editionId} />
+          <DropdownMenu
+            open={isViewSelectorOpen}
+            onOpenChange={handleViewSelectorOpenChange}
+          >
+            <DropdownMenuTrigger asChild>
+              <button className="flex cursor-pointer items-center justify-center">
+                <img
+                  src={langicon}
+                  alt="view selector"
+                  className="h-4 w-[17px]"
+                />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <ViewSelector
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                layoutMode={layoutMode}
+                setLayoutMode={setLayoutMode}
+                versionSelected={versionSelected}
               />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <ViewSelector
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              layoutMode={layoutMode}
-              setLayoutMode={setLayoutMode}
-              versionSelected={versionSelected}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {totalChapters > 1 && (
