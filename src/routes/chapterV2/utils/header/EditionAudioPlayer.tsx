@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "react-query";
-import { IoChevronDown, IoPause, IoPlay } from "react-icons/io5";
+import { IoChevronDown, IoPause, IoPlay, IoReload } from "react-icons/io5";
 import { CheckIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button.tsx";
 import {
@@ -17,6 +17,27 @@ import {
 
 type EditionAudioPlayerProps = {
   editionId?: string;
+};
+
+let currentEditionAudio: HTMLAudioElement | null = null;
+
+/** Pause any other chapter player before this one starts. */
+export const claimEditionAudio = (audio: HTMLAudioElement) => {
+  if (currentEditionAudio && currentEditionAudio !== audio) {
+    currentEditionAudio.pause();
+  }
+  currentEditionAudio = audio;
+};
+
+export const releaseEditionAudio = (audio: HTMLAudioElement | null) => {
+  if (audio && currentEditionAudio === audio) {
+    currentEditionAudio = null;
+  }
+};
+
+/** Exposed for tests. */
+export const resetEditionAudioCoordinator = () => {
+  currentEditionAudio = null;
 };
 
 const pickLocalized = (map?: Record<string, string> | null) => {
@@ -54,13 +75,15 @@ const EditionAudioPlayer = ({ editionId }: EditionAudioPlayerProps) => {
     data: recordings,
     isLoading,
     isError,
+    refetch,
   } = useQuery(
     ["editionRecordings", editionId],
     () => fetchEditionRecordings(editionId as string),
     {
       enabled: !!editionId,
-      refetchOnWindowFocus: false,
-      retry: false,
+      refetchOnWindowFocus: true,
+      retry: 1,
+      retryDelay: 0,
     },
   );
 
@@ -74,7 +97,36 @@ const EditionAudioPlayer = ({ editionId }: EditionAudioPlayerProps) => {
     audioRef.current?.pause();
   }, [activeId]);
 
-  if (!editionId || isLoading || isError || !recordings?.length || !activeId) {
+  useEffect(() => {
+    return () => {
+      const audio = audioRef.current;
+      audio?.pause();
+      releaseEditionAudio(audio);
+    };
+  }, []);
+
+  if (!editionId || isLoading) {
+    return null;
+  }
+
+  if (isError) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        type="button"
+        onClick={() => {
+          void refetch();
+        }}
+        aria-label="Retry loading recordings"
+        className="cursor-pointer"
+      >
+        <IoReload aria-hidden="true" />
+      </Button>
+    );
+  }
+
+  if (!recordings?.length || !activeId) {
     return null;
   }
 
@@ -86,8 +138,10 @@ const EditionAudioPlayer = ({ editionId }: EditionAudioPlayerProps) => {
       return;
     }
     try {
+      claimEditionAudio(audio);
       await audio.play();
     } catch {
+      releaseEditionAudio(audio);
       setPlaying(false);
     }
   };
@@ -153,8 +207,14 @@ const EditionAudioPlayer = ({ editionId }: EditionAudioPlayerProps) => {
         src={recordingAudioUrl(activeId)}
         preload="metadata"
         onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onPause={() => {
+          releaseEditionAudio(audioRef.current);
+          setPlaying(false);
+        }}
+        onEnded={() => {
+          releaseEditionAudio(audioRef.current);
+          setPlaying(false);
+        }}
       >
         <track kind="captions" />
       </audio>

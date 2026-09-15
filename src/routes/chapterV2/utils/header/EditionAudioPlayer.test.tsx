@@ -3,7 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "react-query";
 import "@testing-library/jest-dom";
-import EditionAudioPlayer from "./EditionAudioPlayer.tsx";
+import EditionAudioPlayer, {
+  resetEditionAudioCoordinator,
+} from "./EditionAudioPlayer.tsx";
 import { fetchEditionRecordings } from "@/services/library";
 
 vi.mock("react-query", async () => await vi.importActual("react-query"));
@@ -30,20 +32,22 @@ const recording = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const renderPlayer = (editionId = "ed-1") => {
-  const queryClient = new QueryClient({
+const renderPlayer = (
+  editionId = "ed-1",
+  queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
-  return render(
+  }),
+) =>
+  render(
     <QueryClientProvider client={queryClient}>
       <EditionAudioPlayer editionId={editionId} />
     </QueryClientProvider>,
   );
-};
 
 describe("EditionAudioPlayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetEditionAudioCoordinator();
     HTMLMediaElement.prototype.play = vi.fn(function play(
       this: HTMLMediaElement,
     ) {
@@ -126,5 +130,51 @@ describe("EditionAudioPlayer", () => {
       expect(audio.src).toContain("/library/v2/recordings/rec-2/audio");
     });
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+  });
+
+  test("pauses a recording in another chapter pane before playing", async () => {
+    mockedFetch.mockImplementation(async (editionId: string) => [
+      recording({ id: `${editionId}-rec` }),
+    ]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const user = userEvent.setup();
+    renderPlayer("ed-1", queryClient);
+    renderPlayer("ed-2", queryClient);
+
+    const playButtons = await screen.findAllByRole("button", { name: "Play" });
+    expect(playButtons).toHaveLength(2);
+
+    await user.click(playButtons[0]);
+    expect(
+      await screen.findByRole("button", { name: "Pause" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Play" })[0]);
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: "Pause" })).toHaveLength(1);
+      expect(screen.getAllByRole("button", { name: "Play" })).toHaveLength(1);
+    });
+  });
+
+  test("lets the user retry after recordings fail to load", async () => {
+    mockedFetch.mockRejectedValue(new Error("network"));
+    const user = userEvent.setup();
+    renderPlayer();
+
+    const retry = await screen.findByRole("button", {
+      name: "Retry loading recordings",
+    });
+    expect(
+      screen.queryByRole("button", { name: "Play" }),
+    ).not.toBeInTheDocument();
+
+    mockedFetch.mockResolvedValue([recording()]);
+    await user.click(retry);
+
+    expect(
+      await screen.findByRole("button", { name: "Play" }),
+    ).toBeInTheDocument();
   });
 });
