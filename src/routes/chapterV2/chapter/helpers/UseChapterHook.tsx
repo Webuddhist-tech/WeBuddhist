@@ -76,6 +76,7 @@ type PanelContextValue = {
 
 type UseChapterHookProps = {
   textId?: string;
+  editionId?: string;
   showTableOfContents: boolean;
   setShowTableOfContents: React.Dispatch<React.SetStateAction<boolean>>;
   content?: Content | null;
@@ -115,6 +116,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     onCurrentSectionChange,
     currentSectionId,
     textId,
+    editionId,
     currentSegmentId,
     scrollTrigger,
     textdetail,
@@ -353,6 +355,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       currentSectionId,
       versionSelected: !!currentChapter.versionId,
       canShowTableOfContents,
+      editionId,
     };
     return <ChapterHeader {...propsForChapterHeader} />;
   };

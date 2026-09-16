@@ -44,6 +44,25 @@ export type LibraryEdition = {
   alt_incipit_titles?: string[] | null;
 };
 
+export type LibraryRecordingContribution = {
+  type?: string;
+  id?: string | null;
+  bdrc_id?: string | null;
+  role?: string;
+  name?: LocalizedTitle | null;
+};
+
+export type LibraryRecording = {
+  id: string;
+  edition_id: string;
+  text_id: string;
+  title?: LocalizedTitle | null;
+  language?: string | null;
+  duration_ms?: number | null;
+  contributions?: LibraryRecordingContribution[];
+  format?: string;
+};
+
 export type LibrarySegmentation = {
   id: string;
   edition_id: string;

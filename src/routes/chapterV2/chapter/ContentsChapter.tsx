@@ -187,6 +187,7 @@ const ContentsChapter = ({
   const renderChapter = () => {
     const propsForUseChapterHookComponent = {
       textId,
+      editionId: allContent?.content?.id,
       showTableOfContents: showTableOfContents && canShowTableOfContents,
       setShowTableOfContents,
       content: allContent?.content,
