@@ -7,6 +7,7 @@ import { getLanguageClass } from "../../../../../../utils/helperFunctions.tsx";
 import TextExpand from "../../../../../commons/expandtext/TextExpand.tsx";
 import ResourceHeader from "../common/ResourceHeader.tsx";
 import ResourceState from "../common/ResourceState.tsx";
+import SegmentTypeLabel from "../common/SegmentTypeLabel.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getSegmentRootText } from "@/services/library";
 
@@ -88,12 +89,16 @@ const RootTextView = ({
                 const language = rootText.language;
                 return (
                   <div key={textId}>
+                    {/* The heading is a group's only identifier, and it
+                        carries the segment count too, so a text whose metadata
+                        could not be fetched says so rather than losing its
+                        heading entirely. */}
                     <h3
                       className={` my-2 border-b-2 border-[#a70c0c] pb-3 text-lg font-semibold  text-[#333] ${getLanguageClass(
                         language,
                       )}`}
                     >
-                      {rootText.title}{" "}
+                      {rootText.title || t("connection_panel.untitled_text")}{" "}
                       {rootText.segments?.length > 1
                         ? `(${rootText.segments.length})`
                         : ""}
@@ -103,6 +108,7 @@ const RootTextView = ({
                         {rootText.segments &&
                           rootText.segments.map((item: any, idx: number) => (
                             <div key={idx} className="space-y-2">
+                              <SegmentTypeLabel type={item.type} />
                               <TextExpand language={language} maxLength={250}>
                                 {item.content}
                               </TextExpand>

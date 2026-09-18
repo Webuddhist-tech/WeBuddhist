@@ -23,14 +23,22 @@ const TRANSLATION = "translation";
 const COMMENTARY = "commentary";
 const MAX_SKIP = 10000;
 const MAX_LIMIT = 100;
+/** Enough for 2000 related segments; a stop so a bad `has_more` cannot spin. */
+const RELATED_SCAN_MAX_PAGES = 20;
 
-/** A related text is a translation or a commentary, depending which pointer it carries. */
-const classifyText = (text: LibraryText | null | undefined): string | null => {
-  if (!text) return null;
-  if (text.translation_of) return TRANSLATION;
-  if (text.commentary_of) return COMMENTARY;
-  return null;
-};
+/**
+ * A related text is a commentary when it says so, and a translation otherwise.
+ *
+ * Only `commentary_of` earns a list of its own. Everything else lands in the
+ * translations list: a text carrying `translation_of`, the root text those
+ * point back at, a text carrying neither pointer, and one whose metadata could
+ * not be fetched. The segment's own type does not route it anywhere - a title
+ * or front matter sits in the list alongside the verses, labelled with its type
+ * so the reader can tell them apart. Matching on both pointers used to leave a
+ * related segment in no list at all, dropping it from the panel silently.
+ */
+const classifyText = (text: LibraryText | null | undefined): string =>
+  text?.commentary_of ? COMMENTARY : TRANSLATION;
 
 const fetchTextSafe = async (
   textId: string | null | undefined,
@@ -124,6 +132,53 @@ const uniqueTextIds = (items: LibraryRelatedSegment[]): string[] => [
   ),
 ];
 
+/**
+ * Every segment related to this one, not just the first page of them.
+ *
+ * The panel's lists are this list sliced by type, and its buttons are counts of
+ * the same slices, so both have to see all of it. Asking for one page and
+ * filtering that page afterwards is what made a button promise seven
+ * translations and the list open with two: the page was filled by whatever the
+ * API returned first, commentaries and structural segments included.
+ */
+const fetchAllRelatedSegments = async (
+  segmentId: string,
+): Promise<LibraryRelatedSegment[]> => {
+  const all: LibraryRelatedSegment[] = [];
+  for (let page = 0; page < RELATED_SCAN_MAX_PAGES; page += 1) {
+    const result = await fetchRelatedSegments(segmentId, {
+      limit: MAX_LIMIT,
+      offset: all.length,
+    });
+    const items = result.items ?? [];
+    all.push(...items);
+    if (!result.has_more || items.length === 0) break;
+  }
+  return all;
+};
+
+/** The related segments of `relatedType`, keyed by the text they belong to. */
+const groupRelatedByText = (
+  items: LibraryRelatedSegment[],
+  ownTextId: string | null,
+  textById: Map<string, LibraryText | null>,
+  relatedType: string,
+): Map<string, LibraryRelatedSegment[]> => {
+  const byText = new Map<string, LibraryRelatedSegment[]>();
+  items.forEach((item) => {
+    const textId = item.text_id;
+    // The related lookup also returns other segments of the text being read.
+    // Listing the open text as its own translation or commentary is noise, so
+    // drop it - a commentary was otherwise shown as a commentary on itself.
+    if (!textId || textId === ownTextId) return;
+    if (classifyText(textById.get(textId)) !== relatedType) return;
+    const existing = byText.get(textId);
+    if (existing) existing.push(item);
+    else byText.set(textId, [item]);
+  });
+  return byText;
+};
+
 const relatedSegmentsGroupedByType = async (args: {
   segmentId: string;
   relatedType: string;
@@ -134,64 +189,58 @@ const relatedSegmentsGroupedByType = async (args: {
   groups: V2SegmentTextGroup[];
   hasMore: boolean;
 }> => {
-  const [{ parent: parentSegment, textId: ownTextId }, relatedPage] =
+  const [{ parent: parentSegment, textId: ownTextId }, items] =
     await Promise.all([
       fetchParentSegmentWithText(args.segmentId),
-      fetchRelatedSegments(args.segmentId, {
-        limit: args.limit,
-        offset: args.skip,
-      }),
+      fetchAllRelatedSegments(args.segmentId),
     ]);
-
-  const items = relatedPage.items ?? [];
-  const hasMore = Boolean(relatedPage.has_more);
-  if (items.length === 0) return { parentSegment, groups: [], hasMore };
+  if (items.length === 0) {
+    return { parentSegment, groups: [], hasMore: false };
+  }
 
   const textIds = uniqueTextIds(items);
-  const [texts, sourceLinks] = await Promise.all([
-    Promise.all(textIds.map((textId) => fetchTextSafe(textId))),
-    Promise.all(textIds.map((textId) => fetchTextSourceLink(textId))),
-  ]);
+  const texts = await Promise.all(
+    textIds.map((textId) => fetchTextSafe(textId)),
+  );
   const textById = new Map(textIds.map((textId, i) => [textId, texts[i]]));
-  const sourceById = new Map(
-    textIds.map((textId, i) => [textId, sourceLinks[i]]),
+
+  const byText = groupRelatedByText(
+    items,
+    ownTextId,
+    textById,
+    args.relatedType,
   );
 
-  const filtered = items.filter(
-    (item) =>
-      // The related lookup also returns other segments of the text being read.
-      // Listing the open text as its own translation or commentary is noise, so
-      // drop it - a commentary was otherwise shown as a commentary on itself.
-      item.text_id !== ownTextId &&
-      classifyText(textById.get(item.text_id ?? "")) === args.relatedType,
-  );
-  if (filtered.length === 0) return { parentSegment, groups: [], hasMore };
+  // Group first, then page. Each list shows one entry per text and its button
+  // counts texts, so the window has to be over texts too - paging over raw
+  // related segments let a text fall outside a window it was never counted in.
+  const page = [...byText.entries()].slice(args.skip, args.skip + args.limit);
+  const hasMore = args.skip + args.limit < byText.size;
 
-  const contents = await Promise.all(
-    filtered.map((item) => fetchContentSafe(item.id)),
-  );
-
-  const grouped = new Map<string, V2SegmentTextGroup>();
-  filtered.forEach((item, index) => {
-    const textId = item.text_id;
-    if (!textId) return;
-    let group = grouped.get(textId);
-    if (!group) {
+  // Content and source links only for the texts actually being returned.
+  const groups = await Promise.all(
+    page.map(async ([textId, segments]) => {
       const text = textById.get(textId);
-      group = {
+      const [sourceLink, contents] = await Promise.all([
+        fetchTextSourceLink(textId),
+        Promise.all(segments.map((segment) => fetchContentSafe(segment.id))),
+      ]);
+      return {
         text_id: textId,
         title: extractTitle(text?.title),
         language: text?.language ?? null,
-        source_link: sourceById.get(textId) ?? null,
+        source_link: sourceLink,
         license: text?.license ?? null,
-        segments: [],
+        segments: segments.map((segment, index) => ({
+          id: segment.id,
+          content: contents[index],
+          type: segment.type ?? null,
+        })),
       };
-      grouped.set(textId, group);
-    }
-    group.segments.push({ id: item.id, content: contents[index] });
-  });
+    }),
+  );
 
-  return { parentSegment, groups: [...grouped.values()], hasMore };
+  return { parentSegment, groups, hasMore };
 };
 
 export const getSegmentTranslations = async (params: {
@@ -312,6 +361,7 @@ export const getSegmentRootText = async (params: {
         segments: items.map((item, index) => ({
           id: item.id,
           content: contents[index],
+          type: item.type ?? null,
         })),
       },
     ],
@@ -363,33 +413,41 @@ export const getSegmentInfo = async (
     throw new LibraryError(`Text ID not found for segment '${segmentId}'`, 404);
   }
 
-  const [text, relatedPage] = await Promise.all([
+  const [text, allRelated] = await Promise.all([
     fetchTextById(textId),
     // Count what the panel's lists will actually contain. These are the numbers
     // on the panel buttons, and they used to come from the text's relationships
     // instead: a commentary's front matter reported "root text (1)" because its
     // *text* comments on a root, then opened empty because that *segment* has
     // nothing aligned to it. Relationships are text-level; the lists are
-    // segment-level, and the buttons describe the lists.
-    fetchRelatedSegments(segmentId, { limit: MAX_LIMIT, offset: 0 }).catch(
-      () => null,
-    ),
+    // segment-level, and the buttons describe the lists. The lists read the
+    // same full scan, so the two cannot disagree about where the list ends.
+    fetchAllRelatedSegments(segmentId).catch(() => [] as LibraryRelatedSegment[]),
   ]);
   if (!text) {
     throw new LibraryError(`Text with id '${textId}' not found`, 404);
   }
 
   const rootTextId = text.translation_of ?? text.commentary_of ?? null;
-  const items = (relatedPage?.items ?? []).filter(
+  const items = allRelated.filter(
     (item) => item.text_id && item.text_id !== textId,
   );
   const relatedTextIds = [...new Set(items.map((item) => item.text_id!))];
   const relatedTexts = await Promise.all(
     relatedTextIds.map((id) => fetchTextSafe(id)),
   );
+  const textById = new Map(
+    relatedTextIds.map((id, index) => [id, relatedTexts[index]]),
+  );
 
+  // Each list renders one group per text, so the button counts texts rather
+  // than segments.
   const countOfType = (type: string) =>
-    relatedTexts.filter((related) => classifyText(related) === type).length;
+    new Set(
+      items
+        .filter((item) => classifyText(textById.get(item.text_id!)) === type)
+        .map((item) => item.text_id!),
+    ).size;
 
   return {
     segment_info: {

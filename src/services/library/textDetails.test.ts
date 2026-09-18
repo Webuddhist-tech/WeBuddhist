@@ -23,6 +23,7 @@ import {
 } from "./api.ts";
 import { resolveTranslationSegmentIds } from "./alignments.ts";
 import { getTextDetails, clearSegmentIndexCache } from "./textDetails.ts";
+import { LibraryError } from "./client.ts";
 
 const EDITION = "edition-1";
 const TEXT = "text-1";
@@ -58,6 +59,9 @@ beforeEach(() => {
   mocked(fetchEditionSegmentation).mockImplementation(async (id: string) =>
     id === EDITION ? { id: "seg-1", edition_id: EDITION, text_id: TEXT } : null,
   );
+  // The library answers 200 with an empty list for an edition id, which is how
+  // id resolution tells an edition id from a text id.
+  mocked(fetchTextEditions).mockResolvedValue([]);
   mocked(fetchTextById).mockResolvedValue({
     id: TEXT,
     title: { en: "A Text" },
@@ -398,11 +402,27 @@ describe("getTextDetails translations", () => {
 });
 
 describe("getTextDetails id resolution", () => {
-  test("an edition id needs a single segmentation lookup", async () => {
+  test("an edition id resolves without a failing request", async () => {
     await getTextDetails(EDITION, { size: 1 });
 
+    // The text endpoint answers [] for an edition id, so the id is read as one
+    // and the single segmentation lookup settles it. Nothing 404s on the way.
+    expect(fetchTextEditions).toHaveBeenCalledWith(EDITION);
     expect(fetchEditionSegmentation).toHaveBeenCalledTimes(1);
-    expect(fetchTextEditions).not.toHaveBeenCalled();
+    expect(fetchEditionSegmentation).toHaveBeenCalledWith(EDITION);
+  });
+
+  test("a text id never probes the segmentation endpoint with it", async () => {
+    mocked(fetchTextEditions).mockResolvedValue([
+      { id: EDITION, text_id: TEXT },
+    ]);
+
+    await getTextDetails(TEXT, { size: 1 });
+
+    // Asking /editions/{textId}/segmentation is a guaranteed 404, and the
+    // reader only ever holds text ids, so it used to happen on every load.
+    expect(fetchEditionSegmentation).not.toHaveBeenCalledWith(TEXT);
+    expect(fetchEditionSegmentation).toHaveBeenCalledWith(EDITION);
   });
 
   test("a text id resolves through its first critical edition", async () => {
@@ -413,6 +433,27 @@ describe("getTextDetails id resolution", () => {
     const result = await getTextDetails(TEXT, { size: 1 });
 
     expect(fetchTextEditions).toHaveBeenCalledWith(TEXT);
+    expect(result.content.id).toBe(EDITION);
+  });
+
+  test("a failing editions lookup is not mistaken for an edition id", async () => {
+    // A 500 or a dropped connection says nothing about which kind of id this
+    // is. Treating it as one used to hand the text id to /segmentation and
+    // report an existing text as missing.
+    const upstream = new LibraryError("Failed to fetch text editions", 500);
+    mocked(fetchTextEditions).mockRejectedValue(upstream);
+
+    await expect(getTextDetails(TEXT, { size: 1 })).rejects.toBe(upstream);
+    expect(fetchEditionSegmentation).not.toHaveBeenCalledWith(TEXT);
+  });
+
+  test("a not-found editions lookup still falls back to an edition id", async () => {
+    mocked(fetchTextEditions).mockRejectedValue(
+      new LibraryError("text editions not found", 404),
+    );
+
+    const result = await getTextDetails(EDITION, { size: 1 });
+
     expect(result.content.id).toBe(EDITION);
   });
 

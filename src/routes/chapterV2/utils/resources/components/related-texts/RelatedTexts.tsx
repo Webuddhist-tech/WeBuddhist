@@ -6,6 +6,7 @@ import { getLanguageClass } from "../../../../../../utils/helperFunctions.tsx";
 import TextExpand from "../../../../../commons/expandtext/TextExpand.tsx";
 import ResourceHeader from "../common/ResourceHeader.tsx";
 import ResourceState from "../common/ResourceState.tsx";
+import SegmentTypeLabel from "../common/SegmentTypeLabel.tsx";
 import { getSegmentCommentaries } from "@/services/library";
 
 export const fetchCommentaryData = async (
@@ -63,12 +64,16 @@ const CommentaryView = ({
               const textId = commentary.text_id;
               return (
                 <div key={textId}>
+                  {/* The heading is a group's only identifier, and it carries
+                      the segment count too, so a text whose metadata could not
+                      be fetched says so rather than losing its heading and
+                      leaving stacks of segments no one can tell apart. */}
                   <h3
                     className={` my-2 border-b-2 border-red-700 pb-3 text-lg font-semibold  text-gray-800 ${getLanguageClass(
                       commentary.language,
                     )}`}
                   >
-                    {commentary.title}
+                    {commentary.title || t("connection_panel.untitled_text")}
                     {commentary.segments?.length > 1
                       ? ` (${commentary.segments.length})`
                       : ""}
@@ -77,7 +82,8 @@ const CommentaryView = ({
                     <div className="space-y-4">
                       {commentary.segments &&
                         commentary.segments.map((item: any, idx: number) => (
-                          <div key={`${textId}-${idx}`}>
+                          <div key={`${textId}-${idx}`} className="space-y-2">
+                            <SegmentTypeLabel type={item.type} />
                             <TextExpand
                               language={commentary.language}
                               maxLength={250}

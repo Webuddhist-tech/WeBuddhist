@@ -7,7 +7,7 @@ import {
   fetchTextById,
   fetchTextEditions,
 } from "./api.ts";
-import { LibraryError } from "./client.ts";
+import { isNotFound, LibraryError } from "./client.ts";
 import { mapTextToDTO, sliceByCodePoints } from "./mappers.ts";
 import type {
   ContentDTO,
@@ -28,41 +28,39 @@ type EditionContext = {
 /**
  * Resolve an edition or text id into the ids needed to read the text.
  *
- * `/segmentation` answers three things at once - the segmentation id, the
- * edition id and the text id - and 404s for a text id, which is what tells us
- * the caller passed one. That makes the common case (an edition id) a single
- * request instead of the three the backend spends.
+ * Ask the text endpoint first. Every caller in the app passes a text id - the
+ * reader takes one straight off the URL, and the version and panel lists hand
+ * out text ids too - and for an edition id it answers 200 with an empty list
+ * rather than failing, which is what tells us the caller passed one of those
+ * instead. Probing /segmentation first was cheaper for an edition id, but no
+ * caller supplies one, so in practice it only bought every chapter load a
+ * guaranteed 404 before the real lookups began.
  */
 const resolveEditionContext = async (
   textOrEditionId: string,
 ): Promise<EditionContext> => {
-  const direct = await fetchEditionSegmentation(textOrEditionId);
-  if (direct) {
-    return {
-      editionId: direct.edition_id || textOrEditionId,
-      textId: direct.text_id,
-      segmentationId: direct.id,
-    };
-  }
-
-  const editions = await fetchTextEditions(textOrEditionId);
-  const editionId = editions?.[0]?.id;
-  if (!editionId) {
-    throw new LibraryError(
-      `Edition with id '${textOrEditionId}' not found`,
-      404,
-    );
-  }
+  // A not-found here only means the id is not a text id, which is the signal to
+  // read it as an edition id instead. Anything else - the network, a 5xx, an
+  // auth failure - is a real error, and swallowing it would send the text id on
+  // to the segmentation lookup and report an existing text as missing.
+  const editions = await fetchTextEditions(textOrEditionId).catch((error) => {
+    if (isNotFound(error)) return null;
+    throw error;
+  });
+  // No editions under this id means it was not a text id either, so read it as
+  // an edition id and let the segmentation lookup be the one that can fail.
+  const editionId = editions?.[0]?.id ?? textOrEditionId;
 
   const segmentation = await fetchEditionSegmentation(editionId);
   if (!segmentation) {
     throw new LibraryError(
-      `No segmentation found for edition '${editionId}'`,
+      `No segmentation found for '${textOrEditionId}'`,
       404,
     );
   }
+
   return {
-    editionId,
+    editionId: segmentation.edition_id || editionId,
     textId: segmentation.text_id || textOrEditionId,
     segmentationId: segmentation.id,
   };

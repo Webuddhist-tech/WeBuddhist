@@ -20,6 +20,7 @@ import {
 } from "./api.ts";
 import {
   getSegmentById,
+  getSegmentCommentaries,
   getSegmentInfo,
   getSegmentTranslations,
 } from "./segments.ts";
@@ -203,10 +204,10 @@ describe("relations from anywhere in a family", () => {
 
     expect(result.segment_info).toMatchObject({
       text_id: "fr",
-      // `zh` is the only sibling translation. `fr` is the text being read, and
-      // `root` has no ancestor of its own, so it is counted as the root text
-      // rather than as another translation.
-      translations: 1,
+      // The sibling `zh` and the `root` it was translated from: everything that
+      // is not a commentary is a translation, so the root is counted here as
+      // well as under its own button. `fr` is the text being read, so it drops.
+      translations: 2,
       related_text: { commentaries: 1, root_text: 1 },
     });
   });
@@ -257,5 +258,176 @@ describe("relations from anywhere in a family", () => {
     const result = await getSegmentTranslations({ segmentId: "seg-1" });
 
     expect(result.translations.map((g) => g.text_id)).toEqual(["zh"]);
+  });
+
+  test("everything that is not a commentary is a translation, if it is text", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "fr"));
+    mocked(fetchRelatedSegments).mockResolvedValue({
+      items: [
+        // The root carries neither pointer, and `other` is not in the family at
+        // all. Both used to match no list and vanish from the panel.
+        { id: "rel-1", text_id: "root" },
+        { id: "rel-2", text_id: "zh" },
+        { id: "rel-3", text_id: "other" },
+        { id: "rel-4", text_id: "comm" },
+      ],
+      has_more: false,
+      offset: 0,
+      limit: 10,
+    });
+
+    const result = await getSegmentTranslations({ segmentId: "seg-1" });
+
+    expect(result.translations.map((g) => g.text_id)).toEqual([
+      "root",
+      "zh",
+      "other",
+    ]);
+  });
+
+  test("structural segments stay in the list, labelled with their type", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "fr"));
+    mocked(fetchRelatedSegments).mockResolvedValue({
+      items: [
+        // A verse, a title and a colophon of the same text, plus a segment with
+        // no type at all. None of them route anywhere different; the type only
+        // decides what the panel labels each entry.
+        { id: "rel-1", text_id: "zh", type: "verse" },
+        { id: "rel-2", text_id: "zh", type: "title" },
+        { id: "rel-3", text_id: "root", type: "front_matter" },
+        { id: "rel-4", text_id: "root", type: "back_matter" },
+        { id: "rel-5", text_id: "other" },
+      ],
+      has_more: false,
+      offset: 0,
+      limit: 10,
+    });
+
+    const result = await getSegmentTranslations({ segmentId: "seg-1" });
+
+    expect(result.translations.map((g) => g.text_id)).toEqual([
+      "zh",
+      "root",
+      "other",
+    ]);
+    // The type reaches the panel, which labels each entry with it. An unset one
+    // stays null so the label is skipped rather than guessing "paragraph".
+    expect(result.translations[0].segments.map((s) => s.type)).toEqual([
+      "verse",
+      "title",
+    ]);
+    expect(result.translations[1].segments.map((s) => s.type)).toEqual([
+      "front_matter",
+      "back_matter",
+    ]);
+    expect(result.translations[2].segments[0].type).toBeNull();
+  });
+
+  test("a commentary stays a commentary whatever its segments look like", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "fr"));
+    mocked(fetchRelatedSegments).mockResolvedValue({
+      items: [{ id: "rel-1", text_id: "comm", type: "front_matter" }],
+      has_more: false,
+      offset: 0,
+      limit: 10,
+    });
+
+    const translations = await getSegmentTranslations({ segmentId: "seg-1" });
+    const commentaries = await getSegmentCommentaries({ segmentId: "seg-1" });
+
+    expect(translations.translations).toEqual([]);
+    expect(commentaries.commentaries.map((g) => g.text_id)).toEqual(["comm"]);
+  });
+
+  test("the list is not cut short by segments of another type coming first", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "fr"));
+    // Ten commentary segments arrive before either translation. Asking the API
+    // for ten and filtering afterwards left the translations list empty while
+    // its button still said two, so the mock has to honour `limit` to show it.
+    const all = [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `c-${i}`,
+        text_id: "comm",
+        type: "verse",
+      })),
+      { id: "t-1", text_id: "zh", type: "verse" },
+      { id: "t-2", text_id: "root", type: "verse" },
+    ];
+    mocked(fetchRelatedSegments).mockImplementation(
+      async (_segmentId: string, params: { limit: number; offset: number }) => {
+        const items = all.slice(params.offset, params.offset + params.limit);
+        return {
+          items,
+          has_more: params.offset + items.length < all.length,
+          offset: params.offset,
+          limit: params.limit,
+        };
+      },
+    );
+
+    const info = await getSegmentInfo("seg-1");
+    const list = await getSegmentTranslations({ segmentId: "seg-1" });
+
+    expect(info.segment_info.translations).toBe(2);
+    expect(list.translations).toHaveLength(2);
+    expect(list.translations.map((g) => g.text_id)).toEqual(["zh", "root"]);
+  });
+
+  test("a translation past the first page of related segments still shows", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "fr"));
+    const all = [
+      ...Array.from({ length: 120 }, (_, i) => ({
+        id: `c-${i}`,
+        text_id: "comm",
+        type: "verse",
+      })),
+      { id: "t-1", text_id: "zh", type: "verse" },
+    ];
+    mocked(fetchRelatedSegments).mockImplementation(
+      async (_segmentId: string, params: { limit: number; offset: number }) => {
+        const items = all.slice(params.offset, params.offset + params.limit);
+        return {
+          items,
+          has_more: params.offset + items.length < all.length,
+          offset: params.offset,
+          limit: params.limit,
+        };
+      },
+    );
+
+    const info = await getSegmentInfo("seg-1");
+    const list = await getSegmentTranslations({ segmentId: "seg-1" });
+
+    expect(info.segment_info.translations).toBe(1);
+    expect(list.translations.map((g) => g.text_id)).toEqual(["zh"]);
+  });
+
+  test("the panel counts each text once, however many segments it has", async () => {
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 5]], "fr"));
+    mocked(fetchRelatedSegments).mockResolvedValue({
+      items: [
+        { id: "rel-1", text_id: "zh", type: "verse" },
+        { id: "rel-2", text_id: "zh", type: "title" },
+        { id: "rel-3", text_id: "root", type: "verse" },
+        { id: "rel-4", text_id: "comm", type: "verse" },
+      ],
+      has_more: false,
+      offset: 0,
+      limit: 100,
+    });
+
+    const result = await getSegmentInfo("seg-1");
+
+    expect(result.segment_info).toMatchObject({
+      // `zh` contributes two segments but is one entry in the list, so the
+      // button says two texts rather than three segments.
+      translations: 2,
+      related_text: { commentaries: 1, root_text: 1 },
+    });
   });
 });
