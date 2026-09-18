@@ -89,21 +89,20 @@ const RootTextView = ({
                 const language = rootText.language;
                 return (
                   <div key={textId}>
-                    {/* A text whose metadata could not be fetched has no
-                        title. Rendering the heading anyway left an empty
-                        bordered bar above the segments. */}
-                    {rootText.title && (
-                      <h3
-                        className={` my-2 border-b-2 border-[#a70c0c] pb-3 text-lg font-semibold  text-[#333] ${getLanguageClass(
-                          language,
-                        )}`}
-                      >
-                        {rootText.title}{" "}
-                        {rootText.segments?.length > 1
-                          ? `(${rootText.segments.length})`
-                          : ""}
-                      </h3>
-                    )}
+                    {/* The heading is a group's only identifier, and it
+                        carries the segment count too, so a text whose metadata
+                        could not be fetched says so rather than losing its
+                        heading entirely. */}
+                    <h3
+                      className={` my-2 border-b-2 border-[#a70c0c] pb-3 text-lg font-semibold  text-[#333] ${getLanguageClass(
+                        language,
+                      )}`}
+                    >
+                      {rootText.title || t("connection_panel.untitled_text")}{" "}
+                      {rootText.segments?.length > 1
+                        ? `(${rootText.segments.length})`
+                        : ""}
+                    </h3>
                     {rootText.segments && (
                       <div className="space-y-2">
                         {rootText.segments &&

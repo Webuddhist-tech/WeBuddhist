@@ -71,13 +71,11 @@ const TranslationView = ({
     return (
       <div key={index} className="mb-2 rounded-md">
         <div className="flex items-center justify-between">
-          {translation.title && (
-            <p
-              className={` py-4 font-semibold ${getLanguageClass(translation.language)}`}
-            >
-              {translation.title}
-            </p>
-          )}
+          <p
+            className={` py-4 font-semibold ${getLanguageClass(translation.language)}`}
+          >
+            {translation.title || t("connection_panel.untitled_text")}
+          </p>
           <Badge
             asChild
             variant="outline"

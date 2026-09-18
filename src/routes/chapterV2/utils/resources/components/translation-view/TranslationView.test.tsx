@@ -372,6 +372,31 @@ describe("TranslationView Component", () => {
     expect(screen.getByText("segment.type.back_matter")).toBeInTheDocument();
   });
 
+  test("names a group whose metadata could not be fetched", () => {
+    vi.spyOn(reactQuery, "useQuery").mockImplementationOnce((() => ({
+      data: {
+        translations: [
+          {
+            language: null,
+            title: "",
+            text_id: "text-123",
+            segments: [{ id: "s-1", content: "Orphaned content" }],
+          },
+        ],
+      },
+      isLoading: false,
+    })) as any);
+
+    setup();
+
+    // The heading is the group's only identifier, so it says the title is
+    // missing rather than disappearing and leaving the segments unattributed.
+    expect(
+      screen.getByText("connection_panel.untitled_text"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Orphaned content")).toBeInTheDocument();
+  });
+
   test("renders no type label for a segment that has no type", () => {
     vi.spyOn(reactQuery, "useQuery").mockImplementationOnce((() => ({
       data: {

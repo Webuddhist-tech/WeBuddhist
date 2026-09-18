@@ -64,21 +64,20 @@ const CommentaryView = ({
               const textId = commentary.text_id;
               return (
                 <div key={textId}>
-                  {/* A text whose metadata could not be fetched has no title.
-                      Rendering the heading anyway left an empty bordered bar
-                      above the segments. */}
-                  {commentary.title && (
-                    <h3
-                      className={` my-2 border-b-2 border-red-700 pb-3 text-lg font-semibold  text-gray-800 ${getLanguageClass(
-                        commentary.language,
-                      )}`}
-                    >
-                      {commentary.title}
-                      {commentary.segments?.length > 1
-                        ? ` (${commentary.segments.length})`
-                        : ""}
-                    </h3>
-                  )}
+                  {/* The heading is a group's only identifier, and it carries
+                      the segment count too, so a text whose metadata could not
+                      be fetched says so rather than losing its heading and
+                      leaving stacks of segments no one can tell apart. */}
+                  <h3
+                    className={` my-2 border-b-2 border-red-700 pb-3 text-lg font-semibold  text-gray-800 ${getLanguageClass(
+                      commentary.language,
+                    )}`}
+                  >
+                    {commentary.title || t("connection_panel.untitled_text")}
+                    {commentary.segments?.length > 1
+                      ? ` (${commentary.segments.length})`
+                      : ""}
+                  </h3>
                   {commentary.segments && (
                     <div className="space-y-4">
                       {commentary.segments &&

@@ -3,6 +3,7 @@ import {
   fetchTextById,
   fetchTextEditions,
 } from "./api.ts";
+import { isNotFound } from "./client.ts";
 import type { LibraryText } from "./types.ts";
 
 export type AlignmentPair = {
@@ -102,6 +103,16 @@ const pick = (
 const MAX_FAMILY_DEPTH = 8;
 
 /**
+ * A text that is not there breaks the chain and the panel simply shows no
+ * parallel column. A text we could not reach is a different thing entirely, and
+ * reporting it as "no translation exists" would be a lie, so it propagates.
+ */
+const missingAsNull = (error: unknown): null => {
+  if (isNotFound(error)) return null;
+  throw error;
+};
+
+/**
  * A text and its ancestors, nearest first, following `translation_of` to the
  * top of the family.
  *
@@ -119,7 +130,10 @@ const ancestorTextIds = async (
   for (let step = 0; step < MAX_FAMILY_DEPTH && parentId; step += 1) {
     if (chain.includes(parentId)) break;
     chain.push(parentId);
-    const parent = await fetchTextById(parentId).catch(() => null);
+    // fetchTextById already resolves a 404 to null, so catching here would
+    // swallow only real failures - and a family walk that quietly stops short
+    // returns an empty map, hiding translations that do exist.
+    const parent = await fetchTextById(parentId);
     parentId = parent?.translation_of ?? null;
   }
   return chain;
@@ -139,7 +153,7 @@ const editionPath = async (
   if (textIds.length <= 1) return [lastEditionId];
   const middle = await Promise.all(
     textIds.slice(1, -1).map(async (textId) => {
-      const editions = await fetchTextEditions(textId).catch(() => null);
+      const editions = await fetchTextEditions(textId).catch(missingAsNull);
       return editions?.[0]?.id ?? null;
     }),
   );
@@ -230,7 +244,7 @@ const resolveViaPivot = async (args: {
   else if (pivotTextId === args.versionTextId) {
     pivotEditionId = args.versionEditionId;
   } else {
-    const editions = await fetchTextEditions(pivotTextId).catch(() => null);
+    const editions = await fetchTextEditions(pivotTextId).catch(missingAsNull);
     pivotEditionId = editions?.[0]?.id ?? null;
   }
   if (!pivotEditionId) return new Map();

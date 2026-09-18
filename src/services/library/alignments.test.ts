@@ -15,6 +15,7 @@ import {
   clearAlignmentCache,
   resolveTranslationSegmentIds,
 } from "./alignments.ts";
+import { LibraryError } from "./client.ts";
 import type { LibraryText } from "./types.ts";
 
 const mocked = (fn: unknown) => fn as ReturnType<typeof vi.fn>;
@@ -218,6 +219,80 @@ describe("resolveTranslationSegmentIds", () => {
       versionEditionId: "ed-z",
       versionTextId: "t-z",
       versionText: asText({ id: "t-z" }),
+    });
+
+    expect(result.size).toBe(0);
+  });
+
+  test("an unreachable ancestor is an error, not an absent translation", async () => {
+    // Stopping the family walk on a 500 would report "no translation exists"
+    // for a pair that is perfectly well aligned.
+    alignments({ "ed-en->ed-bo": [["e1", "b1"]] });
+    const upstream = new LibraryError("Failed to fetch text", 500);
+    mocked(fetchTextById).mockRejectedValue(upstream);
+
+    await expect(
+      resolveTranslationSegmentIds({
+        segmentIds: ["e1"],
+        editionId: "ed-en",
+        editionTextId: "t-en",
+        editionText: asText({ id: "t-en", translation_of: "t-bo" }),
+        versionEditionId: "ed-sa",
+        versionTextId: "t-sa",
+        versionText: asText({ id: "t-sa" }),
+      }),
+    ).rejects.toBe(upstream);
+  });
+
+  test("an ancestor that does not exist just ends the family", async () => {
+    alignments({});
+    mocked(fetchTextById).mockResolvedValue(null);
+
+    const result = await resolveTranslationSegmentIds({
+      segmentIds: ["e1"],
+      editionId: "ed-en",
+      editionTextId: "t-en",
+      editionText: asText({ id: "t-en", translation_of: "t-gone" }),
+      versionEditionId: "ed-other",
+      versionTextId: "t-other",
+      versionText: asText({ id: "t-other" }),
+    });
+
+    expect(result.size).toBe(0);
+  });
+
+  test("an unreachable edition lookup propagates too", async () => {
+    alignments({ "ed-fr->ed-root": [["f1", "r1"]] });
+    const upstream = new LibraryError("Failed to fetch text editions", 503);
+    mocked(fetchTextEditions).mockRejectedValue(upstream);
+
+    await expect(
+      resolveTranslationSegmentIds({
+        segmentIds: ["f1"],
+        editionId: "ed-fr",
+        editionTextId: "t-fr",
+        editionText: asText({ id: "t-fr", translation_of: "t-root" }),
+        versionEditionId: "ed-zh",
+        versionTextId: "t-zh",
+        versionText: asText({ id: "t-zh", translation_of: "t-root" }),
+      }),
+    ).rejects.toBe(upstream);
+  });
+
+  test("a text with no editions of its own is an ordinary empty result", async () => {
+    alignments({ "ed-fr->ed-root": [["f1", "r1"]] });
+    mocked(fetchTextEditions).mockRejectedValue(
+      new LibraryError("text editions not found", 404),
+    );
+
+    const result = await resolveTranslationSegmentIds({
+      segmentIds: ["f1"],
+      editionId: "ed-fr",
+      editionTextId: "t-fr",
+      editionText: asText({ id: "t-fr", translation_of: "t-root" }),
+      versionEditionId: "ed-zh",
+      versionTextId: "t-zh",
+      versionText: asText({ id: "t-zh", translation_of: "t-root" }),
     });
 
     expect(result.size).toBe(0);
