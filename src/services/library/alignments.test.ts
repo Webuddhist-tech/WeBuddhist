@@ -2,10 +2,15 @@ import { describe, test, expect, beforeEach, vi } from "vitest";
 
 vi.mock("./api.ts", () => ({
   fetchAlignmentPairs: vi.fn(),
+  fetchTextById: vi.fn(),
   fetchTextEditions: vi.fn(),
 }));
 
-import { fetchAlignmentPairs, fetchTextEditions } from "./api.ts";
+import {
+  fetchAlignmentPairs,
+  fetchTextById,
+  fetchTextEditions,
+} from "./api.ts";
 import {
   clearAlignmentCache,
   resolveTranslationSegmentIds,
@@ -46,10 +51,22 @@ const alignments = (edges: Record<string, [string, string][]>) => {
   );
 };
 
+/**
+ * Stand in for the text endpoint, so ancestry can be walked past the parent the
+ * caller already handed us. Texts left out have no `translation_of` of their
+ * own, which is what makes them the top of a family.
+ */
+const texts = (family: Record<string, Partial<LibraryText>>) => {
+  mocked(fetchTextById).mockImplementation(async (textId: string) =>
+    family[textId] ? asText({ id: textId, ...family[textId] }) : null,
+  );
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   clearAlignmentCache();
   mocked(fetchTextEditions).mockResolvedValue([]);
+  mocked(fetchTextById).mockResolvedValue(null);
 });
 
 describe("resolveTranslationSegmentIds", () => {
@@ -133,6 +150,77 @@ describe("resolveTranslationSegmentIds", () => {
     });
 
     expect(result.get("f1")).toEqual(["z1"]);
+  });
+
+  test("composes through a grandparent when the family is three deep", async () => {
+    // sa -> bo -> en. The open English text translates the Tibetan, which
+    // translates the Sanskrit the reader picked. There is no en -> sa alignment
+    // at all, so the path has to run through the Tibetan in between.
+    alignments({
+      "ed-en->ed-bo": [["e1", "b1"]],
+      "ed-bo->ed-sa": [["b1", "s1"]],
+    });
+    texts({ "t-bo": { translation_of: "t-sa" } });
+    mocked(fetchTextEditions).mockImplementation(async (textId: string) =>
+      textId === "t-bo" ? [{ id: "ed-bo", text_id: "t-bo" }] : [],
+    );
+
+    const result = await resolveTranslationSegmentIds({
+      segmentIds: ["e1"],
+      editionId: "ed-en",
+      editionTextId: "t-en",
+      editionText: asText({ id: "t-en", translation_of: "t-bo" }),
+      versionEditionId: "ed-sa",
+      versionTextId: "t-sa",
+      versionText: asText({ id: "t-sa" }),
+    });
+
+    expect(result.get("e1")).toEqual(["s1"]);
+  });
+
+  test("composes between cousins two levels from the shared ancestor", async () => {
+    // Two English translations made from different intermediaries: en-a from
+    // the Tibetan, en-b straight from the Sanskrit both descend from.
+    alignments({
+      "ed-en-a->ed-bo": [["a1", "b1"]],
+      "ed-bo->ed-sa": [["b1", "s1"]],
+      "ed-en-b->ed-sa": [["x1", "s1"]],
+    });
+    texts({ "t-bo": { translation_of: "t-sa" } });
+    mocked(fetchTextEditions).mockImplementation(async (textId: string) => {
+      if (textId === "t-bo") return [{ id: "ed-bo", text_id: "t-bo" }];
+      if (textId === "t-sa") return [{ id: "ed-sa", text_id: "t-sa" }];
+      return [];
+    });
+
+    const result = await resolveTranslationSegmentIds({
+      segmentIds: ["a1"],
+      editionId: "ed-en-a",
+      editionTextId: "t-en-a",
+      editionText: asText({ id: "t-en-a", translation_of: "t-bo" }),
+      versionEditionId: "ed-en-b",
+      versionTextId: "t-en-b",
+      versionText: asText({ id: "t-en-b", translation_of: "t-sa" }),
+    });
+
+    expect(result.get("a1")).toEqual(["x1"]);
+  });
+
+  test("stops walking a family that points back at itself", async () => {
+    alignments({});
+    texts({ "t-a": { translation_of: "t-b" }, "t-b": { translation_of: "t-a" } });
+
+    const result = await resolveTranslationSegmentIds({
+      segmentIds: ["a1"],
+      editionId: "ed-a",
+      editionTextId: "t-a",
+      editionText: asText({ id: "t-a", translation_of: "t-b" }),
+      versionEditionId: "ed-z",
+      versionTextId: "t-z",
+      versionText: asText({ id: "t-z" }),
+    });
+
+    expect(result.size).toBe(0);
   });
 
   test("gives up when the two texts share no root", async () => {

@@ -77,7 +77,7 @@ const CommentaryView = ({
                     <div className="space-y-4">
                       {commentary.segments &&
                         commentary.segments.map((item: any, idx: number) => (
-                          <div key={`${textId}-${idx}`}>
+                          <div key={`${textId}-${idx}`} className="space-y-2">
                             <TextExpand
                               language={commentary.language}
                               maxLength={250}

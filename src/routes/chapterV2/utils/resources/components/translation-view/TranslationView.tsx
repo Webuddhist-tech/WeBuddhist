@@ -110,7 +110,7 @@ const TranslationView = ({
         )}
 
         {translation.segments?.map((item: any, idx: number) => (
-          <div key={idx} className="space-y-2">
+          <div key={idx} className="mt-3 space-y-2">
             <TextExpand language={translation.language} maxLength={250}>
               {item.content}
             </TextExpand>

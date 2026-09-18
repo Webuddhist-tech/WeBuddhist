@@ -102,6 +102,8 @@ export type LibraryAlignmentPair = {
 export type LibraryRelatedSegment = {
   id: string;
   text_id?: string;
+  /** SegmentType: verse, paragraph, title, front_matter, back_matter, top_segment. */
+  type?: string;
 };
 
 export type LibraryCategory = {
@@ -277,6 +279,8 @@ export type ParentSegment = {
 export type V2RelatedSegmentItem = {
   id: string;
   content: string | null;
+  /** SegmentType: verse, paragraph, title, front_matter, back_matter, top_segment. */
+  type?: string | null;
 };
 
 export type V2SegmentTextGroup = {
@@ -311,6 +315,7 @@ export type V2SegmentRootTextResponse = {
   limit: number;
   has_more: boolean;
 };
+
 
 export type V2SegmentTextDetail = {
   text_id: string;
