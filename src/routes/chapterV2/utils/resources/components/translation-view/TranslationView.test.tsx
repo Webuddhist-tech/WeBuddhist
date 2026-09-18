@@ -346,4 +346,49 @@ describe("TranslationView Component", () => {
     expect(screen.getByText("Tibetan Source")).toBeInTheDocument();
     expect(screen.getByText("Another English Source")).toBeInTheDocument();
   });
+
+  test("labels each segment with its structural type", () => {
+    vi.spyOn(reactQuery, "useQuery").mockImplementationOnce((() => ({
+      data: {
+        translations: [
+          {
+            language: "en",
+            title: "English Title",
+            text_id: "text-123",
+            segments: [
+              { id: "s-1", content: "A verse", type: "verse" },
+              { id: "s-2", content: "The colophon", type: "back_matter" },
+            ],
+          },
+        ],
+      },
+      isLoading: false,
+    })) as any);
+
+    setup();
+
+    // Tolgee is mocked to echo the key, so the label shows the key it asked for.
+    expect(screen.getByText("segment.type.verse")).toBeInTheDocument();
+    expect(screen.getByText("segment.type.back_matter")).toBeInTheDocument();
+  });
+
+  test("renders no type label for a segment that has no type", () => {
+    vi.spyOn(reactQuery, "useQuery").mockImplementationOnce((() => ({
+      data: {
+        translations: [
+          {
+            language: "en",
+            title: "English Title",
+            text_id: "text-123",
+            segments: [{ id: "s-1", content: "Untyped", type: null }],
+          },
+        ],
+      },
+      isLoading: false,
+    })) as any);
+
+    setup();
+
+    expect(screen.queryByText(/^segment\.type\./)).not.toBeInTheDocument();
+  });
 });

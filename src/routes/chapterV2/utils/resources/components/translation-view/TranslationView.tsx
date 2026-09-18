@@ -7,6 +7,7 @@ import { useLanguageLabel } from "@/context/LanguagesContext.tsx";
 import TextExpand from "../../../../../commons/expandtext/TextExpand.tsx";
 import ResourceHeader from "../common/ResourceHeader.tsx";
 import ResourceState from "../common/ResourceState.tsx";
+import SegmentTypeLabel from "../common/SegmentTypeLabel.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getSegmentTranslations } from "@/services/library";
@@ -111,6 +112,7 @@ const TranslationView = ({
 
         {translation.segments?.map((item: any, idx: number) => (
           <div key={idx} className="mt-3 space-y-2">
+            <SegmentTypeLabel type={item.type} />
             <TextExpand language={translation.language} maxLength={250}>
               {item.content}
             </TextExpand>

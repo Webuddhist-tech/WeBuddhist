@@ -23,6 +23,7 @@ import {
 } from "./api.ts";
 import { resolveTranslationSegmentIds } from "./alignments.ts";
 import { getTextDetails, clearSegmentIndexCache } from "./textDetails.ts";
+import { LibraryError } from "./client.ts";
 
 const EDITION = "edition-1";
 const TEXT = "text-1";
@@ -432,6 +433,27 @@ describe("getTextDetails id resolution", () => {
     const result = await getTextDetails(TEXT, { size: 1 });
 
     expect(fetchTextEditions).toHaveBeenCalledWith(TEXT);
+    expect(result.content.id).toBe(EDITION);
+  });
+
+  test("a failing editions lookup is not mistaken for an edition id", async () => {
+    // A 500 or a dropped connection says nothing about which kind of id this
+    // is. Treating it as one used to hand the text id to /segmentation and
+    // report an existing text as missing.
+    const upstream = new LibraryError("Failed to fetch text editions", 500);
+    mocked(fetchTextEditions).mockRejectedValue(upstream);
+
+    await expect(getTextDetails(TEXT, { size: 1 })).rejects.toBe(upstream);
+    expect(fetchEditionSegmentation).not.toHaveBeenCalledWith(TEXT);
+  });
+
+  test("a not-found editions lookup still falls back to an edition id", async () => {
+    mocked(fetchTextEditions).mockRejectedValue(
+      new LibraryError("text editions not found", 404),
+    );
+
+    const result = await getTextDetails(EDITION, { size: 1 });
+
     expect(result.content.id).toBe(EDITION);
   });
 

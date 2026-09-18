@@ -7,7 +7,7 @@ import {
   fetchTextById,
   fetchTextEditions,
 } from "./api.ts";
-import { LibraryError } from "./client.ts";
+import { isNotFound, LibraryError } from "./client.ts";
 import { mapTextToDTO, sliceByCodePoints } from "./mappers.ts";
 import type {
   ContentDTO,
@@ -39,9 +39,16 @@ type EditionContext = {
 const resolveEditionContext = async (
   textOrEditionId: string,
 ): Promise<EditionContext> => {
-  const editions = await fetchTextEditions(textOrEditionId).catch(() => null);
-  // No editions under this id means it was not a text id, so read it as an
-  // edition id and let the segmentation lookup be the one that can fail.
+  // A not-found here only means the id is not a text id, which is the signal to
+  // read it as an edition id instead. Anything else - the network, a 5xx, an
+  // auth failure - is a real error, and swallowing it would send the text id on
+  // to the segmentation lookup and report an existing text as missing.
+  const editions = await fetchTextEditions(textOrEditionId).catch((error) => {
+    if (isNotFound(error)) return null;
+    throw error;
+  });
+  // No editions under this id means it was not a text id either, so read it as
+  // an edition id and let the segmentation lookup be the one that can fail.
   const editionId = editions?.[0]?.id ?? textOrEditionId;
 
   const segmentation = await fetchEditionSegmentation(editionId);

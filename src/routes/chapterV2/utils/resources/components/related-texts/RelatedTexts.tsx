@@ -6,6 +6,7 @@ import { getLanguageClass } from "../../../../../../utils/helperFunctions.tsx";
 import TextExpand from "../../../../../commons/expandtext/TextExpand.tsx";
 import ResourceHeader from "../common/ResourceHeader.tsx";
 import ResourceState from "../common/ResourceState.tsx";
+import SegmentTypeLabel from "../common/SegmentTypeLabel.tsx";
 import { getSegmentCommentaries } from "@/services/library";
 
 export const fetchCommentaryData = async (
@@ -63,21 +64,27 @@ const CommentaryView = ({
               const textId = commentary.text_id;
               return (
                 <div key={textId}>
-                  <h3
-                    className={` my-2 border-b-2 border-red-700 pb-3 text-lg font-semibold  text-gray-800 ${getLanguageClass(
-                      commentary.language,
-                    )}`}
-                  >
-                    {commentary.title}
-                    {commentary.segments?.length > 1
-                      ? ` (${commentary.segments.length})`
-                      : ""}
-                  </h3>
+                  {/* A text whose metadata could not be fetched has no title.
+                      Rendering the heading anyway left an empty bordered bar
+                      above the segments. */}
+                  {commentary.title && (
+                    <h3
+                      className={` my-2 border-b-2 border-red-700 pb-3 text-lg font-semibold  text-gray-800 ${getLanguageClass(
+                        commentary.language,
+                      )}`}
+                    >
+                      {commentary.title}
+                      {commentary.segments?.length > 1
+                        ? ` (${commentary.segments.length})`
+                        : ""}
+                    </h3>
+                  )}
                   {commentary.segments && (
                     <div className="space-y-4">
                       {commentary.segments &&
                         commentary.segments.map((item: any, idx: number) => (
                           <div key={`${textId}-${idx}`} className="space-y-2">
+                            <SegmentTypeLabel type={item.type} />
                             <TextExpand
                               language={commentary.language}
                               maxLength={250}
