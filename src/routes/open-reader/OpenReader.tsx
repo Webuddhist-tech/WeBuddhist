@@ -149,7 +149,7 @@ const OpenReader = () => {
       >
         <div className="md:mr-4 flex shrink-0 flex-col items-start text-gray-700">
           <p className="text-xs" title={`#${segment.segment_number}`}>
-            {segment.segment_number}
+            {segment.reference}
           </p>
         </div>
         <div className="flex flex-col items-start text-lg w-full text-justify">

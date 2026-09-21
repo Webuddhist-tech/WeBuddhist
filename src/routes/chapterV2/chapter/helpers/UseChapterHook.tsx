@@ -492,7 +492,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
                 >
                   <div className="md:mr-4 flex shrink-0 flex-col items-start">
                     <p className="text-xs" title={`#${segment.segment_number}`}>
-                      {segment.segment_number}
+                      {segment.reference}
                     </p>
                   </div>
                   <div
