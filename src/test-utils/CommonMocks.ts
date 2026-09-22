@@ -59,7 +59,14 @@ export const mockReactQuery = () => {
 
     return {
       ...actual,
-      useQuery: vi.fn(),
+      // A bare vi.fn() hands back undefined, which every caller destructures.
+      // Tests that care set their own return value; the rest get a query that
+      // has simply resolved to nothing.
+      useQuery: vi.fn(() => ({
+        data: undefined,
+        error: null,
+        isLoading: false,
+      })),
       useMutation: vi.fn(defaultUseMutation),
     };
   });

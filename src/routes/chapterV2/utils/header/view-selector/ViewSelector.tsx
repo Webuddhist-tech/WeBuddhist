@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslate } from "@tolgee/react";
 import { ImParagraphJustify } from "react-icons/im";
-import { LuAlignJustify } from "react-icons/lu";
+import { LuAlignJustify, LuList, LuListX } from "react-icons/lu";
 import {
   DropdownMenuLabel,
   DropdownMenuPortal,
@@ -23,6 +23,15 @@ export const VIEW_MODES = {
 export const LAYOUT_MODES = {
   SEGMENTED: "SEGMENTED",
   PROSE: "PROSE",
+};
+
+/**
+ * Whether the table of contents is drawn into the text itself, each section
+ * title standing where the section begins, rather than only in the sidebar.
+ */
+export const SECTION_TITLE_MODES = {
+  SHOWN: "SHOWN",
+  HIDDEN: "HIDDEN",
 };
 
 const options = [
@@ -58,12 +67,33 @@ const layoutOptions = [
   },
 ];
 
+const sectionTitleOptions = [
+  {
+    id: "section-titles-1",
+    icon: <LuList className="size-5" />,
+    value: SECTION_TITLE_MODES.SHOWN,
+    labelKey: "text.reader_option_menu.section_titles_shown",
+    label: "Show",
+  },
+  {
+    id: "section-titles-2",
+    icon: <LuListX className="size-5" />,
+    value: SECTION_TITLE_MODES.HIDDEN,
+    labelKey: "text.reader_option_menu.section_titles_hidden",
+    label: "Hide",
+  },
+];
+
 type ViewSelectorProps = {
   viewMode: string;
   setViewMode: (viewMode: string) => void;
   layoutMode: string;
   setLayoutMode: (layoutMode: string) => void;
   versionSelected?: boolean;
+  sectionTitleMode?: string;
+  setSectionTitleMode?: (sectionTitleMode: string) => void;
+  /** Off for a text the library has no table of contents for. */
+  canShowSectionTitles?: boolean;
 };
 
 const ViewSelector = ({
@@ -72,6 +102,9 @@ const ViewSelector = ({
   setViewMode,
   layoutMode,
   setLayoutMode,
+  sectionTitleMode,
+  setSectionTitleMode,
+  canShowSectionTitles = false,
 }: ViewSelectorProps) => {
   const { t } = useTranslate();
   const { script, setScript, mode, setMode, isTransliterating } =
@@ -158,6 +191,32 @@ const ViewSelector = ({
           </DropdownMenuRadioItem>
         ))}
       </DropdownMenuRadioGroup>
+      {/* Only worth offering where there is an annotation to draw. */}
+      {canShowSectionTitles && setSectionTitleMode && (
+        <>
+          <DropdownMenuLabel className="text-sm font-medium text-[#676767]">
+            {t("text.table_of_contents")}
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={sectionTitleMode}
+            onValueChange={setSectionTitleMode}
+            className="grid grid-cols-2 gap-2"
+          >
+            {sectionTitleOptions.map((option) => (
+              <DropdownMenuRadioItem
+                key={option.id}
+                value={option.value}
+                className="flex items-center gap-2 rounded-md border px-3 py-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5"
+              >
+                <span className="text-muted-foreground">{option.icon}</span>
+                <span className="text-sm text-foreground">
+                  {t(option.labelKey, option.label)}
+                </span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </>
+      )}
       {renderMenuRow(
         "text.script.title",
         "Script",
