@@ -421,6 +421,16 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     openResourcesPanel();
   };
 
+  const createSegmentControlHandlers = (segmentId: string) => {
+    const handleClick = () => handleSegmentClick(segmentId);
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      handleSegmentClick(segmentId);
+    };
+    return { handleClick, handleKeyDown };
+  };
+
   const renderProseTransliteration = (segments: Segment[]) => {
     if (!showsBelow) return null;
     if (
@@ -455,20 +465,24 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
 
   const renderProseSegment = (segment: Segment) => {
     const isSelected = selectedSegmentId === segment.segment_id;
+    const { handleClick, handleKeyDown } = createSegmentControlHandlers(
+      segment.segment_id,
+    );
     return (
       <span
         key={segment.segment_id}
         className={`inline cursor-pointer text-lg mr-0.5 ${
           isSelected && "bg-blue-50"
         }`}
-        onClick={() => handleSegmentClick(segment.segment_id)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleSegmentClick(segment.segment_id);
-          }
-        }}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
         role="button"
+        tabIndex={0}
+        aria-label={
+          segment.reference
+            ? `Open resources for segment ${segment.reference}`
+            : "Open resources for this segment"
+        }
       >
         {(viewMode === VIEW_MODES.SOURCE ||
           viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
@@ -496,19 +510,23 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   const renderSegmentedSegment = (segment: Segment) => {
     const isSelected = selectedSegmentId === segment.segment_id;
     const below = transliterationBelow(segment.content);
+    const { handleClick, handleKeyDown } = createSegmentControlHandlers(
+      segment.segment_id,
+    );
     return (
       <div
         key={segment.segment_id}
         className={`cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4`}
-        onClick={() => handleSegmentClick(segment.segment_id)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleSegmentClick(segment.segment_id);
-          }
-        }}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
         title={`#${segment.reference}_${segment.type}`}
         role="button"
+        tabIndex={0}
+        aria-label={
+          segment.reference
+            ? `Open resources for segment ${segment.reference}`
+            : "Open resources for this segment"
+        }
       >
         <div className="md:mr-4 flex shrink-0 flex-col items-start">
           <p className="text-xs" title={`#${segment.segment_number}`}>
