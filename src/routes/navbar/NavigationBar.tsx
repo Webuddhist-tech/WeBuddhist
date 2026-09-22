@@ -78,14 +78,24 @@ const Navigation = () => {
   const [, setParams] = useSearchParams();
 
   /**
-   * On the home page the bar floats over the hero image, and its background
-   * fades in once you scroll off it (or point at the bar itself). Everywhere
-   * else it is an ordinary opaque bar in the flow.
+   * On the home page the bar floats over the hero image. It stays on the
+   * white-over-photo theme while the hero is in view (a dark glass on hover,
+   * so the controls stay readable) and becomes the ordinary cream bar only
+   * after you scroll off the image. Everywhere else it is an opaque bar in
+   * the flow.
    */
   // Only the front page has a hero for the bar to float over.
   const isHome = location.pathname === "/";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPointerOver, setIsPointerOver] = useState(false);
+
+  // Stay on the white-over-photo theme for the whole hero, including hover.
+  // Flipping to the cream bar just because the pointer entered made the
+  // controls unreadable (grey on a leftover dark chip, or white on white).
+  const isOverHero = isHome && !isScrolled;
+  const isHeroHover = isOverHero && isPointerOver;
+  const navControlClass =
+    "rounded bg-transparent shadow-none border-custom-border text-faded-grey hover:bg-search-background hover:text-faded-grey dark:bg-transparent dark:border-custom-border dark:hover:bg-search-background dark:hover:text-faded-grey";
 
   useEffect(() => {
     if (!isHome) {
@@ -98,7 +108,6 @@ const Navigation = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isHome]);
 
-  const isOverHero = isHome && !isScrolled && !isPointerOver;
   const navItems = [
     { to: "/plans", label: t("header.plans"), key: "plans" },
     { to: "/collections", label: t("header.text"), key: "collections" },
@@ -120,6 +129,13 @@ const Navigation = () => {
   const shouldHideColorBorder = routesWithoutColorBorder.includes(
     location.pathname,
   );
+  const heroBorder = isHeroHover
+    ? "2px solid rgba(255,255,255,0.2)"
+    : "2px solid transparent";
+  const pageBorderColor = shouldHideColorBorder
+    ? "#E7E5E4"
+    : (collectionColor ?? "#E7E5E4");
+  const navBorder = isOverHero ? heroBorder : `2px solid ${pageBorderColor}`;
 
   const handleLogout = (e: any) => {
     e.preventDefault();
@@ -165,7 +181,7 @@ const Navigation = () => {
           <Button
             variant="outline"
             onClick={() => navigate("/login")}
-            className="rounded text-faded-grey"
+            className={navControlClass}
             aria-label="Go to login"
           >
             {t("login.form.button.login_in")}
@@ -173,7 +189,7 @@ const Navigation = () => {
           <Button
             variant="ghost"
             onClick={() => navigate("/register")}
-            className="rounded text-faded-grey"
+            className={navControlClass}
             aria-label="Go to sign up"
           >
             {t("common.sign_up")}
@@ -186,8 +202,8 @@ const Navigation = () => {
         variant="outline"
         className={
           variant === "desktop"
-            ? "rounded text-faded-grey"
-            : "w-full rounded text-faded-grey"
+            ? navControlClass
+            : `w-full ${navControlClass}`
         }
         onClick={handleLogout}
       >
@@ -200,7 +216,7 @@ const Navigation = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="flex items-center justify-center p-1.5 rounded hover:bg-accent transition-colors"
+            className="flex items-center justify-center p-1.5 rounded text-faded-grey hover:bg-search-background hover:text-faded-grey transition-colors"
             aria-label="Change language"
           >
             <FaGlobe className="text-faded-grey" />
@@ -225,22 +241,29 @@ const Navigation = () => {
     <div
       onMouseEnter={() => setIsPointerOver(true)}
       onMouseLeave={() => setIsPointerOver(false)}
-      className={`${isTibetan && "text-sm"} overalltext bg-navbar h-[60px] flex justify-between items-center w-full px-4 md:px-7 transition-colors duration-300 ${
+      onFocus={() => setIsPointerOver(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsPointerOver(false);
+        }
+      }}
+      className={`${isTibetan && "text-sm"} overalltext bg-navbar h-[60px] flex justify-between items-center w-full px-4 md:px-7 transition-[background-color,border-color,backdrop-filter] duration-300 ${
         isHome ? "fixed inset-x-0 top-0 z-50" : ""
-      }`}
+      } ${isHeroHover ? "backdrop-blur-md" : ""}`}
       style={
         {
-          borderBottom: isOverHero
-            ? "2px solid transparent"
-            : `2px solid ${shouldHideColorBorder ? "#E7E5E4" : collectionColor || "#E7E5E4"}`,
+          borderBottom: navBorder,
           // The bar's colours are all CSS variables, so rebinding them here
           // recolours everything inside - including the mobile menu - without
           // every control needing to know where it is being rendered.
           ...(isOverHero && {
-            "--navbar": "transparent",
+            "--navbar": isHeroHover ? "rgba(10, 23, 41, 0.72)" : "transparent",
             "--navbar-foreground": "#ffffff",
             "--custom-border": "rgba(255,255,255,0.35)",
-            "--search-background": "rgba(255,255,255,0.12)",
+            "--search-background": "rgba(255,255,255,0.16)",
+            "--background": "transparent",
+            "--accent": "rgba(255,255,255,0.18)",
+            "--accent-foreground": "#ffffff",
           }),
         } as React.CSSProperties
       }
@@ -289,7 +312,7 @@ const Navigation = () => {
             placeholder={t("common.placeholder.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border-none bg-transparent outline-none px-1 py-1.5 content"
+            className="w-full border-none bg-transparent outline-none px-1 py-1.5 content text-faded-grey placeholder:text-faded-grey"
           />
         </form>
         {renderAuthButtons("desktop")}
@@ -298,7 +321,7 @@ const Navigation = () => {
             <Button
               variant="ghost"
               onClick={() => navigate("/profile")}
-              className="rounded text-faded-grey"
+              className={navControlClass}
             >
               {t("header.profileMenu.profile")}
             </Button>

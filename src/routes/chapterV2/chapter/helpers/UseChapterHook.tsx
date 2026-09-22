@@ -11,6 +11,7 @@ import {
   getCurrentSectionFromScroll,
 } from "../../../../utils/helperFunctions";
 import { usePanelContext } from "../../../../context/PanelContext";
+import { useTransliteration } from "../../../../context/TransliterationContext";
 import Resources from "../../utils/resources/Resources";
 import {
   ResizablePanelGroup,
@@ -133,6 +134,14 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { isResourcesPanelOpen, openResourcesPanel, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
+  const {
+    displayContent,
+    transliterationBelow,
+    contentClass,
+    transliterationClass,
+    isTransliterating,
+    showsBelow,
+  } = useTransliteration();
   const contentsContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef({ isRestoring: false, previousScrollHeight: 0 });
   const sectionRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -407,10 +416,46 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     openResourcesPanel();
   };
 
+  const renderProseTransliteration = (section: Section) => {
+    if (!showsBelow) return null;
+    if (
+      viewMode !== VIEW_MODES.SOURCE &&
+      viewMode !== VIEW_MODES.SOURCE_AND_TRANSLATIONS
+    ) {
+      return null;
+    }
+    const lines = (section.segments ?? []).map((segment) => ({
+      id: segment.segment_id,
+      html: transliterationBelow(segment.content),
+    }));
+    // Every segment was already in the chosen script, so a second paragraph
+    // would just repeat the first.
+    if (!lines.some((line) => line.html)) return null;
+    return (
+      <p
+        className={`m-0 mt-2 leading-7 text-justify text-[0.95em] text-[#555] ${transliterationClass}`}
+      >
+        {lines.map((line) => (
+          <span
+            key={line.id}
+            className="mr-0.5 inline"
+            dangerouslySetInnerHTML={{ __html: line.html }}
+          />
+        ))}
+      </p>
+    );
+  };
+
   const renderSectionRecursive = (section: Section | undefined) => {
     if (!section) return null;
     const isProse = layoutMode === LAYOUT_MODES.PROSE;
-    const languageClass = getLanguageClass(language || "en");
+    const languageClass = contentClass(language || "en");
+    // Section headings are set in English by default; once the text is
+    // replaced they need the target script's face instead.
+    const titleClass =
+      isTransliterating && !showsBelow
+        ? contentClass(language)
+        : getLanguageClass("en");
     return (
       <div
         className="flex flex-col items-center w-full"
@@ -423,59 +468,68 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       >
         {section.title && (
           <h2
-            className={` ${getLanguageClass("en")} w-fit border-b-2 border-zinc-500 p-2 text-lg`}
+            className={` ${titleClass} w-fit border-b-2 border-zinc-500 p-2 text-lg`}
           >
-            {section.title}
+            {displayContent(section.title)}
           </h2>
         )}
         <div
           className={`flex flex-col w-full px-2.5 items-center mx-auto ${isProse && "block max-w-[700px]"}`}
         >
           {isProse ? (
-            <p className="leading-7 text-justify m-0">
-              {section.segments?.map((segment) => {
-                const isSelected = selectedSegmentId === segment.segment_id;
-                return (
-                  <span
-                    key={segment.segment_id}
-                    className={`inline cursor-pointer text-lg mr-0.5 ${
-                      isSelected && "bg-blue-50"
-                    }`}
-                    onClick={() => handleSegmentClick(segment.segment_id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSegmentClick(segment.segment_id);
-                      }
-                    }}
-                    role="button"
-                  >
-                    {(viewMode === VIEW_MODES.SOURCE ||
-                      viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
-                      <span
-                        className={languageClass}
-                        dangerouslySetInnerHTML={{ __html: segment.content }}
-                      />
-                    )}
-                    {segment.translation &&
-                      (viewMode === VIEW_MODES.TRANSLATIONS ||
+            <>
+              <p className="leading-7 text-justify m-0">
+                {section.segments?.map((segment) => {
+                  const isSelected = selectedSegmentId === segment.segment_id;
+                  return (
+                    <span
+                      key={segment.segment_id}
+                      className={`inline cursor-pointer text-lg mr-0.5 ${
+                        isSelected && "bg-blue-50"
+                      }`}
+                      onClick={() => handleSegmentClick(segment.segment_id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSegmentClick(segment.segment_id);
+                        }
+                      }}
+                      role="button"
+                    >
+                      {(viewMode === VIEW_MODES.SOURCE ||
                         viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
                         <span
-                          className={getLanguageClass(
-                            segment.translation.language || "en",
-                          )}
+                          className={languageClass}
                           dangerouslySetInnerHTML={{
-                            __html: segment.translation.content,
+                            __html: displayContent(segment.content),
                           }}
                         />
                       )}
-                  </span>
-                );
-              })}
-            </p>
+                      {segment.translation &&
+                        (viewMode === VIEW_MODES.TRANSLATIONS ||
+                          viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+                          <span
+                            className={getLanguageClass(
+                              segment.translation.language || "en",
+                            )}
+                            dangerouslySetInnerHTML={{
+                              __html: segment.translation.content,
+                            }}
+                          />
+                        )}
+                    </span>
+                  );
+                })}
+              </p>
+              {/* Prose runs segments together, so a line under each one would
+                  break the paragraph. The transliteration follows as a second
+                  paragraph instead, reading in the same order. */}
+              {renderProseTransliteration(section)}
+            </>
           ) : (
             section.segments?.map((segment) => {
               const isSelected = selectedSegmentId === segment.segment_id;
+              const below = transliterationBelow(segment.content);
               return (
                 <div
                   key={segment.segment_id}
@@ -502,9 +556,19 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
                       viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
                       <p
                         className={`${languageClass} whitespace-pre-line`}
-                        dangerouslySetInnerHTML={{ __html: segment.content }}
+                        dangerouslySetInnerHTML={{
+                          __html: displayContent(segment.content),
+                        }}
                       />
                     )}
+                    {below &&
+                      (viewMode === VIEW_MODES.SOURCE ||
+                        viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+                        <p
+                          className={`${transliterationClass} whitespace-pre-line text-[0.95em] text-[#555]`}
+                          dangerouslySetInnerHTML={{ __html: below }}
+                        />
+                      )}
                     {segment.translation &&
                       (viewMode === VIEW_MODES.TRANSLATIONS ||
                         viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (

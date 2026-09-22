@@ -4,9 +4,15 @@ import { ImParagraphJustify } from "react-icons/im";
 import { LuAlignJustify } from "react-icons/lu";
 import {
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
+import { useTransliteration } from "@/context/TransliterationContext.tsx";
+import { MODE_OPTIONS, SCRIPT_OPTIONS } from "@/utils/transliteration.ts";
 
 export const VIEW_MODES = {
   SOURCE: "SOURCE",
@@ -68,6 +74,8 @@ const ViewSelector = ({
   setLayoutMode,
 }: ViewSelectorProps) => {
   const { t } = useTranslate();
+  const { script, setScript, mode, setMode, isTransliterating } =
+    useTransliteration();
 
   const renderViewModeOptions = () => {
     return (
@@ -88,6 +96,43 @@ const ViewSelector = ({
           ))}
         </DropdownMenuRadioGroup>
       </div>
+    );
+  };
+
+  // One row per choice, so they sit alongside the view and layout options
+  // rather than unrolling twenty entries into the menu. The source script is
+  // always detected from the text, so there is nothing else to choose here.
+  const renderMenuRow = (
+    labelKey: string,
+    label: string,
+    value: string,
+    onChange: (value: string) => void,
+    menuOptions: readonly { value: string; labelKey: string; label: string }[],
+  ) => {
+    const selected =
+      menuOptions.find((option) => option.value === value) ?? menuOptions[0];
+    return (
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="rounded-md border px-3 py-2">
+          <span className="text-sm text-foreground">{t(labelKey, label)}</span>
+          <span className="ml-auto pl-2 text-sm text-[#676767]">
+            {t(selected.labelKey, selected.label)}
+          </span>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuSubContent className="max-h-[60vh] overflow-y-auto">
+            <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
+              {menuOptions.map((option) => (
+                <DropdownMenuRadioItem key={option.value} value={option.value}>
+                  <span className="text-sm text-foreground">
+                    {t(option.labelKey, option.label)}
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuPortal>
+      </DropdownMenuSub>
     );
   };
 
@@ -113,6 +158,22 @@ const ViewSelector = ({
           </DropdownMenuRadioItem>
         ))}
       </DropdownMenuRadioGroup>
+      {renderMenuRow(
+        "text.script.title",
+        "Script",
+        script,
+        setScript,
+        SCRIPT_OPTIONS,
+      )}
+      {/* Nothing to place while the text is shown as stored. */}
+      {isTransliterating &&
+        renderMenuRow(
+          "text.script.mode",
+          "Transliteration",
+          mode,
+          setMode,
+          MODE_OPTIONS,
+        )}
     </div>
   );
 };

@@ -111,7 +111,11 @@ const TranslationView = ({
         {translation.segments?.map((item: any, idx: number) => (
           <div key={idx} className="mt-3 space-y-2">
             <SegmentTypeLabel type={item.type} />
-            <TextExpand language={translation.language} maxLength={250}>
+            <TextExpand
+              language={translation.language}
+              maxLength={250}
+              transliterable={false}
+            >
               {item.content}
             </TextExpand>
             <div className="flex min-h-10 items-center justify-between overalltext">

@@ -5,11 +5,9 @@ import { useQuery } from "react-query";
 import { useSearchParams } from "react-router-dom";
 import PaginationComponent from "../../../../../commons/pagination/PaginationComponent.tsx";
 import { highlightSearchMatch } from "../../../../../../utils/highlightUtils.tsx";
-import {
-  getLanguageClass,
-  getEarlyReturn,
-} from "../../../../../../utils/helperFunctions.tsx";
+import { getEarlyReturn } from "../../../../../../utils/helperFunctions.tsx";
 import { usePanelContext } from "../../../../../../context/PanelContext.tsx";
+import { useTransliteration } from "../../../../../../context/TransliterationContext.tsx";
 import { useDebounce } from "use-debounce";
 import { LANGUAGE } from "../../../../../../utils/constants.ts";
 import ResourceHeader from "../common/ResourceHeader.tsx";
@@ -43,6 +41,12 @@ const IndividualTextSearch = ({
   const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
   const { t } = useTranslate();
   const { openResourcesPanel } = usePanelContext() as any;
+  const {
+    displayContent,
+    transliterationBelow,
+    contentClass,
+    transliterationClass,
+  } = useTransliteration();
   const storedLanguage = localStorage.getItem(LANGUAGE);
 
   const [pagination, setPagination] = useState({ currentPage: 1, limit: 10 });
@@ -138,20 +142,32 @@ const IndividualTextSearch = ({
                     handleSegmentNavigate(segment.segment_id);
                     openResourcesPanel();
                   }}
-                  className={`w-full rounded border cursor-pointer border-gray-200 bg-white p-3 text-left  transition hover:border-gray-300 hover:bg-gray-50 ${getLanguageClass(
+                  className={`w-full rounded border cursor-pointer border-gray-200 bg-white p-3 text-left  transition hover:border-gray-300 hover:bg-gray-50 ${contentClass(
                     segment.language,
                   )}`}
                 >
                   <p
                     className="whitespace-pre-wrap wrap-break-word text-base text-gray-900"
                     dangerouslySetInnerHTML={{
-                      __html: highlightSearchMatch(
-                        segment.content,
-                        searchText,
-                        highlightClassNames,
+                      // Highlight first: the query is typed in the stored
+                      // script, and the markers survive transliteration.
+                      __html: displayContent(
+                        highlightSearchMatch(
+                          segment.content,
+                          searchText,
+                          highlightClassNames,
+                        ),
                       ),
                     }}
                   />
+                  {transliterationBelow(segment.content) && (
+                    <p
+                      className={`whitespace-pre-wrap wrap-break-word text-[0.95em] text-gray-500 ${transliterationClass}`}
+                      dangerouslySetInnerHTML={{
+                        __html: transliterationBelow(segment.content),
+                      }}
+                    />
+                  )}
                 </button>
               ))}
             </div>

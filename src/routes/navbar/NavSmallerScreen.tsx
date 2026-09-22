@@ -51,7 +51,7 @@ const NavSmallerScreen = ({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="flex md:hidden items-center justify-center p-2 hover:bg-accent">
+        <button className="flex md:hidden items-center justify-center p-2 rounded text-faded-grey hover:bg-search-background hover:text-faded-grey">
           <SearchNavbarIcon className="text-faded-grey" />
         </button>
       </SheetTrigger>
@@ -77,7 +77,7 @@ const NavSmallerScreen = ({
               value={searchTerm}
               onChange={handleInputChange}
               autoFocus={false}
-              className="w-full border-none bg-transparent outline-none px-1 py-1.5"
+              className="w-full border-none bg-transparent outline-none px-1 py-1.5 text-faded-grey placeholder:text-faded-grey"
             />
           </form>
         </div>
