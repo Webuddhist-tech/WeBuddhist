@@ -39,14 +39,6 @@ vi.mock("react-intersection-observer", () => ({
   }),
 }));
 
-vi.mock("../../utils/header/table-of-contents/TableOfContents.jsx", () => ({
-  __esModule: true,
-  default: ({ showTableOfContents }: { showTableOfContents: boolean }) =>
-    showTableOfContents ? (
-      <div data-testid="table-of-contents">TableOfContents</div>
-    ) : null,
-}));
-
 vi.mock("../../utils/header/ChapterHeader.jsx", () => ({
   __esModule: true,
   default: () => <div data-testid="chapter-header-mock">ChapterHeader</div>,
@@ -65,7 +57,6 @@ vi.mock("../../../../utils/helperFunctions.jsx", () => ({
 }));
 
 const defaultProps: any = {
-  showTableOfContents: true,
   content: {
     sections: [
       {
@@ -123,13 +114,8 @@ describe("UseChapterHook", () => {
     expect(document.querySelector(".flex")).toBeInTheDocument();
   });
 
-  test("renders TableOfContents when showTableOfContents is true", () => {
-    setup({ showTableOfContents: true });
-    expect(screen.getByTestId("table-of-contents")).toBeInTheDocument();
-  });
-
-  test("does not render TableOfContents when showTableOfContents is false", () => {
-    setup({ showTableOfContents: false });
+  test("draws no table-of-contents sidebar - the outline lives in the resources panel", () => {
+    setup();
     expect(screen.queryByTestId("table-of-contents")).not.toBeInTheDocument();
   });
 

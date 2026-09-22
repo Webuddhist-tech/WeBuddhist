@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
-import TableOfContents from "../../utils/header/table-of-contents/TableOfContents";
 import ChapterHeader from "../../utils/header/ChapterHeader";
 import {
   VIEW_MODES,
@@ -11,12 +10,26 @@ import {
   getCurrentSectionFromScroll,
 } from "../../../../utils/helperFunctions";
 import { usePanelContext } from "../../../../context/PanelContext";
+import { useTransliteration } from "../../../../context/TransliterationContext";
 import Resources from "../../utils/resources/Resources";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import {
+  groupSegmentsByHeading,
+  NO_TOC_HEADINGS,
+  type TocHeading,
+} from "@/hooks/useTableOfContents.ts";
+
+/** Weight for an inline section title, by how deep it sits in the outline. */
+const HEADING_CLASSES = [
+  "text-xl font-semibold text-gray-900",
+  "text-lg font-semibold text-gray-800",
+  "text-base font-medium text-gray-700",
+  "text-sm font-medium text-gray-600",
+];
 
 type ViewMode = (typeof VIEW_MODES)[keyof typeof VIEW_MODES];
 type LayoutMode = (typeof LAYOUT_MODES)[keyof typeof LAYOUT_MODES];
@@ -77,8 +90,6 @@ type PanelContextValue = {
 type UseChapterHookProps = {
   textId?: string;
   editionId?: string;
-  showTableOfContents: boolean;
-  setShowTableOfContents: React.Dispatch<React.SetStateAction<boolean>>;
   content?: Content | null;
   language?: string;
   viewMode: ViewMode;
@@ -95,15 +106,18 @@ type UseChapterHookProps = {
   textdetail?: TextDetail;
   removeChapter: (chapterId: unknown) => void;
   totalChapters: number;
+  canShowSectionTitles: boolean;
   canShowTableOfContents: boolean;
   setViewMode: (mode: ViewMode) => void;
   setLayoutMode: (mode: LayoutMode) => void;
+  sectionTitleMode?: string;
+  setSectionTitleMode?: (mode: string) => void;
+  /** Section titles keyed by the segment each section begins at. */
+  sectionHeadings?: Map<string, TocHeading[]>;
 };
 
 const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   const {
-    showTableOfContents,
-    setShowTableOfContents,
     content,
     language,
     viewMode,
@@ -122,9 +136,13 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     textdetail,
     removeChapter,
     totalChapters,
+    canShowSectionTitles,
     canShowTableOfContents,
     setViewMode,
     setLayoutMode,
+    sectionTitleMode,
+    setSectionTitleMode,
+    sectionHeadings = NO_TOC_HEADINGS,
   } = props;
 
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(
@@ -133,6 +151,14 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { isResourcesPanelOpen, openResourcesPanel, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
+  const {
+    displayContent,
+    transliterationBelow,
+    contentClass,
+    transliterationClass,
+    isTransliterating,
+    showsBelow,
+  } = useTransliteration();
   const contentsContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef({ isRestoring: false, previousScrollHeight: 0 });
   const sectionRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -347,29 +373,17 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       layoutMode,
       setLayoutMode,
       textdetail,
-      showTableOfContents,
-      setShowTableOfContents,
       removeChapter,
       currentChapter,
       totalChapters,
       currentSectionId,
       versionSelected: !!currentChapter.versionId,
-      canShowTableOfContents,
+      canShowSectionTitles,
       editionId,
+      sectionTitleMode,
+      setSectionTitleMode,
     };
     return <ChapterHeader {...propsForChapterHeader} />;
-  };
-
-  const renderTableOfContents = () => {
-    const propsForTableOfContents = {
-      textId,
-      showTableOfContents,
-      currentSectionId,
-      onSegmentSelect: handleSegmentNavigate,
-      language,
-      onClose: () => setShowTableOfContents(false),
-    };
-    return <TableOfContents {...propsForTableOfContents} />;
   };
 
   const renderLoadingIndicator = (message: string) => (
@@ -407,10 +421,198 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     openResourcesPanel();
   };
 
+  const createSegmentControlHandlers = (segmentId: string) => {
+    const handleClick = () => handleSegmentClick(segmentId);
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      handleSegmentClick(segmentId);
+    };
+    return { handleClick, handleKeyDown };
+  };
+
+  const renderProseTransliteration = (segments: Segment[]) => {
+    if (!showsBelow) return null;
+    if (
+      viewMode !== VIEW_MODES.SOURCE &&
+      viewMode !== VIEW_MODES.SOURCE_AND_TRANSLATIONS
+    ) {
+      return null;
+    }
+    const lines = segments.map((segment) => ({
+      id: segment.segment_id,
+      html: transliterationBelow(segment.content),
+    }));
+    // Every segment was already in the chosen script, so a second paragraph
+    // would just repeat the first.
+    if (!lines.some((line) => line.html)) return null;
+    return (
+      <p
+        className={`m-0 mt-2 leading-7 text-justify text-[0.95em] text-[#555] ${transliterationClass}`}
+      >
+        {lines.map((line) => (
+          <span
+            key={line.id}
+            className="mr-0.5 inline"
+            dangerouslySetInnerHTML={{ __html: line.html }}
+          />
+        ))}
+      </p>
+    );
+  };
+
+  const languageClass = contentClass(language || "en");
+
+  const renderProseSegment = (segment: Segment) => {
+    const isSelected = selectedSegmentId === segment.segment_id;
+    const { handleClick, handleKeyDown } = createSegmentControlHandlers(
+      segment.segment_id,
+    );
+    return (
+      <span
+        key={segment.segment_id}
+        className={`inline cursor-pointer text-lg mr-0.5 ${
+          isSelected && "bg-blue-50"
+        }`}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label={
+          segment.reference
+            ? `Open resources for segment ${segment.reference}`
+            : "Open resources for this segment"
+        }
+      >
+        {(viewMode === VIEW_MODES.SOURCE ||
+          viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+          <span
+            className={languageClass}
+            dangerouslySetInnerHTML={{
+              __html: displayContent(segment.content),
+            }}
+          />
+        )}
+        {segment.translation &&
+          (viewMode === VIEW_MODES.TRANSLATIONS ||
+            viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+            <span
+              className={getLanguageClass(segment.translation.language || "en")}
+              dangerouslySetInnerHTML={{
+                __html: segment.translation.content,
+              }}
+            />
+          )}
+      </span>
+    );
+  };
+
+  const renderSegmentedSegment = (segment: Segment) => {
+    const isSelected = selectedSegmentId === segment.segment_id;
+    const below = transliterationBelow(segment.content);
+    const { handleClick, handleKeyDown } = createSegmentControlHandlers(
+      segment.segment_id,
+    );
+    return (
+      <div
+        key={segment.segment_id}
+        className={`cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4`}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        title={`#${segment.reference}_${segment.type}`}
+        role="button"
+        tabIndex={0}
+        aria-label={
+          segment.reference
+            ? `Open resources for segment ${segment.reference}`
+            : "Open resources for this segment"
+        }
+      >
+        <div className="md:mr-4 flex shrink-0 flex-col items-start">
+          <p className="text-xs" title={`#${segment.segment_number}`}>
+            {segment.reference}
+          </p>
+        </div>
+        <div
+          className={`flex flex-col items-start text-lg w-full text-justify ${isSelected && "bg-blue-50"}`}
+        >
+          {(viewMode === VIEW_MODES.SOURCE ||
+            viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+            <p
+              className={`${languageClass} whitespace-pre-line`}
+              dangerouslySetInnerHTML={{
+                __html: displayContent(segment.content),
+              }}
+            />
+          )}
+          {below &&
+            (viewMode === VIEW_MODES.SOURCE ||
+              viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+              <p
+                className={`${transliterationClass} whitespace-pre-line text-[0.95em] text-[#555]`}
+                dangerouslySetInnerHTML={{ __html: below }}
+              />
+            )}
+          {segment.translation &&
+            (viewMode === VIEW_MODES.TRANSLATIONS ||
+              viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
+              <p
+                className={`${getLanguageClass(
+                  segment.translation.language || "en",
+                )} whitespace-pre-line`}
+                dangerouslySetInnerHTML={{
+                  __html: segment.translation.content,
+                }}
+              />
+            )}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * The section titles that open a run of text.
+   *
+   * A chapter, its first part and that part's first subsection can all begin at
+   * the same words, so several titles stack here; they arrive outermost first
+   * and lose weight with depth, which is what makes the nesting legible without
+   * numbering. The rule above separates one section from the end of the last,
+   * and is skipped at the top of a page where there is nothing to separate from.
+   */
+  const renderSectionHeadings = (headings: TocHeading[], index: number) => {
+    if (headings.length === 0) return null;
+    return (
+      <div
+        className={`w-[700px] max-w-full text-center ${
+          index === 0 ? "mt-2" : "mt-10 border-t border-gray-200 pt-8"
+        }`}
+      >
+        {headings.map((heading) => (
+          <p
+            key={heading.id}
+            className={`mb-4 ${languageClass} ${
+              HEADING_CLASSES[
+                Math.min(heading.depth, HEADING_CLASSES.length - 1)
+              ]
+            }`}
+          >
+            {displayContent(heading.title)}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
   const renderSectionRecursive = (section: Section | undefined) => {
     if (!section) return null;
     const isProse = layoutMode === LAYOUT_MODES.PROSE;
-    const languageClass = getLanguageClass(language || "en");
+    const groups = groupSegmentsByHeading(section.segments, sectionHeadings);
+    // Section headings are set in English by default; once the text is
+    // replaced they need the target script's face instead.
+    const titleClass =
+      isTransliterating && !showsBelow
+        ? contentClass(language)
+        : getLanguageClass("en");
     return (
       <div
         className="flex flex-col items-center w-full"
@@ -423,105 +625,33 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       >
         {section.title && (
           <h2
-            className={` ${getLanguageClass("en")} w-fit border-b-2 border-zinc-500 p-2 text-lg`}
+            className={` ${titleClass} w-fit border-b-2 border-zinc-500 p-2 text-lg`}
           >
-            {section.title}
+            {displayContent(section.title)}
           </h2>
         )}
         <div
           className={`flex flex-col w-full px-2.5 items-center mx-auto ${isProse && "block max-w-[700px]"}`}
         >
-          {isProse ? (
-            <p className="leading-7 text-justify m-0">
-              {section.segments?.map((segment) => {
-                const isSelected = selectedSegmentId === segment.segment_id;
-                return (
-                  <span
-                    key={segment.segment_id}
-                    className={`inline cursor-pointer text-lg mr-0.5 ${
-                      isSelected && "bg-blue-50"
-                    }`}
-                    onClick={() => handleSegmentClick(segment.segment_id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSegmentClick(segment.segment_id);
-                      }
-                    }}
-                    role="button"
-                  >
-                    {(viewMode === VIEW_MODES.SOURCE ||
-                      viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
-                      <span
-                        className={languageClass}
-                        dangerouslySetInnerHTML={{ __html: segment.content }}
-                      />
-                    )}
-                    {segment.translation &&
-                      (viewMode === VIEW_MODES.TRANSLATIONS ||
-                        viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
-                        <span
-                          className={getLanguageClass(
-                            segment.translation.language || "en",
-                          )}
-                          dangerouslySetInnerHTML={{
-                            __html: segment.translation.content,
-                          }}
-                        />
-                      )}
-                  </span>
-                );
-              })}
-            </p>
-          ) : (
-            section.segments?.map((segment) => {
-              const isSelected = selectedSegmentId === segment.segment_id;
-              return (
-                <div
-                  key={segment.segment_id}
-                  className={`cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4`}
-                  onClick={() => handleSegmentClick(segment.segment_id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      handleSegmentClick(segment.segment_id);
-                    }
-                  }}
-                  title={`#${segment.reference}_${segment.type}`}
-                  role="button"
-                >
-                  <div className="md:mr-4 flex shrink-0 flex-col items-start">
-                    <p className="text-xs" title={`#${segment.segment_number}`}>
-                      {segment.reference}
-                    </p>
-                  </div>
-                  <div
-                    className={`flex flex-col items-start text-lg w-full text-justify ${isSelected && "bg-blue-50"}`}
-                  >
-                    {(viewMode === VIEW_MODES.SOURCE ||
-                      viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
-                      <p
-                        className={`${languageClass} whitespace-pre-line`}
-                        dangerouslySetInnerHTML={{ __html: segment.content }}
-                      />
-                    )}
-                    {segment.translation &&
-                      (viewMode === VIEW_MODES.TRANSLATIONS ||
-                        viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
-                        <p
-                          className={`${getLanguageClass(
-                            segment.translation.language || "en",
-                          )} whitespace-pre-line`}
-                          dangerouslySetInnerHTML={{
-                            __html: segment.translation.content,
-                          }}
-                        />
-                      )}
-                  </div>
-                </div>
-              );
-            })
-          )}
+          {isProse
+            ? groups.map((group, index) => (
+                <React.Fragment key={group.key}>
+                  {renderSectionHeadings(group.headings, index)}
+                  <p className="leading-7 text-justify m-0">
+                    {group.segments.map(renderProseSegment)}
+                  </p>
+                  {/* Prose runs segments together, so a line under each one
+                      would break the paragraph. The transliteration follows as
+                      a second paragraph instead, reading in the same order. */}
+                  {renderProseTransliteration(group.segments)}
+                </React.Fragment>
+              ))
+            : groups.map((group, index) => (
+                <React.Fragment key={group.key}>
+                  {renderSectionHeadings(group.headings, index)}
+                  {group.segments.map(renderSegmentedSegment)}
+                </React.Fragment>
+              ))}
 
           {section.sections?.map((nestedSection) =>
             renderSectionRecursive(nestedSection),
@@ -558,6 +688,8 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
         currentChapter={currentChapter}
         setVersionId={setVersionId}
         handleSegmentNavigate={handleSegmentNavigate}
+        textId={textId}
+        canShowTableOfContents={canShowTableOfContents}
       />
     );
   };
@@ -615,8 +747,6 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   return (
     <div className="flex flex-col w-full min-h-full flex-1">
       <div className="flex w-full h-full min-h-0">
-        {renderTableOfContents()}
-
         {isMobile ? renderMobileLayout() : renderDesktopLayout()}
 
         {!isMobile && isResourcesPanelOpen && renderResources()}

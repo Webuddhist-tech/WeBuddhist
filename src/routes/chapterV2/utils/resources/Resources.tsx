@@ -1,6 +1,7 @@
 import { useQuery } from "react-query";
 import { IoLanguage, IoNewspaperOutline } from "react-icons/io5";
 import { BiSearch, BiBookOpen } from "react-icons/bi";
+import { LuList } from "react-icons/lu";
 import { useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import ShareView from "./components/share-view/ShareView.tsx";
@@ -13,6 +14,7 @@ import IndividualTextSearch from "./components/individual-text-search/Individual
 import { Button } from "@/components/ui/button";
 import ResourceHeader from "./components/common/ResourceHeader.tsx";
 import CompareText from "./components/compare-text/CompareText.tsx";
+import TableOfContentsView from "./components/table-of-contents/TableOfContentsView.tsx";
 import { getSegmentInfo } from "@/services/library";
 
 type PanelContextValue = {
@@ -31,6 +33,8 @@ const Resources = ({
   currentChapter,
   setVersionId,
   handleSegmentNavigate,
+  textId,
+  canShowTableOfContents = false,
 }: any) => {
   const { isResourcesPanelOpen, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
@@ -169,6 +173,17 @@ const Resources = ({
           />
           {t("connection_panel.search_in_this_text")}
         </Button>
+        {canShowTableOfContents && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setActiveView("table_of_contents")}
+            className="w-full flex justify-start gap-1.5"
+          >
+            <LuList className="text-lg" />
+            {t("text.table_of_contents")}
+          </Button>
+        )}
         {renderTranslationsSection()}
         {renderRelatedTextsSection()}
         {renderResourcesSection()}
@@ -215,6 +230,15 @@ const Resources = ({
             addChapter={addChapter}
             currentChapter={currentChapter}
             handleNavigate={() => setActiveView("main")}
+          />
+        );
+      case "table_of_contents":
+        return (
+          <TableOfContentsView
+            textId={textId}
+            handleSegmentNavigate={handleSegmentNavigate}
+            handleNavigate={() => setActiveView("main")}
+            onClose={handleClosePanel}
           />
         );
       case "compare_text":

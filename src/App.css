@@ -55,6 +55,22 @@
   font-family: "NotoSerifTC-Regular", sans-serif;
 }
 
+/* Text transliterated into an Indic or Southeast Asian script. We ship no face
+   for these, so name the Noto families the major platforms install and let the
+   browser pick the one that covers the script actually on screen. */
+.transliterated-text {
+  font-family:
+    "Noto Serif Sinhala", "Noto Sans Sinhala", "Noto Serif Devanagari",
+    "Noto Sans Devanagari", "Noto Serif Thai", "Noto Sans Thai",
+    "Noto Serif Myanmar", "Noto Sans Myanmar", "Noto Serif Khmer",
+    "Noto Sans Khmer", "Noto Serif Lao", "Noto Sans Lao", "Noto Serif Bengali",
+    "Noto Sans Bengali", "Noto Serif Gurmukhi", "Noto Sans Gurmukhi",
+    "Noto Serif Gujarati", "Noto Sans Gujarati", "Noto Serif Telugu",
+    "Noto Sans Telugu", "Noto Serif Kannada", "Noto Sans Kannada",
+    "Noto Serif Malayalam", "Noto Sans Malayalam", "Noto Sans Tai Tham",
+    "Noto Sans Brahmi", "Noto Serif", sans-serif;
+}
+
 .content {
   font-family: var(--content-font-family);
 }

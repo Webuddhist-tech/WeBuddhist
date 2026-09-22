@@ -29,8 +29,6 @@ describe("ChapterHeader Component", () => {
     layoutMode: "default",
     setLayoutMode: vi.fn(),
     textdetail: { title: "Test Chapter", language: "bo" },
-    showTableOfContents: false,
-    setShowTableOfContents: vi.fn(),
     removeChapter: vi.fn(),
     currentChapter: { id: 1 },
     totalChapters: 2,
@@ -59,20 +57,13 @@ describe("ChapterHeader Component", () => {
     expect(title).toHaveClass("lang-bo");
   });
 
-  test("toggles table of contents when the toggle is clicked", () => {
-    const setShowTableOfContents = vi.fn();
-    renderHeader({ setShowTableOfContents });
-    const buttons = screen.getAllByRole("button");
-    const tocButton = buttons[0];
-    fireEvent.click(tocButton);
-    expect(setShowTableOfContents).toHaveBeenCalledTimes(1);
-    expect(typeof setShowTableOfContents.mock.calls[0][0]).toBe("function");
-  });
-
-  test("hides table of contents toggle when disabled", () => {
-    renderHeader({ canShowTableOfContents: false });
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBe(3);
+  test("offers no table-of-contents toggle - the outline lives in the resources panel", () => {
+    renderHeader();
+    expect(
+      screen.queryByRole("button", { name: /table of contents/i }),
+    ).not.toBeInTheDocument();
+    // Back, view selector and close chapter.
+    expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 
   test("calls removeChapter when close icon is clicked", () => {

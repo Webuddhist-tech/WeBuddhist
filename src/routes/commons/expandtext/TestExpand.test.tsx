@@ -1,6 +1,11 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import TextExpand from "./TextExpand";
+import { TransliterationProvider } from "@/context/TransliterationContext";
+import {
+  TRANSLITERATION_MODE,
+  TRANSLITERATION_SCRIPT,
+} from "@/utils/constants";
 
 vi.mock("@tolgee/react", () => ({
   useTranslate: () => ({
@@ -181,5 +186,121 @@ describe("TextExpand", () => {
     const contentDiv = container.querySelector("div");
     expect(contentDiv?.innerHTML).toBe("1234567890");
     expect(screen.getByText("panel.showmore")).toBeInTheDocument();
+  });
+});
+
+describe("TextExpand transliteration", () => {
+  const setupInScript = (
+    script: string,
+    props: {
+      children: string;
+      maxLength: number;
+      language: string;
+      transliterable?: boolean;
+    },
+    mode = "below",
+  ) => {
+    localStorage.setItem(TRANSLITERATION_SCRIPT, script);
+    localStorage.setItem(TRANSLITERATION_MODE, mode);
+    return render(
+      <TransliterationProvider>
+        <TextExpand {...props} />
+      </TransliterationProvider>,
+    );
+  };
+
+  const lines = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll("div")).map((div) => div.innerHTML);
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("keeps the text and adds the transliteration below it", () => {
+    const { container } = setupInScript("si", {
+      children: "buddho",
+      maxLength: 100,
+      language: "pi",
+    });
+    expect(lines(container)).toEqual(["buddho", "බුද්ධො"]);
+  });
+
+  it("replaces the text when asked to", () => {
+    const { container } = setupInScript(
+      "si",
+      { children: "buddho", maxLength: 100, language: "pi" },
+      "replace",
+    );
+    expect(lines(container)).toEqual(["බුද්ධො"]);
+  });
+
+  it("converts whatever the stored language is", () => {
+    const { container } = setupInScript(
+      "si",
+      { children: "buddho", maxLength: 100, language: "en" },
+      "replace",
+    );
+    expect(container.querySelector("div")?.innerHTML).toBe("බුද්ධො");
+  });
+
+  it("keeps line breaks out of the conversion", () => {
+    const { container } = setupInScript(
+      "si",
+      { children: "buddho⤵dhammo", maxLength: 100, language: "pi" },
+      "replace",
+    );
+    expect(container.querySelector("div")?.innerHTML).toBe("බුද්ධො<br>ධම්මො");
+  });
+
+  it("adds no second line when the original script is selected", () => {
+    const { container } = setupInScript("original", {
+      children: "buddho",
+      maxLength: 100,
+      language: "pi",
+    });
+    expect(lines(container)).toEqual(["buddho"]);
+  });
+
+  it("adds no second line when the caller opts out", () => {
+    const { container } = setupInScript("si", {
+      children: "buddho",
+      maxLength: 100,
+      language: "en",
+      transliterable: false,
+    });
+    expect(lines(container)).toEqual(["buddho"]);
+    expect(container.querySelector("div")).toHaveClass("en-serif-text");
+  });
+
+  it("gives the transliteration line the script's font class", () => {
+    const { container } = setupInScript("si", {
+      children: "buddho",
+      maxLength: 100,
+      language: "pi",
+    });
+    const divs = container.querySelectorAll("div");
+    expect(divs[1]).toHaveClass("transliterated-text");
+  });
+
+  it("applies the script's font class to the text when replacing", () => {
+    const { container } = setupInScript(
+      "si",
+      { children: "buddho", maxLength: 100, language: "pi" },
+      "replace",
+    );
+    expect(container.querySelector("div")).toHaveClass("transliterated-text");
+  });
+
+  it("converts the expanded text too", () => {
+    const longPali = "buddho dhammo sangho ".repeat(4).trim();
+    setupInScript(
+      "si",
+      { children: longPali, maxLength: 20, language: "pi" },
+      "replace",
+    );
+    fireEvent.click(screen.getByText("panel.showmore"));
+    const contentDiv = document.querySelector("div.text-base");
+    expect(contentDiv?.innerHTML).toContain("බුද්ධො");
+    expect(contentDiv?.innerHTML).not.toContain("buddho");
   });
 });
