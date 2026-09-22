@@ -61,11 +61,16 @@ const TableOfContentsView = ({
     Record<string, boolean>
   >({});
 
-  const handleToggleSection = (sectionId: string) =>
+  // Both handlers are built per row rather than written inline at the call
+  // site, so every click target carries a named handler.
+  const handleToggleSection = (sectionId: string) => () =>
     setCollapsedSections((previous) => ({
       ...previous,
       [sectionId]: !previous[sectionId],
     }));
+
+  const handleSectionSelect = (segmentId: string) => () =>
+    handleSegmentNavigate(segmentId);
 
   const sections = (tableOfContents?.contents ?? []).flatMap(
     (content) => content.sections ?? [],
@@ -92,7 +97,7 @@ const TableOfContentsView = ({
             ? t("common.collapse", { title: section.title })
             : t("common.expand", { title: section.title })
         }
-        onClick={() => handleToggleSection(section.id)}
+        onClick={handleToggleSection(section.id)}
       >
         {isExpanded ? (
           <FiChevronDown size={16} />
@@ -118,7 +123,7 @@ const TableOfContentsView = ({
     return (
       <button
         type="button"
-        onClick={() => handleSegmentNavigate(segmentId)}
+        onClick={handleSectionSelect(segmentId)}
         className={`${className} cursor-pointer transition hover:text-[#a70c0c]`}
       >
         {displayContent(section.title)}
