@@ -11,8 +11,22 @@ import {
 } from "@/hooks/useTableOfContents.ts";
 import type { TocSection } from "@/services/library";
 
-/** Past this the rows have no width left for the title. */
-const MAX_INDENT_LEVEL = 6;
+/**
+ * Indent for each level of the outline, one class per depth.
+ *
+ * Spelled out rather than computed because Tailwind only emits classes it can
+ * read in the source, and the last entry doubles as the cap: past this the rows
+ * have no width left for the title.
+ */
+const INDENT_CLASSES = [
+  "ps-0",
+  "ps-3",
+  "ps-6",
+  "ps-9",
+  "ps-12",
+  "ps-15",
+  "ps-18",
+];
 
 type TableOfContentsViewProps = {
   textId?: string;
@@ -47,7 +61,7 @@ const TableOfContentsView = ({
     Record<string, boolean>
   >({});
 
-  const toggleSection = (sectionId: string) =>
+  const handleToggleSection = (sectionId: string) =>
     setCollapsedSections((previous) => ({
       ...previous,
       [sectionId]: !previous[sectionId],
@@ -78,7 +92,7 @@ const TableOfContentsView = ({
             ? t("common.collapse", { title: section.title })
             : t("common.expand", { title: section.title })
         }
-        onClick={() => toggleSection(section.id)}
+        onClick={() => handleToggleSection(section.id)}
       >
         {isExpanded ? (
           <FiChevronDown size={16} />
@@ -118,10 +132,9 @@ const TableOfContentsView = ({
     return (
       <div key={section.id}>
         <div
-          className="flex items-start gap-1 rounded transition hover:bg-gray-50"
-          style={{
-            paddingInlineStart: Math.min(depth, MAX_INDENT_LEVEL) * 12,
-          }}
+          className={`flex items-start gap-1 rounded transition hover:bg-gray-50 ${
+            INDENT_CLASSES[Math.min(depth, INDENT_CLASSES.length - 1)]
+          }`}
         >
           {renderToggle(section, hasChildren)}
           {renderTitle(section, firstSegmentIdInSection(section))}
