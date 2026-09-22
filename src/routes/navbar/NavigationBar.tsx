@@ -16,7 +16,7 @@ import {
 import { useTolgee, useTranslate } from "@tolgee/react";
 import { setFontVariables } from "../../config/commonConfigs.ts";
 import { useQueryClient } from "react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FocusEvent, type FormEvent } from "react";
 import { useCollectionColor } from "../../context/CollectionColorContext.tsx";
 import { Button } from "../../components/ui/button";
 import {
@@ -57,6 +57,24 @@ export const changeLanguage = async (
   setFontVariables(lng);
   await invalidateQueries(queryClient);
 };
+
+/**
+ * How the bar looks while it still floats over the hero: light text on a
+ * transparent (or, on hover, dark-glass) chip.
+ *
+ * Rebinding the colour tokens rather than restyling each control, the way
+ * the footer does at the other end of the screen - everything inside
+ * picks the new values up without knowing where it is being rendered.
+ */
+const OVER_HERO = [
+  "[--navbar-foreground:#ffffff]",
+  "[--custom-border:rgba(255,255,255,0.35)]",
+  "[--search-background:rgba(255,255,255,0.16)]",
+  "[--background:transparent]",
+  "[--accent:rgba(255,255,255,0.18)]",
+  "[--accent-foreground:#ffffff]",
+].join(" ");
+
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -129,13 +147,28 @@ const Navigation = () => {
   const shouldHideColorBorder = routesWithoutColorBorder.includes(
     location.pathname,
   );
-  const heroBorder = isHeroHover
-    ? "2px solid rgba(255,255,255,0.2)"
-    : "2px solid transparent";
-  const pageBorderColor = shouldHideColorBorder
-    ? "#E7E5E4"
-    : (collectionColor ?? "#E7E5E4");
-  const navBorder = isOverHero ? heroBorder : `2px solid ${pageBorderColor}`;
+  const heroSurfaceClass = isHeroHover
+    ? "backdrop-blur-md border-b-2 border-white/20 [--navbar:rgba(10,23,41,0.72)]"
+    : "border-b-2 border-transparent [--navbar:transparent]";
+  const overHeroClasses = isOverHero
+    ? `${OVER_HERO} ${heroSurfaceClass}`
+    : "border-b-2 border-custom-border";
+  // Collection colour is a runtime hex from context, so Tailwind cannot
+  // name it. It only tints the bar's own bottom edge, not the tokens
+  // the controls inherit.
+  const collectionBorderStyle: CSSProperties | undefined =
+    !isOverHero && !shouldHideColorBorder && collectionColor
+      ? { borderBottomColor: collectionColor }
+      : undefined;
+
+  const handleMouseEnter = () => setIsPointerOver(true);
+  const handleMouseLeave = () => setIsPointerOver(false);
+  const handleFocus = () => setIsPointerOver(true);
+  const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setIsPointerOver(false);
+    }
+  };
 
   const handleLogout = (e: any) => {
     e.preventDefault();
@@ -239,34 +272,14 @@ const Navigation = () => {
 
   return (
     <div
-      onMouseEnter={() => setIsPointerOver(true)}
-      onMouseLeave={() => setIsPointerOver(false)}
-      onFocus={() => setIsPointerOver(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsPointerOver(false);
-        }
-      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       className={`${isTibetan && "text-sm"} overalltext bg-navbar h-[60px] flex justify-between items-center w-full px-4 md:px-7 transition-[background-color,border-color,backdrop-filter] duration-300 ${
         isHome ? "fixed inset-x-0 top-0 z-50" : ""
-      } ${isHeroHover ? "backdrop-blur-md" : ""}`}
-      style={
-        {
-          borderBottom: navBorder,
-          // The bar's colours are all CSS variables, so rebinding them here
-          // recolours everything inside - including the mobile menu - without
-          // every control needing to know where it is being rendered.
-          ...(isOverHero && {
-            "--navbar": isHeroHover ? "rgba(10, 23, 41, 0.72)" : "transparent",
-            "--navbar-foreground": "#ffffff",
-            "--custom-border": "rgba(255,255,255,0.35)",
-            "--search-background": "rgba(255,255,255,0.16)",
-            "--background": "transparent",
-            "--accent": "rgba(255,255,255,0.18)",
-            "--accent-foreground": "#ffffff",
-          }),
-        } as React.CSSProperties
-      }
+      } ${overHeroClasses}`}
+      style={collectionBorderStyle}
     >
       <div className="flex items-center gap-x-4">
         <Link
