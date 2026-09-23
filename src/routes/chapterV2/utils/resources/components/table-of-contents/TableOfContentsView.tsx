@@ -87,7 +87,7 @@ const TableOfContentsView = ({
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="shrink-0 cursor-pointer text-gray-500"
+        className="shrink-0 cursor-pointer text-toc-400"
         aria-expanded={isExpanded}
         /* The title beside it is a button too, and it goes somewhere else
            entirely, so this one says what it does rather than repeating the
@@ -109,13 +109,13 @@ const TableOfContentsView = ({
   };
 
   const renderTitle = (section: TocSection, segmentId?: string) => {
-    const className = `w-full py-1.5 text-left text-base text-gray-800 ${languageClass}`;
+    const className = `w-full py-1.5 text-left text-base text-toc-700 ${languageClass}`;
     // A section the library could not anchor to a segment has nowhere to send
     // the reader, so it stays in the outline as plain text rather than as a
     // button that does nothing.
     if (!segmentId) {
       return (
-        <p className={`${className} text-gray-500`}>
+        <p className={`${className} text-toc-muted`}>
           {displayContent(section.title)}
         </p>
       );
@@ -124,7 +124,7 @@ const TableOfContentsView = ({
       <button
         type="button"
         onClick={handleSectionSelect(segmentId)}
-        className={`${className} cursor-pointer transition hover:text-[#a70c0c]`}
+        className={`${className} cursor-pointer transition hover:text-toc-500`}
       >
         {displayContent(section.title)}
       </button>
@@ -137,7 +137,7 @@ const TableOfContentsView = ({
     return (
       <div key={section.id}>
         <div
-          className={`flex items-start gap-1 rounded transition hover:bg-gray-50 ${
+          className={`flex items-start gap-1 rounded transition hover:bg-toc-50 ${
             INDENT_CLASSES[Math.min(depth, INDENT_CLASSES.length - 1)]
           }`}
         >

@@ -61,10 +61,12 @@ const ChapterHeader = (props: any) => {
   };
 
   // Close the menu on start, so the reader can see the text it just set moving;
-  // the menu would otherwise sit over the page for the whole scroll.
+  // the menu would otherwise sit over the page for the whole scroll. Pausing
+  // leaves it open: the reader is most likely there to change the speed and set
+  // it going again, and closing would cost them a reopen each time.
   const handleToggleAutoScroll = () => {
     onToggleAutoScroll?.();
-    setIsViewSelectorOpen(false);
+    if (!isAutoScrolling) setIsViewSelectorOpen(false);
   };
 
   return (
