@@ -13,6 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu.tsx";
 import { useTransliteration } from "@/context/TransliterationContext.tsx";
 import { MODE_OPTIONS, SCRIPT_OPTIONS } from "@/utils/transliteration.ts";
+import AutoScrollControl, {
+  AUTO_SCROLL_SPEEDS,
+} from "../AutoScrollControl.tsx";
 
 export const VIEW_MODES = {
   SOURCE: "SOURCE",
@@ -94,6 +97,10 @@ type ViewSelectorProps = {
   setSectionTitleMode?: (sectionTitleMode: string) => void;
   /** Off for a text the library has no table of contents for. */
   canShowSectionTitles?: boolean;
+  isAutoScrolling?: boolean;
+  onToggleAutoScroll?: () => void;
+  scrollSpeed?: number;
+  setScrollSpeed?: (speed: number) => void;
 };
 
 const ViewSelector = ({
@@ -105,6 +112,10 @@ const ViewSelector = ({
   sectionTitleMode,
   setSectionTitleMode,
   canShowSectionTitles = false,
+  isAutoScrolling = false,
+  onToggleAutoScroll,
+  scrollSpeed,
+  setScrollSpeed,
 }: ViewSelectorProps) => {
   const { t } = useTranslate();
   const { script, setScript, mode, setMode, isTransliterating } =
@@ -233,6 +244,14 @@ const ViewSelector = ({
           setMode,
           MODE_OPTIONS,
         )}
+      {onToggleAutoScroll && setScrollSpeed && (
+        <AutoScrollControl
+          isAutoScrolling={isAutoScrolling}
+          onToggle={onToggleAutoScroll}
+          scrollSpeed={scrollSpeed ?? AUTO_SCROLL_SPEEDS.NORMAL}
+          onSpeedChange={setScrollSpeed}
+        />
+      )}
     </div>
   );
 };

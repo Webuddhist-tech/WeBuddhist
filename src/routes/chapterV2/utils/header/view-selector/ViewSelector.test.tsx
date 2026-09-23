@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { vi, beforeEach, test, expect, describe } from "vitest";
 import ViewSelector, { VIEW_MODES, LAYOUT_MODES } from "./ViewSelector.tsx";
+import { AUTO_SCROLL_SPEEDS } from "../AutoScrollControl.tsx";
 import { TransliterationProvider } from "@/context/TransliterationContext.tsx";
 import {
   TRANSLITERATION_MODE,
@@ -277,5 +278,58 @@ describe("ViewSelector script menu", () => {
     localStorage.setItem(TRANSLITERATION_SCRIPT, "klingon");
     setup();
     expect(trigger(0)).toHaveTextContent("Original");
+  });
+});
+
+describe("ViewSelector auto-scroll section", () => {
+  const renderWith = (props: Record<string, unknown> = {}) =>
+    render(
+      <ViewSelector
+        setViewMode={vi.fn()}
+        viewMode={VIEW_MODES.SOURCE}
+        versionSelected={true}
+        layoutMode={LAYOUT_MODES.SEGMENTED}
+        setLayoutMode={vi.fn()}
+        {...props}
+      />,
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("sits in the option menu alongside the layout and script choices", () => {
+    renderWith({
+      isAutoScrolling: false,
+      onToggleAutoScroll: vi.fn(),
+      scrollSpeed: AUTO_SCROLL_SPEEDS.NORMAL,
+      setScrollSpeed: vi.fn(),
+    });
+    expect(screen.getByText("Auto-scroll")).toBeInTheDocument();
+    expect(screen.getByText("Normal")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("text.reader_option_menu.auto_scroll_play"),
+    ).toBeInTheDocument();
+  });
+
+  test("toggling from the menu reaches the reader", () => {
+    const onToggleAutoScroll = vi.fn();
+    renderWith({
+      isAutoScrolling: false,
+      onToggleAutoScroll,
+      scrollSpeed: AUTO_SCROLL_SPEEDS.NORMAL,
+      setScrollSpeed: vi.fn(),
+    });
+    fireEvent.click(
+      screen.getByLabelText("text.reader_option_menu.auto_scroll_play"),
+    );
+    expect(onToggleAutoScroll).toHaveBeenCalledTimes(1);
+  });
+
+  // The reader passes these together, so a caller that wires up neither wants
+  // the menu it had before auto-scroll existed.
+  test("stays out of the menu when the caller wires up no auto-scroll", () => {
+    renderWith();
+    expect(screen.queryByText("Auto-scroll")).not.toBeInTheDocument();
   });
 });

@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
 import EditionAudioPlayer from "./EditionAudioPlayer.tsx";
-import AutoScrollControl from "./AutoScrollControl.tsx";
 
 const ChapterHeader = (props: any) => {
   const {
@@ -61,6 +60,13 @@ const ChapterHeader = (props: any) => {
     setIsViewSelectorOpen(open);
   };
 
+  // Close the menu on start, so the reader can see the text it just set moving;
+  // the menu would otherwise sit over the page for the whole scroll.
+  const handleToggleAutoScroll = () => {
+    onToggleAutoScroll?.();
+    setIsViewSelectorOpen(false);
+  };
+
   return (
     <div className="flex w-full shrink-0 items-center justify-center p-2  border-b border-gray-200 bg-[#f8f8f8]">
       <div className="flex w-full md:max-w-[700px] items-center justify-between">
@@ -79,12 +85,6 @@ const ChapterHeader = (props: any) => {
         </p>
         <div className="flex items-center gap-1">
           <EditionAudioPlayer editionId={editionId} />
-          <AutoScrollControl
-            isAutoScrolling={isAutoScrolling}
-            onToggle={onToggleAutoScroll}
-            scrollSpeed={scrollSpeed}
-            onSpeedChange={setScrollSpeed}
-          />
           <DropdownMenu
             open={isViewSelectorOpen}
             onOpenChange={handleViewSelectorOpenChange}
@@ -108,6 +108,10 @@ const ChapterHeader = (props: any) => {
                 sectionTitleMode={sectionTitleMode}
                 setSectionTitleMode={setSectionTitleMode}
                 canShowSectionTitles={canShowSectionTitles}
+                isAutoScrolling={isAutoScrolling}
+                onToggleAutoScroll={handleToggleAutoScroll}
+                scrollSpeed={scrollSpeed}
+                setScrollSpeed={setScrollSpeed}
               />
             </DropdownMenuContent>
           </DropdownMenu>

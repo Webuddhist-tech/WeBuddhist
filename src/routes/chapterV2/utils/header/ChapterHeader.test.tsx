@@ -22,11 +22,6 @@ vi.mock("./EditionAudioPlayer.tsx", () => ({
   default: () => null,
 }));
 
-vi.mock("./AutoScrollControl.tsx", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 describe("ChapterHeader Component", () => {
   const defaultProps: any = {
     viewMode: "single",

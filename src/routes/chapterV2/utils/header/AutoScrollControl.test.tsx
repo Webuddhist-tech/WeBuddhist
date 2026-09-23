@@ -9,10 +9,16 @@ vi.mock("@tolgee/react", async () => {
   return {
     ...actual,
     useTranslate: () => ({
-      t: (key: string) => key,
+      t: (key: string, defaultValue?: string) => defaultValue ?? key,
     }),
   };
 });
+
+vi.mock("@/components/ui/dropdown-menu.tsx", () => ({
+  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}));
 
 describe("AutoScrollControl", () => {
   const onToggle = vi.fn();
@@ -22,7 +28,8 @@ describe("AutoScrollControl", () => {
     vi.clearAllMocks();
   });
 
-  const renderControl = (overrides: Record<string, unknown> = {}) =>
+  const renderControl = (overrides: Record<string, unknown> = {}) => {
+    const user = userEvent.setup();
     render(
       <AutoScrollControl
         isAutoScrolling={false}
@@ -32,31 +39,14 @@ describe("AutoScrollControl", () => {
         {...overrides}
       />,
     );
-
-  const openPopover = async (overrides: Record<string, unknown> = {}) => {
-    const user = userEvent.setup();
-    renderControl(overrides);
-    await user.click(
-      screen.getByLabelText("text.reader_option_menu.auto_scroll"),
-    );
     return user;
   };
 
-  test("renders only the trigger icon until clicked", () => {
+  test("renders the section inline, with no trigger to open first", () => {
     renderControl();
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByText("Auto-scroll")).toBeInTheDocument();
     expect(
-      screen.getByLabelText("text.reader_option_menu.auto_scroll"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText("text.reader_option_menu.auto_scroll_play"),
-    ).not.toBeInTheDocument();
-  });
-
-  test("clicking the trigger opens a popover with decrease, toggle, and increase buttons", async () => {
-    await openPopover();
-    expect(
-      await screen.findByLabelText("text.reader_option_menu.auto_scroll_play"),
+      screen.getByLabelText("text.reader_option_menu.auto_scroll_play"),
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText(
@@ -70,25 +60,36 @@ describe("AutoScrollControl", () => {
     ).toBeInTheDocument();
   });
 
-  test("clicking the toggle button calls onToggle", async () => {
-    const user = await openPopover();
+  test("names the selected speed between the step buttons", () => {
+    renderControl({ scrollSpeed: AUTO_SCROLL_SPEEDS.VERY_FAST });
+    expect(screen.getByText("Very fast")).toBeInTheDocument();
+  });
+
+  test("falls back to the slowest preset label for an unknown speed", () => {
+    renderControl({ scrollSpeed: 999 });
+    expect(screen.getByText("Slow")).toBeInTheDocument();
+  });
+
+  test("clicking the toggle calls onToggle", async () => {
+    const user = renderControl();
     await user.click(
-      await screen.findByLabelText("text.reader_option_menu.auto_scroll_play"),
+      screen.getByLabelText("text.reader_option_menu.auto_scroll_play"),
     );
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  test("shows pause label and stop icon while auto-scrolling", async () => {
-    await openPopover({ isAutoScrolling: true });
+  test("shows the pause affordance while auto-scrolling", () => {
+    renderControl({ isAutoScrolling: true });
     expect(
-      await screen.findByLabelText("text.reader_option_menu.auto_scroll_pause"),
+      screen.getByLabelText("text.reader_option_menu.auto_scroll_pause"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Pause")).toBeInTheDocument();
   });
 
   test("clicking increase steps to the next speed preset", async () => {
-    const user = await openPopover({ scrollSpeed: AUTO_SCROLL_SPEEDS.NORMAL });
+    const user = renderControl({ scrollSpeed: AUTO_SCROLL_SPEEDS.NORMAL });
     await user.click(
-      await screen.findByLabelText(
+      screen.getByLabelText(
         "text.reader_option_menu.auto_scroll_speed_increase",
       ),
     );
@@ -96,19 +97,19 @@ describe("AutoScrollControl", () => {
   });
 
   test("clicking decrease steps to the previous speed preset", async () => {
-    const user = await openPopover({ scrollSpeed: AUTO_SCROLL_SPEEDS.NORMAL });
+    const user = renderControl({ scrollSpeed: AUTO_SCROLL_SPEEDS.NORMAL });
     await user.click(
-      await screen.findByLabelText(
+      screen.getByLabelText(
         "text.reader_option_menu.auto_scroll_speed_decrease",
       ),
     );
     expect(onSpeedChange).toHaveBeenCalledWith(AUTO_SCROLL_SPEEDS.SLOW);
   });
 
-  test("disables decrease at the slowest preset", async () => {
-    await openPopover({ scrollSpeed: AUTO_SCROLL_SPEEDS.SLOW });
+  test("disables decrease at the slowest preset", () => {
+    renderControl({ scrollSpeed: AUTO_SCROLL_SPEEDS.SLOW });
     expect(
-      await screen.findByLabelText(
+      screen.getByLabelText(
         "text.reader_option_menu.auto_scroll_speed_decrease",
       ),
     ).toBeDisabled();
@@ -119,10 +120,10 @@ describe("AutoScrollControl", () => {
     ).toBeEnabled();
   });
 
-  test("disables increase at the fastest preset", async () => {
-    await openPopover({ scrollSpeed: AUTO_SCROLL_SPEEDS.VERY_FAST });
+  test("disables increase at the fastest preset", () => {
+    renderControl({ scrollSpeed: AUTO_SCROLL_SPEEDS.VERY_FAST });
     expect(
-      await screen.findByLabelText(
+      screen.getByLabelText(
         "text.reader_option_menu.auto_scroll_speed_increase",
       ),
     ).toBeDisabled();
@@ -134,9 +135,9 @@ describe("AutoScrollControl", () => {
   });
 
   test("does not call onSpeedChange when a disabled step button is clicked", async () => {
-    const user = await openPopover({ scrollSpeed: AUTO_SCROLL_SPEEDS.SLOW });
+    const user = renderControl({ scrollSpeed: AUTO_SCROLL_SPEEDS.SLOW });
     await user.click(
-      await screen.findByLabelText(
+      screen.getByLabelText(
         "text.reader_option_menu.auto_scroll_speed_decrease",
       ),
     );
