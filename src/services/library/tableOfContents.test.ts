@@ -32,7 +32,9 @@ const tocWithSpan = (span: { start: number; end: number }) => [
     id: "toc-1",
     edition_id: "ed-1",
     text_id: "text-1",
-    sections: [{ id: "sec-1", title: { en: "Chapter" }, span, subsections: [] }],
+    sections: [
+      { id: "sec-1", title: { en: "Chapter" }, span, subsections: [] },
+    ],
   },
 ];
 

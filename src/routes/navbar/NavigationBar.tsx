@@ -16,7 +16,13 @@ import {
 import { useTolgee, useTranslate } from "@tolgee/react";
 import { setFontVariables } from "../../config/commonConfigs.ts";
 import { useQueryClient } from "react-query";
-import { useEffect, useState, type CSSProperties, type FocusEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type FormEvent,
+} from "react";
 import { useCollectionColor } from "../../context/CollectionColorContext.tsx";
 import { Button } from "../../components/ui/button";
 import {
@@ -234,9 +240,7 @@ const Navigation = () => {
       <Button
         variant="outline"
         className={
-          variant === "desktop"
-            ? navControlClass
-            : `w-full ${navControlClass}`
+          variant === "desktop" ? navControlClass : `w-full ${navControlClass}`
         }
         onClick={handleLogout}
       >
