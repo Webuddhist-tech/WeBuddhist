@@ -218,6 +218,19 @@ describe("getTextCommentaries precedence", () => {
     expect(result.map((c) => c.id)).toEqual(["c1", "c2"]);
   });
 
+  test("a root text with both translations and commentaries reports its own", async () => {
+    graph([
+      text({ id: "root", translations: ["en"], commentaries: ["c1", "c2"] }),
+      text({ id: "en", translation_of: "root" }),
+      text({ id: "c1", commentary_of: "root" }),
+      text({ id: "c2", commentary_of: "root" }),
+    ]);
+
+    const result = await getTextCommentaries({ textId: "root" });
+
+    expect(result.map((c) => c.id)).toEqual(["c1", "c2"]);
+  });
+
   test("a root text with related texts reads through the first of them", async () => {
     graph([
       text({ id: "root", translations: ["fr"], commentaries: [] }),
