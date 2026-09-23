@@ -1,4 +1,6 @@
 import type {
+  ContributorDTO,
+  LibraryContribution,
   LibraryText,
   LocalizedTitle,
   TextDTO,
@@ -23,6 +25,26 @@ export const extractTitle = (
   return "";
 };
 
+/**
+ * Credits on a text, with each name resolved for the reader's language.
+ *
+ * The library keys a person's name by script - often only `bo` or `sa` - so the
+ * usual title fallback does the work. A person it cannot name is dropped: the
+ * only other thing the payload carries is an internal id, which tells a reader
+ * nothing.
+ */
+export const mapContributors = (
+  contributions: LibraryContribution[] | null | undefined,
+  language?: string | null,
+): ContributorDTO[] =>
+  (contributions ?? [])
+    .map((contribution) => ({
+      type: contribution.type,
+      name: extractTitle(contribution.name, language),
+      role: contribution.role,
+    }))
+    .filter((contributor) => contributor.type === "ai" || contributor.name);
+
 export const mapTextToV2DTO = (
   item: LibraryText,
   language?: string | null,
@@ -31,6 +53,7 @@ export const mapTextToV2DTO = (
   title: extractTitle(item.title, language),
   language: item.language ?? "",
   license: item.license ?? null,
+  tag_ids: item.tag_ids ?? [],
 });
 
 export const mapTextToDTO = (
@@ -57,6 +80,8 @@ export const mapTextToDTO = (
     source_link: item.source_link ?? null,
     ranking: null,
     license: item.license ?? null,
+    tag_ids: item.tag_ids ?? [],
+    contributors: mapContributors(item.contributions, language),
   };
 };
 

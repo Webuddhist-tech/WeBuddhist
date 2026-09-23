@@ -87,6 +87,39 @@ describe("Commentaries Component", () => {
     );
   };
 
+  test("credits each commentary separately", () => {
+    setup({
+      items: [
+        {
+          id: "c1",
+          title: "Commentary 1",
+          language: "bo",
+          contributors: [
+            { type: "person", name: "Rinchen Zangpo", role: "author" },
+          ],
+        },
+        {
+          id: "c2",
+          title: "Commentary 2",
+          language: "en",
+          contributors: [
+            { type: "person", name: "Sarvajnadeva", role: "translator" },
+          ],
+        },
+      ],
+    });
+
+    expect(screen.getByText("Rinchen Zangpo")).toBeInTheDocument();
+    expect(screen.getByText("contributor.role.author")).toBeInTheDocument();
+    expect(screen.getByText("Sarvajnadeva")).toBeInTheDocument();
+    expect(screen.getByText("contributor.role.translator")).toBeInTheDocument();
+  });
+
+  test("leaves an uncredited commentary's card unchanged", () => {
+    const { container } = setup();
+    expect(container.querySelector("ul")).not.toBeInTheDocument();
+  });
+
   test("renders items with language labels", () => {
     setup();
 

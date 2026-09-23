@@ -1,6 +1,6 @@
 export { libraryClient, LibraryError, isNotFound } from "./client.ts";
 export * from "./types.ts";
-export { extractTitle } from "./mappers.ts";
+export { extractTitle, mapContributors } from "./mappers.ts";
 export {
   getTextsByCollection,
   getTextById,
@@ -11,6 +11,7 @@ export {
   getTextLanguages,
   getTextCommentaries,
   getTextCommentariesByEdition,
+  getTextContributors,
   resolveTextId,
 } from "./texts.ts";
 export { getTextDetails, clearSegmentIndexCache } from "./textDetails.ts";
@@ -21,6 +22,7 @@ export {
   getSegmentCommentaries,
   getSegmentRootText,
 } from "./segments.ts";
+export { getTags, getTagsById } from "./tags.ts";
 export { getCollections } from "./collections.ts";
 export { getTableOfContents } from "./tableOfContents.ts";
 export type { TableOfContentsResponse, TocSection } from "./tableOfContents.ts";

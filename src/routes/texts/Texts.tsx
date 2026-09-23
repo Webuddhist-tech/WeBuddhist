@@ -14,6 +14,8 @@ import Commentaries from "./commentaries/Commentaries.tsx";
 import Breadcrumbs, {
   type BreadcrumbItemType,
 } from "../commons/breadcrumbs/Breadcrumbs.tsx";
+import TextTags from "../commons/tags/TextTags.tsx";
+import ContributorList from "../commons/contributors/ContributorList.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwoColumnLayout from "../../components/layout/TwoColumnLayout";
 import { usePanelContext } from "@/context/PanelContext.tsx";
@@ -52,6 +54,10 @@ const Texts = (props: any) => {
   const textId = collection_id || urlId || "";
   const [pagination, setPagination] = useState({ currentPage: 1, limit: 10 });
   const [versionsPagination] = useState({ currentPage: 1, limit: 10 });
+  // Controlled, so the page knows which tab is open: the credits below belong
+  // to this text, and under the commentaries - each of which lists its own -
+  // they would read as that commentary's.
+  const [activeTab, setActiveTab] = useState("versions");
   const [commentariesPagination, setCommentariesPagination] = useState({
     currentPage: 1,
     limit: 10,
@@ -152,7 +158,11 @@ const Texts = (props: any) => {
 
   const renderTabs = () => {
     return (
-      <Tabs className="w-full space-y-4" defaultValue="versions">
+      <Tabs
+        className="w-full space-y-4"
+        value={activeTab}
+        onValueChange={setActiveTab}
+      >
         <TabsList className="overalltext">
           <TabsTrigger value="versions">{t("common.version")}</TabsTrigger>
           {(commentaries?.items?.length ?? 0) > 0 && (
@@ -186,6 +196,22 @@ const Texts = (props: any) => {
       </Tabs>
     );
   };
+
+  const contributors = versions?.text?.contributors ?? [];
+
+  const renderContributors = () =>
+    contributors.length > 0 && (
+      <section className="flex w-full flex-col text-left">
+        <h2 className="overalltext border-b py-2 font-bold text-faded-grey">
+          {t("panel.contributors", "Contributors")}
+        </h2>
+        <ContributorList
+          contributors={contributors}
+          layout="horizontal"
+          className="mt-4"
+        />
+      </section>
+    );
 
   const handleTextTitleClick = (e: React.MouseEvent) => {
     if (addChapter) {
@@ -225,6 +251,7 @@ const Texts = (props: any) => {
             </h1>
           </Link>
         )}
+        <TextTags tagIds={versions?.text?.tag_ids} />
         {renderTabs()}
       </div>
     );
@@ -254,7 +281,9 @@ const Texts = (props: any) => {
                 {versions?.text?.title}
               </p>
             </Link>
+            <TextTags tagIds={versions?.text?.tag_ids} className="-mt-4" />
             {renderTabs()}
+            {activeTab === "versions" && renderContributors()}
           </div>
         </div>
       }

@@ -13,6 +13,7 @@ import PaginationComponent from "../commons/pagination/PaginationComponent.tsx";
 import Breadcrumbs from "../commons/breadcrumbs/Breadcrumbs.tsx";
 import TwoColumnLayout from "../../components/layout/TwoColumnLayout";
 import { getTextsByCollection } from "@/services/library";
+import TextTags from "../commons/tags/TextTags.tsx";
 
 const fetchWorks = async (bookId: string, limit = 10, skip = 0) => {
   const storedLanguage = localStorage.getItem(LANGUAGE);
@@ -31,6 +32,7 @@ type TextItem = {
   title: string;
   language: string;
   license?: string | null;
+  tag_ids?: string[];
 };
 
 type WorksResponse = {
@@ -176,6 +178,7 @@ const Works = (props?: WorksProps) => {
                       className={`${getLanguageClass(text.language)} flex flex-col gap-2 text-left text-gray-800 transition-colors hover:text-gray-600 cursor-pointer`}
                     >
                       <p className="text-lg pt-4 border-t">{text.title}</p>
+                      <TextTags tagIds={text.tag_ids} />
                     </button>
                   );
                 }
@@ -189,6 +192,7 @@ const Works = (props?: WorksProps) => {
                     className={`${getLanguageClass(text.language)} flex flex-col gap-2 text-left text-gray-800 transition-colors hover:text-gray-600`}
                   >
                     <p className="text-lg pt-4 border-t">{text.title}</p>
+                    <TextTags tagIds={text.tag_ids} />
                   </Link>
                 );
               })}

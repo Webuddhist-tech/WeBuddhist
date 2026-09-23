@@ -9,6 +9,7 @@ import type {
   LibrarySegmentDetail,
   LibrarySegmentSpan,
   LibrarySegmentation,
+  LibraryTag,
   LibraryText,
 } from "./types.ts";
 
@@ -183,6 +184,29 @@ export const fetchCategories = (params: {
     },
     "categories",
   );
+
+/**
+ * The application's whole tag list, cached for the session.
+ *
+ * It is a handful of entries that every text's tag ids point into, and it does
+ * not change under us, so fetch it once rather than per listing.
+ */
+let tagsRequest: Promise<LibraryTag[]> | null = null;
+
+export const fetchTags = (): Promise<LibraryTag[]> => {
+  tagsRequest ??= libraryGet<LibraryTag[]>("/v2/tags", undefined, "tags").catch(
+    (error) => {
+      tagsRequest = null;
+      throw error;
+    },
+  );
+  return tagsRequest;
+};
+
+/** Exposed for tests. */
+export const clearTagsCache = () => {
+  tagsRequest = null;
+};
 
 export const fetchCategoryById = (categoryId: string, language?: string) =>
   libraryGetOrNull<LibraryCategory>(

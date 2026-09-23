@@ -135,6 +135,77 @@ describe("Texts Component", () => {
     expect(title).toHaveTextContent("Sample Text");
   });
 
+  test("credits the text's contributors below the tabs", () => {
+    (reactQuery.useQuery as Mock).mockImplementation((queryKey: any) => {
+      const key = Array.isArray(queryKey) ? queryKey[0] : queryKey;
+      if (key === "versions") {
+        return {
+          data: {
+            text: {
+              ...versionsData.text,
+              contributors: [
+                { type: "person", name: "Rinchen Zangpo", role: "translator" },
+              ],
+            },
+          },
+          isLoading: false,
+          error: undefined,
+        };
+      }
+      return { data: undefined, isLoading: false, error: undefined };
+    });
+
+    const { container } = setup();
+
+    expect(screen.getByText("Rinchen Zangpo")).toBeInTheDocument();
+    expect(screen.getByText("Translator")).toBeInTheDocument();
+    // Below the tabs: the credits are the last thing on the page.
+    const section = container.querySelector("section");
+    const tabs = container.querySelector('[role="tablist"]');
+    expect(section).toBeInTheDocument();
+    expect(
+      tabs?.compareDocumentPosition(section as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  test("drops the credits while the commentary tab is open", async () => {
+    const user = userEvent.setup();
+    (reactQuery.useQuery as Mock).mockImplementation((queryKey: any) => {
+      const key = Array.isArray(queryKey) ? queryKey[0] : queryKey;
+      if (key === "versions") {
+        return {
+          data: {
+            text: {
+              ...versionsData.text,
+              contributors: [
+                { type: "person", name: "Rinchen Zangpo", role: "translator" },
+              ],
+            },
+          },
+          isLoading: false,
+          error: undefined,
+        };
+      }
+      if (key === "commentaries") {
+        return { data: commentariesData, isLoading: false, error: undefined };
+      }
+      return { data: undefined, isLoading: false, error: undefined };
+    });
+
+    setup();
+    expect(screen.getByText("Rinchen Zangpo")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /commentary/i }));
+    // Each commentary lists its own credits; the text's would read as theirs.
+    expect(screen.queryByText("Rinchen Zangpo")).not.toBeInTheDocument();
+  });
+
+  test("leaves the credits out for a text with none", () => {
+    const { container } = setup();
+    expect(container.querySelector("section")).not.toBeInTheDocument();
+  });
+
   test("shows versions tab by default and switches to commentaries", async () => {
     const user = userEvent.setup();
     setup();

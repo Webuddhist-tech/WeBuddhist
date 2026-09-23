@@ -26,6 +26,12 @@ vi.mock("@/services/library", () => ({
   getTextsByCollection: vi.fn(),
 }));
 
+// Tag labels have their own tests; here they would only add a second useQuery
+// call for the mock above to answer.
+vi.mock("../commons/tags/TextTags.tsx", () => ({
+  default: () => null,
+}));
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {

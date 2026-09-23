@@ -29,9 +29,31 @@ export type LibraryText = {
   commentaries?: string[];
   translations?: string[];
   editions?: string[];
-  contributions?: unknown[];
+  contributions?: LibraryContribution[];
+  /** Ids into the application's tag list; resolve labels with `getTags`. */
+  tag_ids?: string[];
   /** Not part of the upstream payload; filled in from the critical edition. */
   source_link?: string | null;
+};
+
+/** The library's own ContributorRole enum. */
+export type ContributorRole =
+  | "translator"
+  | "reviser"
+  | "author"
+  | "scholar"
+  | "narrator";
+
+/**
+ * One credit on a text. A person carries a localized name; an AI contribution
+ * carries only the model's id, so it has nothing name-like to show.
+ */
+export type LibraryContribution = {
+  type: "person" | "ai";
+  id?: string | null;
+  bdrc_id?: string | null;
+  role: ContributorRole;
+  name?: LocalizedTitle | null;
 };
 
 export type LibraryEdition = {
@@ -106,6 +128,12 @@ export type LibraryRelatedSegment = {
   type?: string;
 };
 
+export type LibraryTag = {
+  id: string;
+  title: LocalizedTitle;
+  description?: LocalizedTitle | null;
+};
+
 export type LibraryCategory = {
   id: string;
   title: LocalizedTitle;
@@ -137,6 +165,8 @@ export type TextDTO = {
   source_link: string | null;
   ranking: number | null;
   license: string | null;
+  tag_ids: string[];
+  contributors: ContributorDTO[];
 };
 
 export type V2TextDTO = {
@@ -144,6 +174,22 @@ export type V2TextDTO = {
   title: string;
   language: string;
   license: string | null;
+  tag_ids: string[];
+};
+
+/** A credit with its name already resolved for one language. */
+export type ContributorDTO = {
+  type: "person" | "ai";
+  /** Empty for an AI contribution, and for a person the library cannot name. */
+  name: string;
+  role: ContributorRole;
+};
+
+/** A tag with its label already resolved for one language. */
+export type TagDTO = {
+  id: string;
+  title: string;
+  description: string | null;
 };
 
 export type TextVersion = {
@@ -315,7 +361,6 @@ export type V2SegmentRootTextResponse = {
   limit: number;
   has_more: boolean;
 };
-
 
 export type V2SegmentTextDetail = {
   text_id: string;

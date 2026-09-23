@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge.tsx";
 import { usePanelContext } from "@/context/PanelContext.tsx";
 import { useLanguageLabel } from "@/context/LanguagesContext.tsx";
+import ContributorList from "../../commons/contributors/ContributorList.tsx";
+import type { ContributorDTO } from "@/services/library";
 
 type CommentaryItem = {
   id: string;
@@ -16,6 +18,7 @@ type CommentaryItem = {
   language: string;
   source_link?: string | null;
   license?: string | null;
+  contributors?: ContributorDTO[];
 };
 
 type PaginationState = { currentPage: number; limit: number };
@@ -115,6 +118,13 @@ const Commentaries = ({
               </div>
             )}
           </div>
+          {(commentary.contributors?.length ?? 0) > 0 && (
+            <ContributorList
+              contributors={commentary.contributors as ContributorDTO[]}
+              layout="horizontal"
+              className="mt-1"
+            />
+          )}
         </div>
         <Badge variant="outline" className="w-fit px-4 py-2">
           {languageLabel(commentary.language)}

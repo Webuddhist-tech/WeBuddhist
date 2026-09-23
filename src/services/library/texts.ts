@@ -8,11 +8,13 @@ import {
 import { LibraryError } from "./client.ts";
 import {
   extractTitle,
+  mapContributors,
   mapTextToDTO,
   mapTextToV2DTO,
   mapTextToVersion,
 } from "./mappers.ts";
 import type {
+  ContributorDTO,
   LanguageResponse,
   LibraryText,
   TextDTO,
@@ -122,6 +124,20 @@ export const getTextById = async (textId: string): Promise<V2TextDTO> => {
   const data = await fetchTextById(textId);
   if (!data) throw new LibraryError(`Text with id '${textId}' not found`, 404);
   return mapTextToV2DTO(data, data.language);
+};
+
+/**
+ * Who a text is credited to.
+ *
+ * The metadata request is the session-cached one every other lookup uses, so
+ * asking for a text the reader is already on costs nothing.
+ */
+export const getTextContributors = async (params: {
+  textId: string;
+  language?: string | null;
+}): Promise<ContributorDTO[]> => {
+  const text = await fetchTextById(params.textId);
+  return mapContributors(text?.contributions, params.language);
 };
 
 /**

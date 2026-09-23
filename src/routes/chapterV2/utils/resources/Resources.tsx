@@ -2,6 +2,7 @@ import { useQuery } from "react-query";
 import { IoLanguage, IoNewspaperOutline } from "react-icons/io5";
 import { BiSearch, BiBookOpen } from "react-icons/bi";
 import { LuList } from "react-icons/lu";
+import { FaRegUser } from "react-icons/fa6";
 import { useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import ShareView from "./components/share-view/ShareView.tsx";
@@ -15,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import ResourceHeader from "./components/common/ResourceHeader.tsx";
 import CompareText from "./components/compare-text/CompareText.tsx";
 import TableOfContentsView from "./components/table-of-contents/TableOfContentsView.tsx";
+import ContributorsView, {
+  useTextContributors,
+} from "./components/contributors-view/ContributorsView.tsx";
 import { getSegmentInfo } from "@/services/library";
 
 type PanelContextValue = {
@@ -56,11 +60,17 @@ const Resources = ({
     setActiveView("main");
   };
 
+  // The segment's own text, which for a translation is not the text the reader
+  // opened, so the credits follow what they actually selected.
+  const segmentTextId = sidePanelData?.segment_info?.text_id ?? textId;
+  const { data: contributors } = useTextContributors(segmentTextId);
+
   const counts = {
     translations: sidePanelData?.segment_info?.translations ?? 0,
     commentaries: sidePanelData?.segment_info?.related_text?.commentaries ?? 0,
     rootTexts: sidePanelData?.segment_info?.related_text?.root_text ?? 0,
     sheets: sidePanelData?.segment_info?.resources?.sheets ?? 0,
+    contributors: contributors?.length ?? 0,
   };
 
   const renderTranslationsSection = () =>
@@ -113,6 +123,19 @@ const Resources = ({
           {renderRootTextButton()}
         </div>
       </>
+    );
+
+  const renderContributorsButton = () =>
+    counts.contributors > 0 && (
+      <Button
+        type="button"
+        variant="ghost"
+        className="w-full flex justify-start gap-1.5"
+        onClick={() => setActiveView("contributors")}
+      >
+        <FaRegUser className="text-lg" />
+        {`${t("panel.contributors", "Contributors")} (${counts.contributors})`}
+      </Button>
     );
 
   const renderResourcesSection = () =>
@@ -184,6 +207,7 @@ const Resources = ({
             {t("text.table_of_contents")}
           </Button>
         )}
+        {renderContributorsButton()}
         {renderTranslationsSection()}
         {renderRelatedTextsSection()}
         {renderResourcesSection()}
@@ -230,6 +254,14 @@ const Resources = ({
             addChapter={addChapter}
             currentChapter={currentChapter}
             handleNavigate={() => setActiveView("main")}
+          />
+        );
+      case "contributors":
+        return (
+          <ContributorsView
+            textId={segmentTextId}
+            handleNavigate={() => setActiveView("main")}
+            onClose={handleClosePanel}
           />
         );
       case "table_of_contents":

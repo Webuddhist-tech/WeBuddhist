@@ -281,7 +281,13 @@ describe("getTextsByCollection", () => {
 
     expect(result.collection).toEqual({ id: "cat-1", title: "Liturgy" });
     expect(result.texts).toEqual([
-      { id: "t1", title: "One", language: "en", license: "public" },
+      {
+        id: "t1",
+        title: "One",
+        language: "en",
+        license: "public",
+        tag_ids: [],
+      },
     ]);
     expect(result.has_more).toBe(true);
   });

@@ -248,6 +248,46 @@ describe("Resources Side Panel", () => {
     expect(screen.getByTestId("root-text-view")).toBeInTheDocument();
   });
 
+  test("offers the contributors view, with a count, when the text is credited", () => {
+    vi.spyOn(reactQuery, "useQuery").mockImplementation((queryKey) => {
+      if (queryKey[0] === "sidePanel") {
+        return { data: { segment_info: { text_id: "text-1" } } };
+      }
+      if (queryKey[0] === "text-contributors") {
+        return {
+          data: [
+            { type: "person", name: "Sarvajnadeva", role: "translator" },
+            { type: "person", name: "Rinchen Zangpo", role: "translator" },
+          ],
+          isLoading: false,
+        };
+      }
+      return { data: null, isLoading: false };
+    });
+
+    setup();
+    const contributorsButton = screen.getByText(/panel\.contributors \(2\)/);
+    fireEvent.click(contributorsButton);
+
+    expect(screen.getByText("Sarvajnadeva")).toBeInTheDocument();
+    expect(screen.getByText("Rinchen Zangpo")).toBeInTheDocument();
+  });
+
+  test("hides the contributors view when the text has no credits", () => {
+    vi.spyOn(reactQuery, "useQuery").mockImplementation((queryKey) => {
+      if (queryKey[0] === "sidePanel") {
+        return { data: { segment_info: { text_id: "text-1" } } };
+      }
+      if (queryKey[0] === "text-contributors") {
+        return { data: [], isLoading: false };
+      }
+      return { data: null, isLoading: false };
+    });
+
+    setup();
+    expect(screen.queryByText(/panel\.contributors/)).not.toBeInTheDocument();
+  });
+
   test("renders menu items correctly", () => {
     setup();
 
