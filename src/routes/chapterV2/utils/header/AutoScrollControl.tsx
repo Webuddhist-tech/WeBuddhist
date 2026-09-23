@@ -36,10 +36,10 @@ const AutoScrollControl = ({
   const canDecrease = currentIndex > 0;
   const canIncrease = currentIndex < SPEED_VALUES.length - 1;
 
-  const decreaseSpeed = () => {
+  const handleDecreaseSpeed = () => {
     if (canDecrease) onSpeedChange(SPEED_VALUES[currentIndex - 1]);
   };
-  const increaseSpeed = () => {
+  const handleIncreaseSpeed = () => {
     if (canIncrease) onSpeedChange(SPEED_VALUES[currentIndex + 1]);
   };
 
@@ -60,7 +60,7 @@ const AutoScrollControl = ({
             variant="ghost"
             size="icon-sm"
             type="button"
-            onClick={decreaseSpeed}
+            onClick={handleDecreaseSpeed}
             disabled={!canDecrease}
             aria-label={t("text.reader_option_menu.auto_scroll_speed_decrease")}
             className="cursor-pointer"
@@ -89,7 +89,7 @@ const AutoScrollControl = ({
             variant="ghost"
             size="icon-sm"
             type="button"
-            onClick={increaseSpeed}
+            onClick={handleIncreaseSpeed}
             disabled={!canIncrease}
             aria-label={t("text.reader_option_menu.auto_scroll_speed_increase")}
             className="cursor-pointer"

@@ -252,18 +252,20 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   useEffect(() => {
     const container = contentsContainerRef.current;
     if (!container || !isAutoScrolling) return;
-    const stopAutoScroll = () => setIsAutoScrolling(false);
-    container.addEventListener("wheel", stopAutoScroll, { passive: true });
-    container.addEventListener("touchstart", stopAutoScroll, {
+    const handleStopAutoScroll = () => setIsAutoScrolling(false);
+    container.addEventListener("wheel", handleStopAutoScroll, {
       passive: true,
     });
-    container.addEventListener("pointerdown", stopAutoScroll, {
+    container.addEventListener("touchstart", handleStopAutoScroll, {
+      passive: true,
+    });
+    container.addEventListener("pointerdown", handleStopAutoScroll, {
       passive: true,
     });
     return () => {
-      container.removeEventListener("wheel", stopAutoScroll);
-      container.removeEventListener("touchstart", stopAutoScroll);
-      container.removeEventListener("pointerdown", stopAutoScroll);
+      container.removeEventListener("wheel", handleStopAutoScroll);
+      container.removeEventListener("touchstart", handleStopAutoScroll);
+      container.removeEventListener("pointerdown", handleStopAutoScroll);
     };
   }, [isAutoScrolling]);
 
@@ -458,6 +460,8 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     }
   }, [content]);
 
+  const handleToggleAutoScroll = () => setIsAutoScrolling((prev) => !prev);
+
   // -------------------------- renderers --------------------------
   const renderChapterHeader = () => {
     const propsForChapterHeader = {
@@ -474,7 +478,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       canShowSectionTitles,
       editionId,
       isAutoScrolling,
-      onToggleAutoScroll: () => setIsAutoScrolling((prev) => !prev),
+      onToggleAutoScroll: handleToggleAutoScroll,
       scrollSpeed,
       setScrollSpeed,
       sectionTitleMode,
