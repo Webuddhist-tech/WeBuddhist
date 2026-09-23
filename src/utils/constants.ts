@@ -8,6 +8,9 @@ export const RESET_PASSWORD = "reset-password";
 export const LANGUAGE = "language";
 export const LAYOUT_MODE = "layoutMode";
 export const AUTO_SCROLL_SPEED = "autoScrollSpeed";
+export const SECTION_TITLE_MODE = "sectionTitleMode";
+export const TRANSLITERATION_SCRIPT = "transliterationScript";
+export const TRANSLITERATION_MODE = "transliterationMode";
 export const siteName = "WeBuddhist";
 export const siteDescription =
   "We are Buddhist. We learn, practice and connect. Daily.";

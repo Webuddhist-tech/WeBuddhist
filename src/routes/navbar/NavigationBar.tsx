@@ -16,7 +16,13 @@ import {
 import { useTolgee, useTranslate } from "@tolgee/react";
 import { setFontVariables } from "../../config/commonConfigs.ts";
 import { useQueryClient } from "react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type FormEvent,
+} from "react";
 import { useCollectionColor } from "../../context/CollectionColorContext.tsx";
 import { Button } from "../../components/ui/button";
 import {
@@ -57,6 +63,24 @@ export const changeLanguage = async (
   setFontVariables(lng);
   await invalidateQueries(queryClient);
 };
+
+/**
+ * How the bar looks while it still floats over the hero: light text on a
+ * transparent (or, on hover, dark-glass) chip.
+ *
+ * Rebinding the colour tokens rather than restyling each control, the way
+ * the footer does at the other end of the screen - everything inside
+ * picks the new values up without knowing where it is being rendered.
+ */
+const OVER_HERO = [
+  "[--navbar-foreground:#ffffff]",
+  "[--custom-border:rgba(255,255,255,0.35)]",
+  "[--search-background:rgba(255,255,255,0.16)]",
+  "[--background:transparent]",
+  "[--accent:rgba(255,255,255,0.18)]",
+  "[--accent-foreground:#ffffff]",
+].join(" ");
+
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,14 +102,24 @@ const Navigation = () => {
   const [, setParams] = useSearchParams();
 
   /**
-   * On the home page the bar floats over the hero image, and its background
-   * fades in once you scroll off it (or point at the bar itself). Everywhere
-   * else it is an ordinary opaque bar in the flow.
+   * On the home page the bar floats over the hero image. It stays on the
+   * white-over-photo theme while the hero is in view (a dark glass on hover,
+   * so the controls stay readable) and becomes the ordinary cream bar only
+   * after you scroll off the image. Everywhere else it is an opaque bar in
+   * the flow.
    */
   // Only the front page has a hero for the bar to float over.
   const isHome = location.pathname === "/";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPointerOver, setIsPointerOver] = useState(false);
+
+  // Stay on the white-over-photo theme for the whole hero, including hover.
+  // Flipping to the cream bar just because the pointer entered made the
+  // controls unreadable (grey on a leftover dark chip, or white on white).
+  const isOverHero = isHome && !isScrolled;
+  const isHeroHover = isOverHero && isPointerOver;
+  const navControlClass =
+    "rounded bg-transparent shadow-none border-custom-border text-faded-grey hover:bg-search-background hover:text-faded-grey dark:bg-transparent dark:border-custom-border dark:hover:bg-search-background dark:hover:text-faded-grey";
 
   useEffect(() => {
     if (!isHome) {
@@ -98,7 +132,6 @@ const Navigation = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isHome]);
 
-  const isOverHero = isHome && !isScrolled && !isPointerOver;
   const navItems = [
     { to: "/plans", label: t("header.plans"), key: "plans" },
     { to: "/collections", label: t("header.text"), key: "collections" },
@@ -120,6 +153,28 @@ const Navigation = () => {
   const shouldHideColorBorder = routesWithoutColorBorder.includes(
     location.pathname,
   );
+  const heroSurfaceClass = isHeroHover
+    ? "backdrop-blur-md border-b-2 border-white/20 [--navbar:rgba(10,23,41,0.72)]"
+    : "border-b-2 border-transparent [--navbar:transparent]";
+  const overHeroClasses = isOverHero
+    ? `${OVER_HERO} ${heroSurfaceClass}`
+    : "border-b-2 border-custom-border";
+  // Collection colour is a runtime hex from context, so Tailwind cannot
+  // name it. It only tints the bar's own bottom edge, not the tokens
+  // the controls inherit.
+  const collectionBorderStyle: CSSProperties | undefined =
+    !isOverHero && !shouldHideColorBorder && collectionColor
+      ? { borderBottomColor: collectionColor }
+      : undefined;
+
+  const handleMouseEnter = () => setIsPointerOver(true);
+  const handleMouseLeave = () => setIsPointerOver(false);
+  const handleFocus = () => setIsPointerOver(true);
+  const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setIsPointerOver(false);
+    }
+  };
 
   const handleLogout = (e: any) => {
     e.preventDefault();
@@ -165,7 +220,7 @@ const Navigation = () => {
           <Button
             variant="outline"
             onClick={() => navigate("/login")}
-            className="rounded text-faded-grey"
+            className={navControlClass}
             aria-label="Go to login"
           >
             {t("login.form.button.login_in")}
@@ -173,7 +228,7 @@ const Navigation = () => {
           <Button
             variant="ghost"
             onClick={() => navigate("/register")}
-            className="rounded text-faded-grey"
+            className={navControlClass}
             aria-label="Go to sign up"
           >
             {t("common.sign_up")}
@@ -185,9 +240,7 @@ const Navigation = () => {
       <Button
         variant="outline"
         className={
-          variant === "desktop"
-            ? "rounded text-faded-grey"
-            : "w-full rounded text-faded-grey"
+          variant === "desktop" ? navControlClass : `w-full ${navControlClass}`
         }
         onClick={handleLogout}
       >
@@ -200,7 +253,7 @@ const Navigation = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="flex items-center justify-center p-1.5 rounded hover:bg-accent transition-colors"
+            className="flex items-center justify-center p-1.5 rounded text-faded-grey hover:bg-search-background hover:text-faded-grey transition-colors"
             aria-label="Change language"
           >
             <FaGlobe className="text-faded-grey" />
@@ -223,27 +276,14 @@ const Navigation = () => {
 
   return (
     <div
-      onMouseEnter={() => setIsPointerOver(true)}
-      onMouseLeave={() => setIsPointerOver(false)}
-      className={`${isTibetan && "text-sm"} overalltext bg-navbar h-[60px] flex justify-between items-center w-full px-4 md:px-7 transition-colors duration-300 ${
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      className={`${isTibetan && "text-sm"} overalltext bg-navbar h-[60px] flex justify-between items-center w-full px-4 md:px-7 transition-[background-color,border-color,backdrop-filter] duration-300 ${
         isHome ? "fixed inset-x-0 top-0 z-50" : ""
-      }`}
-      style={
-        {
-          borderBottom: isOverHero
-            ? "2px solid transparent"
-            : `2px solid ${shouldHideColorBorder ? "#E7E5E4" : collectionColor || "#E7E5E4"}`,
-          // The bar's colours are all CSS variables, so rebinding them here
-          // recolours everything inside - including the mobile menu - without
-          // every control needing to know where it is being rendered.
-          ...(isOverHero && {
-            "--navbar": "transparent",
-            "--navbar-foreground": "#ffffff",
-            "--custom-border": "rgba(255,255,255,0.35)",
-            "--search-background": "rgba(255,255,255,0.12)",
-          }),
-        } as React.CSSProperties
-      }
+      } ${overHeroClasses}`}
+      style={collectionBorderStyle}
     >
       <div className="flex items-center gap-x-4">
         <Link
@@ -289,7 +329,7 @@ const Navigation = () => {
             placeholder={t("common.placeholder.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border-none bg-transparent outline-none px-1 py-1.5 content"
+            className="w-full border-none bg-transparent outline-none px-1 py-1.5 content text-faded-grey placeholder:text-faded-grey"
           />
         </form>
         {renderAuthButtons("desktop")}
@@ -298,7 +338,7 @@ const Navigation = () => {
             <Button
               variant="ghost"
               onClick={() => navigate("/profile")}
-              className="rounded text-faded-grey"
+              className={navControlClass}
             >
               {t("header.profileMenu.profile")}
             </Button>

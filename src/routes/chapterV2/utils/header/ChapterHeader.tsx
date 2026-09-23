@@ -1,9 +1,8 @@
 import React, { useEffect } from "react";
-import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu";
 import { MdClose } from "react-icons/md";
 import { IoChevronBackSharp } from "react-icons/io5";
 import ViewSelector from "./view-selector/ViewSelector.tsx";
-import { getLanguageClass } from "../../../../utils/helperFunctions.tsx";
+import { useTransliteration } from "../../../../context/TransliterationContext.tsx";
 import { usePanelContext } from "../../../../context/PanelContext.tsx";
 import { useNavigate } from "react-router-dom";
 import langicon from "@/assets/icons/langicon.svg";
@@ -23,18 +22,18 @@ const ChapterHeader = (props: any) => {
     layoutMode,
     setLayoutMode,
     textdetail,
-    showTableOfContents,
-    setShowTableOfContents,
     removeChapter,
     currentChapter,
     totalChapters,
     versionSelected,
-    canShowTableOfContents = true,
+    canShowSectionTitles = false,
     editionId,
     isAutoScrolling,
     onToggleAutoScroll,
     scrollSpeed,
     setScrollSpeed,
+    sectionTitleMode,
+    setSectionTitleMode,
   } = props;
   const {
     isResourcesPanelOpen,
@@ -43,10 +42,9 @@ const ChapterHeader = (props: any) => {
     closeResourcesPanel,
   } = usePanelContext() as any;
   const navigate = useNavigate();
+  const { displayContent, contentClass } = useTransliteration();
 
   const handleBackClick = () => navigate(-1);
-  const handleToggleTableOfContents = () =>
-    setShowTableOfContents((prev: boolean) => !prev);
   const handleCloseChapter = () => removeChapter(currentChapter);
 
   useEffect(() => {
@@ -65,20 +63,6 @@ const ChapterHeader = (props: any) => {
 
   return (
     <div className="flex w-full shrink-0 items-center justify-center p-2  border-b border-gray-200 bg-[#f8f8f8]">
-      {canShowTableOfContents && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleToggleTableOfContents}
-        >
-          {showTableOfContents ? (
-            <LuPanelLeftClose size={20} />
-          ) : (
-            <LuPanelLeftOpen size={20} />
-          )}
-        </Button>
-      )}
-
       <div className="flex w-full md:max-w-[700px] items-center justify-between">
         <Button
           variant="ghost"
@@ -89,9 +73,9 @@ const ChapterHeader = (props: any) => {
           <IoChevronBackSharp size={20} />
         </Button>
         <p
-          className={`min-w-0 w-fit truncate whitespace-nowrap text-lg font-medium ${getLanguageClass(textdetail?.language)}`}
+          className={`min-w-0 w-fit truncate whitespace-nowrap text-lg font-medium ${contentClass(textdetail?.language)}`}
         >
-          {textdetail?.title}
+          {displayContent(textdetail?.title)}
         </p>
         <div className="flex items-center gap-1">
           <EditionAudioPlayer editionId={editionId} />
@@ -121,6 +105,9 @@ const ChapterHeader = (props: any) => {
                 layoutMode={layoutMode}
                 setLayoutMode={setLayoutMode}
                 versionSelected={versionSelected}
+                sectionTitleMode={sectionTitleMode}
+                setSectionTitleMode={setSectionTitleMode}
+                canShowSectionTitles={canShowSectionTitles}
               />
             </DropdownMenuContent>
           </DropdownMenu>

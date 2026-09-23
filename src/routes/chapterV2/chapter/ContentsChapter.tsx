@@ -2,8 +2,13 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   VIEW_MODES,
   LAYOUT_MODES,
+  SECTION_TITLE_MODES,
 } from "@/routes/chapterV2/utils/header/view-selector/ViewSelector.tsx";
-import { LAYOUT_MODE, siteName } from "@/utils/constants.ts";
+import {
+  LAYOUT_MODE,
+  SECTION_TITLE_MODE,
+  siteName,
+} from "@/utils/constants.ts";
 import UseChapterHook from "./helpers/UseChapterHook.tsx";
 import { useInfiniteQuery } from "react-query";
 import { PanelProvider } from "@/context/PanelContext.tsx";
@@ -14,6 +19,12 @@ import {
   mergeSections,
 } from "@/utils/helperFunctions.tsx";
 import { getTextDetails } from "@/services/library";
+import {
+  hasTableOfContents,
+  NO_TOC_HEADINGS,
+  tocHeadingsBySegment,
+  useTableOfContents,
+} from "@/hooks/useTableOfContents.ts";
 import { useTranslate } from "@tolgee/react";
 import Seo from "@/routes/commons/seo/Seo.tsx";
 
@@ -78,7 +89,12 @@ const ContentsChapter = ({
     }
     return LAYOUT_MODES.SEGMENTED;
   });
-  const [showTableOfContents, setShowTableOfContents] = useState(false);
+  const [sectionTitleMode, setSectionTitleMode] = useState(() => {
+    const stored = localStorage.getItem(SECTION_TITLE_MODE);
+    return stored === SECTION_TITLE_MODES.HIDDEN
+      ? SECTION_TITLE_MODES.HIDDEN
+      : SECTION_TITLE_MODES.SHOWN;
+  });
   const [currentSegmentId, setCurrentSegmentId] = useState(segmentId);
   const [currentSectionId, setCurrentSectionId] = useState(null);
   const [scrollTrigger, setScrollTrigger] = useState(0);
@@ -100,6 +116,16 @@ const ContentsChapter = ({
   useEffect(() => {
     localStorage.setItem(LAYOUT_MODE, layoutMode);
   }, [layoutMode]);
+
+  useEffect(() => {
+    localStorage.setItem(SECTION_TITLE_MODE, sectionTitleMode);
+  }, [sectionTitleMode]);
+
+  // Fetched here rather than only inside the panel, because the header has to
+  // know whether this text has a table of contents before it can decide to
+  // offer the toggle. Same query key as the panel, so this costs no extra
+  // request.
+  const { data: tableOfContents } = useTableOfContents(textId);
 
   const infiniteQuery = useInfiniteQuery(
     ["content", textId, contentId, versionId, size, currentSegmentId],
@@ -159,6 +185,16 @@ const ContentsChapter = ({
     };
   }, [infiniteQuery.data?.pages]);
 
+  // Each section title keyed by the segment it begins at, so the reader can set
+  // it down in the running text at the point the section starts.
+  const sectionHeadings = useMemo(
+    () =>
+      sectionTitleMode === SECTION_TITLE_MODES.SHOWN && !isFromSheet
+        ? tocHeadingsBySegment(tableOfContents)
+        : NO_TOC_HEADINGS,
+    [sectionTitleMode, tableOfContents, isFromSheet],
+  );
+
   const handleSegmentNavigate = useCallback((newSegmentId: any) => {
     setCurrentSegmentId(newSegmentId);
     setScrollTrigger((prev) => prev + 1);
@@ -180,16 +216,17 @@ const ContentsChapter = ({
     t,
   });
   if (earlyReturn) return earlyReturn;
+  // Whether this text has an outline to offer at all: the resources panel lists
+  // it, and the view menu offers to set its titles into the text. Sheets stay
+  // out of both, being a pinned excerpt with paging turned off.
   const canShowTableOfContents =
-    (allContent?.content?.sections || []).length > 1;
+    !isFromSheet && hasTableOfContents(tableOfContents);
 
   // ------------------------ renderers ----------------------
   const renderChapter = () => {
     const propsForUseChapterHookComponent = {
       textId,
       editionId: allContent?.content?.id,
-      showTableOfContents: showTableOfContents && canShowTableOfContents,
-      setShowTableOfContents,
       content: allContent?.content,
       language: allContent?.text_detail?.language,
       viewMode,
@@ -207,8 +244,12 @@ const ContentsChapter = ({
       removeChapter,
       totalChapters,
       canShowTableOfContents,
+      canShowSectionTitles: canShowTableOfContents,
       setViewMode,
       setLayoutMode,
+      sectionTitleMode,
+      setSectionTitleMode,
+      sectionHeadings,
     };
     return <UseChapterHook {...propsForUseChapterHookComponent} />;
   };
