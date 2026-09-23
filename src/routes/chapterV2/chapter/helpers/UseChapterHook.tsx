@@ -6,10 +6,12 @@ import {
   VIEW_MODES,
   LAYOUT_MODES,
 } from "../../utils/header/view-selector/ViewSelector";
+import { AUTO_SCROLL_SPEEDS } from "../../utils/header/AutoScrollControl";
 import {
   getLanguageClass,
   getCurrentSectionFromScroll,
 } from "../../../../utils/helperFunctions";
+import { AUTO_SCROLL_SPEED } from "../../../../utils/constants";
 import { usePanelContext } from "../../../../context/PanelContext";
 import Resources from "../../utils/resources/Resources";
 import {
@@ -153,6 +155,95 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     fetchNextPage,
     fetchPreviousPage,
   } = infiniteQuery;
+
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState<number>(() => {
+    const stored = Number(localStorage.getItem(AUTO_SCROLL_SPEED));
+    return Object.values(AUTO_SCROLL_SPEEDS).includes(stored)
+      ? stored
+      : AUTO_SCROLL_SPEEDS.NORMAL;
+  });
+  const autoScrollFrameRef = useRef<number | null>(null);
+  const autoScrollLastTsRef = useRef<number | null>(null);
+  const scrollSpeedRef = useRef(scrollSpeed);
+  const hasNextPageRef = useRef(hasNextPage);
+  const isFetchingNextPageRef = useRef(isFetchingNextPage);
+  scrollSpeedRef.current = scrollSpeed;
+  hasNextPageRef.current = hasNextPage;
+  isFetchingNextPageRef.current = isFetchingNextPage;
+
+  useEffect(() => {
+    localStorage.setItem(AUTO_SCROLL_SPEED, String(scrollSpeed));
+  }, [scrollSpeed]);
+
+  useEffect(() => {
+    if (!isAutoScrolling) {
+      if (autoScrollFrameRef.current != null) {
+        cancelAnimationFrame(autoScrollFrameRef.current);
+      }
+      autoScrollFrameRef.current = null;
+      autoScrollLastTsRef.current = null;
+      return;
+    }
+
+    const tick = (timestamp: number) => {
+      const container = contentsContainerRef.current;
+      if (!container) {
+        setIsAutoScrolling(false);
+        return;
+      }
+      if (autoScrollLastTsRef.current == null) {
+        autoScrollLastTsRef.current = timestamp;
+      }
+      const deltaSeconds = (timestamp - autoScrollLastTsRef.current) / 1000;
+      autoScrollLastTsRef.current = timestamp;
+      container.scrollTop += scrollSpeedRef.current * deltaSeconds;
+
+      const atBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight <=
+        1;
+      if (
+        atBottom &&
+        !hasNextPageRef.current &&
+        !isFetchingNextPageRef.current
+      ) {
+        setIsAutoScrolling(false);
+        return;
+      }
+      autoScrollFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    autoScrollFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (autoScrollFrameRef.current != null) {
+        cancelAnimationFrame(autoScrollFrameRef.current);
+      }
+      autoScrollFrameRef.current = null;
+      autoScrollLastTsRef.current = null;
+    };
+  }, [isAutoScrolling]);
+
+  useEffect(() => {
+    const container = contentsContainerRef.current;
+    if (!container || !isAutoScrolling) return;
+    const stopAutoScroll = () => setIsAutoScrolling(false);
+    container.addEventListener("wheel", stopAutoScroll, { passive: true });
+    container.addEventListener("touchstart", stopAutoScroll, {
+      passive: true,
+    });
+    container.addEventListener("pointerdown", stopAutoScroll, {
+      passive: true,
+    });
+    return () => {
+      container.removeEventListener("wheel", stopAutoScroll);
+      container.removeEventListener("touchstart", stopAutoScroll);
+      container.removeEventListener("pointerdown", stopAutoScroll);
+    };
+  }, [isAutoScrolling]);
+
+  useEffect(() => {
+    setIsAutoScrolling(false);
+  }, [currentSegmentId, textId]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -304,6 +395,8 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     const container = contentsContainerRef.current;
     if (!container) return;
 
+    setIsAutoScrolling(false);
+
     const findSectionWithSegment = (sections: Section[]): string | null => {
       for (const section of sections) {
         if (
@@ -356,6 +449,10 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       versionSelected: !!currentChapter.versionId,
       canShowTableOfContents,
       editionId,
+      isAutoScrolling,
+      onToggleAutoScroll: () => setIsAutoScrolling((prev) => !prev),
+      scrollSpeed,
+      setScrollSpeed,
     };
     return <ChapterHeader {...propsForChapterHeader} />;
   };

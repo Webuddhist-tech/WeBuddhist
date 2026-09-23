@@ -7,6 +7,7 @@ export const RESET_PASSWORD_TOKEN = "resetPasswordToken";
 export const RESET_PASSWORD = "reset-password";
 export const LANGUAGE = "language";
 export const LAYOUT_MODE = "layoutMode";
+export const AUTO_SCROLL_SPEED = "autoScrollSpeed";
 export const siteName = "WeBuddhist";
 export const siteDescription =
   "We are Buddhist. We learn, practice and connect. Daily.";

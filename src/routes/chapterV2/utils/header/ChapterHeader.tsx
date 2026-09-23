@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
 import EditionAudioPlayer from "./EditionAudioPlayer.tsx";
+import AutoScrollControl from "./AutoScrollControl.tsx";
 
 const ChapterHeader = (props: any) => {
   const {
@@ -30,6 +31,10 @@ const ChapterHeader = (props: any) => {
     versionSelected,
     canShowTableOfContents = true,
     editionId,
+    isAutoScrolling,
+    onToggleAutoScroll,
+    scrollSpeed,
+    setScrollSpeed,
   } = props;
   const {
     isResourcesPanelOpen,
@@ -88,8 +93,14 @@ const ChapterHeader = (props: any) => {
         >
           {textdetail?.title}
         </p>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
           <EditionAudioPlayer editionId={editionId} />
+          <AutoScrollControl
+            isAutoScrolling={isAutoScrolling}
+            onToggle={onToggleAutoScroll}
+            scrollSpeed={scrollSpeed}
+            onSpeedChange={setScrollSpeed}
+          />
           <DropdownMenu
             open={isViewSelectorOpen}
             onOpenChange={handleViewSelectorOpenChange}
