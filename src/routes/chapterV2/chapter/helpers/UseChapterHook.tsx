@@ -25,12 +25,18 @@ import {
   type TocHeading,
 } from "@/hooks/useTableOfContents.ts";
 
-/** Weight for an inline section title, by how deep it sits in the outline. */
+/**
+ * Weight for an inline section title, by how deep it sits in the outline.
+ *
+ * One hue at descending strength rather than grey, so a title reads as part of
+ * the outline instead of as emphasised running text, and its depth is legible
+ * where it stands in the text without the sidebar's indentation to place it.
+ */
 const HEADING_CLASSES = [
-  "text-xl font-semibold text-gray-900",
-  "text-lg font-semibold text-gray-800",
-  "text-base font-medium text-gray-700",
-  "text-sm font-medium text-gray-600",
+  "text-xl font-semibold text-toc-800",
+  "text-lg font-semibold text-toc-700",
+  "text-base font-medium text-toc-600",
+  "text-sm font-medium text-toc-500",
 ];
 
 type ViewMode = (typeof VIEW_MODES)[keyof typeof VIEW_MODES];

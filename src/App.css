@@ -136,6 +136,13 @@ div::-webkit-scrollbar {
   --color-search-background: var(--search-background);
   --color-blue-button: var(--button-background);
   --color-blue-button-light: var(--button-light-background);
+  --color-toc-50: var(--toc-50);
+  --color-toc-400: var(--toc-400);
+  --color-toc-500: var(--toc-500);
+  --color-toc-600: var(--toc-600);
+  --color-toc-700: var(--toc-700);
+  --color-toc-800: var(--toc-800);
+  --color-toc-muted: var(--toc-muted);
 }
 
 :root {
@@ -177,6 +184,18 @@ div::-webkit-scrollbar {
   --search-background: #ededec;
   --button-background: #18345d;
   --button-light-background: #0f479a;
+
+  /* Table of contents, as one hue at different strengths: the outline reads as
+     a hierarchy by depth, so the steps carry the nesting that indentation alone
+     conveys poorly once a text runs several levels deep. Steps 500-800 all sit
+     above 4.5:1 on white; 400 is for icons only. */
+  --toc-50: #f1f5fb;
+  --toc-400: #4178c8;
+  --toc-500: #2459a8;
+  --toc-600: #164488;
+  --toc-700: #0c346f;
+  --toc-800: #0a2957;
+  --toc-muted: #5c6e8a;
 }
 
 @layer base {

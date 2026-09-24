@@ -12,17 +12,21 @@ vi.mock("../../../../utils/helperFunctions.tsx", () => ({
   getLanguageClass: (lang: string) => (lang ? `lang-${lang}` : ""),
 }));
 
+// Stands in for the real menu, exposing just the auto-scroll toggle the header
+// wires up, so the tests can drive it without the whole option panel.
 vi.mock("./view-selector/ViewSelector.tsx", () => ({
   __esModule: true,
-  default: () => <div data-testid="view-selector">ViewSelector</div>,
+  default: ({ onToggleAutoScroll }: any) => (
+    <div data-testid="view-selector">
+      ViewSelector
+      <button type="button" onClick={onToggleAutoScroll}>
+        toggle auto scroll
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./EditionAudioPlayer.tsx", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
-vi.mock("./AutoScrollControl.tsx", () => ({
   __esModule: true,
   default: () => null,
 }));
@@ -96,5 +100,35 @@ describe("ChapterHeader Component", () => {
   test("renders without textdetail", () => {
     renderHeader({ textdetail: undefined });
     expect(screen.getByAltText("view selector")).toBeInTheDocument();
+  });
+
+  const openMenuAndToggleAutoScroll = async (props: any) => {
+    const user = userEvent.setup();
+    renderHeader(props);
+    await user.click(screen.getByAltText("view selector"));
+    await user.click(await screen.findByText("toggle auto scroll"));
+    return user;
+  };
+
+  test("closes the menu on start, so the text it set moving is visible", async () => {
+    const onToggleAutoScroll = vi.fn();
+    await openMenuAndToggleAutoScroll({
+      isAutoScrolling: false,
+      onToggleAutoScroll,
+    });
+    expect(onToggleAutoScroll).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("view-selector")).not.toBeInTheDocument();
+  });
+
+  // Pausing from the menu is usually a prelude to changing the speed, so
+  // closing would cost a reopen every time.
+  test("leaves the menu open on pause", async () => {
+    const onToggleAutoScroll = vi.fn();
+    await openMenuAndToggleAutoScroll({
+      isAutoScrolling: true,
+      onToggleAutoScroll,
+    });
+    expect(onToggleAutoScroll).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("view-selector")).toBeInTheDocument();
   });
 });

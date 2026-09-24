@@ -472,6 +472,8 @@ export const getTextCommentaries = async (params: {
     throw new LibraryError(`Text with id '${params.textId}' not found`, 404);
   }
 
+  const ownCommentaryIds = textData.commentaries ?? [];
+
   if (textData.commentary_of) {
     return commentariesFromParent(
       textData.commentary_of,
@@ -481,10 +483,18 @@ export const getTextCommentaries = async (params: {
     );
   }
 
+  // A text that lists commentaries of its own is already the hub of its family,
+  // so that list is the answer. Climbing to a relative first threw it away: a
+  // root text with both translations and commentaries read through its
+  // translation, whose own list is empty, and reported no commentaries at all.
+  if (ownCommentaryIds.length > 0) {
+    return commentariesFromIds(ownCommentaryIds, skip, limit, params.textId);
+  }
+
   // A translation carries no commentaries of its own - they hang off the text it
   // translates - but a reader looking at the translation still expects to find
   // them.
-  if ((textData.commentaries ?? []).length === 0 && textData.translation_of) {
+  if (textData.translation_of) {
     return commentariesFromParent(
       textData.translation_of,
       skip,
@@ -493,22 +503,12 @@ export const getTextCommentaries = async (params: {
     );
   }
 
-  if (!textData.translation_of) {
-    const relatedIds = [
-      ...(textData.translations ?? []),
-      ...(textData.commentaries ?? []),
-    ];
-    if (relatedIds.length > 0) {
-      return commentariesFromRelated(relatedIds[0], skip, limit, params.textId);
-    }
+  const relatedIds = textData.translations ?? [];
+  if (relatedIds.length > 0) {
+    return commentariesFromRelated(relatedIds[0], skip, limit, params.textId);
   }
 
-  return commentariesFromIds(
-    textData.commentaries ?? [],
-    skip,
-    limit,
-    params.textId,
-  );
+  return [];
 };
 
 export const getTextCommentariesByEdition = async (params: {
