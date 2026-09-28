@@ -40,7 +40,7 @@ const tolgee = Tolgee()
   .use(
     BackendFetch({
       prefix:
-        "https://cdn.tolg.ee/a23495c159b886551292e856ecf7a332/webuddhist",
+        "https://cdn.tolg.ee/50cc3287503c99e8f336aad9ee80f6f1/reactjs_json",
       fallbackOnFail: true,
     }),
   )
