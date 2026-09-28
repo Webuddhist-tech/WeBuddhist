@@ -32,6 +32,11 @@ server {
     proxy_pass ${VITE_BACKEND_BASE_URL};
     proxy_ssl_server_name on;
 
+    # Logs the path without the query string: the live recitation socket
+    # carries its bearer token in `?token=`, and the default `main` format
+    # would persist it in plain text on every handshake.
+    access_log /var/log/nginx/access.log api_no_query;
+
     # The live recitation socket lives under /api. `Upgrade` and `Connection`
     # are hop-by-hop headers, so nginx drops them unless they are set again
     # here - without this the handshake comes out the other side as a plain

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../../../config/AuthContext.tsx";
 import { ACCESS_TOKEN } from "../../../utils/constants.ts";
 
 export type LiveViewerStatus =
@@ -64,11 +65,22 @@ const readString = (frame: unknown, key: string): string | null => {
  *
  * Pass `enabled: false` to stay off the socket - the count is only worth a
  * connection once the reader is actually looking at the event.
+ *
+ * The socket is tied to the reader's session: signing in on an open page opens
+ * one, and signing out closes it rather than leaving it running on a credential
+ * the reader has given up.
  */
 export const useLiveViewerCount = (
   eventId: string | undefined,
   enabled = true,
 ): LiveViewerCount => {
+  // Auth lives in session storage, which cannot be subscribed to. These are the
+  // flags the app flips on login and logout, and they are what tells this hook
+  // that the credential behind an open socket has changed.
+  const { isLoggedIn, isTokenReady } = useAuth() as {
+    isLoggedIn?: boolean;
+    isTokenReady?: boolean;
+  };
   const [count, setCount] = useState<number | null>(null);
   const [status, setStatus] = useState<LiveViewerStatus>("connecting");
   const [detail, setDetail] = useState<string | null>(null);
@@ -76,15 +88,6 @@ export const useLiveViewerCount = (
 
   useEffect(() => {
     if (!enabled || !eventId) return;
-
-    const token = sessionStorage.getItem(ACCESS_TOKEN);
-    if (!token) {
-      setCount(null);
-      setStatus("signed-out");
-      setDetail(null);
-      setCode(null);
-      return;
-    }
 
     let stopped = false;
     let giveUp = false;
@@ -102,6 +105,19 @@ export const useLiveViewerCount = (
 
     const connect = () => {
       if (stopped || giveUp) return;
+
+      // Read on every attempt rather than once: the app refreshes this token on
+      // a timer, and a reconnect an hour into a puja must not present the one
+      // that was current when the page opened.
+      const token = sessionStorage.getItem(ACCESS_TOKEN);
+      if (!token) {
+        setCount(null);
+        setStatus("signed-out");
+        setDetail(null);
+        setCode(null);
+        return;
+      }
+
       setStatus((current) =>
         current === "connected" || current === "reconnecting"
           ? "reconnecting"
@@ -168,7 +184,7 @@ export const useLiveViewerCount = (
       if (retryTimer) clearTimeout(retryTimer);
       socket?.close();
     };
-  }, [eventId, enabled]);
+  }, [eventId, enabled, isLoggedIn, isTokenReady]);
 
   return { count, status, detail, code };
 };

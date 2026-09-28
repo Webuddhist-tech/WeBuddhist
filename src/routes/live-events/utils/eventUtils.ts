@@ -146,6 +146,33 @@ export const youtubeVideoId = (url: string): string | null => {
   return null;
 };
 
+/**
+ * An organizer-supplied URL, or null when it is not one a browser can safely
+ * follow. Event links and stream URLs are typed by whoever created the event,
+ * and a `javascript:` or `data:` href would run in this page's origin for
+ * anyone who clicks it - so only absolute http(s) URLs are handed to an anchor.
+ */
+export const safeExternalUrl = (
+  url: string | null | undefined,
+): string | null => {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    // Not absolute, so there is no scheme to vouch for.
+    return null;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+
+  // The parsed form is what was actually checked; the raw string may carry
+  // characters the URL parser strips on its way to a different scheme.
+  return parsed.href;
+};
+
 /** nocookie host: this page embeds third-party video on an otherwise first-party page. */
 export const youtubeEmbedUrl = (url: string): string | null => {
   const id = youtubeVideoId(url);
@@ -176,11 +203,35 @@ export const preferredVideo = (event: EventDTO, language: string) => {
 };
 
 /**
- * The event's window in the reader's locale. A single-day event collapses to
- * one date and a time range; anything longer spells out both ends, because
- * "10:00 - 14:00" across a three-day retreat tells the reader nothing.
+ * The event's `timezone`, but only when `Intl` recognises it. The value comes
+ * from whoever created the event, and an unknown zone makes `Intl` throw - so
+ * an unusable one falls back to the reader's own zone rather than taking the
+ * page down.
+ */
+const usableTimeZone = (timezone?: string | null): string | undefined => {
+  const trimmed = timezone?.trim();
+  if (!trimmed) return undefined;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: trimmed });
+    return trimmed;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * The event's window, in the event's own timezone when it declares one.
+ *
+ * An event that says it starts at 10:00 in Asia/Kathmandu has to read as 10:00
+ * next to that label, or the two contradict each other for every reader outside
+ * that zone. The offset is appended so the time is not silently foreign.
+ *
+ * A single-day event collapses to one date and a time range; anything longer
+ * spells out both ends, because "10:00 - 14:00" across a three-day retreat
+ * tells the reader nothing.
  */
 export const formatEventWindow = (event: EventDTO, locale: string): string => {
+  const timeZone = usableTimeZone(event.timezone);
   const start = new Date(event.start_date);
   const end = new Date(event.end_date);
   if (Number.isNaN(start.getTime())) return "";
@@ -189,24 +240,39 @@ export const formatEventWindow = (event: EventDTO, locale: string): string => {
     weekday: "short",
     day: "numeric",
     month: "short",
+    timeZone,
   };
   const timeOptions: Intl.DateTimeFormatOptions = {
     hour: "numeric",
     minute: "2-digit",
+    timeZone,
   };
+  // Named once, on the closing time, so a range does not repeat the offset.
+  const zonedTimeOptions: Intl.DateTimeFormatOptions = timeZone
+    ? { ...timeOptions, timeZoneName: "short" }
+    : timeOptions;
 
-  const sameDay =
-    !Number.isNaN(end.getTime()) && start.toDateString() === end.toDateString();
+  // "Same day" has to be judged in the zone being rendered, or an evening
+  // event splits across two dates for a reader the other side of midnight.
+  const dayKey = (date: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone,
+    }).format(date);
+
+  const sameDay = !Number.isNaN(end.getTime()) && dayKey(start) === dayKey(end);
 
   if (sameDay) {
     return `${start.toLocaleDateString(locale, dateOptions)} · ${start.toLocaleTimeString(
       locale,
       timeOptions,
-    )} – ${end.toLocaleTimeString(locale, timeOptions)}`;
+    )} – ${end.toLocaleTimeString(locale, zonedTimeOptions)}`;
   }
 
   if (Number.isNaN(end.getTime())) {
-    return `${start.toLocaleDateString(locale, dateOptions)} · ${start.toLocaleTimeString(locale, timeOptions)}`;
+    return `${start.toLocaleDateString(locale, dateOptions)} · ${start.toLocaleTimeString(locale, zonedTimeOptions)}`;
   }
 
   return `${start.toLocaleDateString(locale, dateOptions)} – ${end.toLocaleDateString(

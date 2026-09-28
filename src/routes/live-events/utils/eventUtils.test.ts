@@ -7,6 +7,7 @@ import {
   locationLabel,
   metadataForLanguage,
   preferredVideo,
+  safeExternalUrl,
   sortByPhaseThenTime,
   youtubeEmbedUrl,
   youtubeVideoId,
@@ -229,6 +230,76 @@ describe("formatEventWindow", () => {
 
   it("returns an empty string for an unparseable start", () => {
     expect(formatEventWindow(event({ start_date: "nope" }), "en-US")).toBe("");
+  });
+
+  it("renders the time in the event's own timezone, which is what is labelled", () => {
+    // 10:00 UTC is 15:45 in Kathmandu. The detail page prints the zone next to
+    // this string, so the clock has to agree with that label wherever the
+    // reader happens to be.
+    const formatted = formatEventWindow(
+      event({ timezone: "Asia/Kathmandu" }),
+      "en-GB",
+    );
+    expect(formatted).toContain("15:45");
+    expect(formatted).toContain("17:45");
+  });
+
+  it("names the zone so an event-local time is not silently foreign", () => {
+    expect(formatEventWindow(event({ timezone: "Asia/Kathmandu" }), "en-GB")).
+      toMatch(/GMT\+5:45/);
+  });
+
+  it("judges same-day in the event's zone, not the reader's", () => {
+    // 20:00-22:00 in Kathmandu is 14:15-16:15 UTC: one day there, and it must
+    // not be split across two dates.
+    const formatted = formatEventWindow(
+      event({
+        start_date: "2026-03-10T14:15:00Z",
+        end_date: "2026-03-10T16:15:00Z",
+        timezone: "Asia/Kathmandu",
+      }),
+      "en-GB",
+    );
+    expect(formatted).toContain("·");
+    expect(formatted).toContain("20:00");
+  });
+
+  it("falls back to the reader's zone when the event names one Intl rejects", () => {
+    expect(() =>
+      formatEventWindow(event({ timezone: "Not/AZone" }), "en-GB"),
+    ).not.toThrow();
+    expect(formatEventWindow(event({ timezone: "Not/AZone" }), "en-GB")).not.toBe(
+      "",
+    );
+  });
+});
+
+describe("safeExternalUrl", () => {
+  it("passes an ordinary http(s) link through", () => {
+    expect(safeExternalUrl("https://example.org/stream")).toBe(
+      "https://example.org/stream",
+    );
+    expect(safeExternalUrl("  http://example.org/a  ")).toBe(
+      "http://example.org/a",
+    );
+  });
+
+  it("refuses a scheme that would run script when clicked", () => {
+    expect(safeExternalUrl("javascript:alert(1)")).toBeNull();
+    // The URL parser strips the newline, so the scheme still resolves to
+    // javascript: - the check has to see it the way the browser will.
+    expect(safeExternalUrl("java\nscript:alert(1)")).toBeNull();
+    expect(safeExternalUrl("JaVaScRiPt:alert(1)")).toBeNull();
+    expect(safeExternalUrl("data:text/html,<script>alert(1)</script>")).toBeNull();
+    expect(safeExternalUrl("vbscript:msgbox(1)")).toBeNull();
+  });
+
+  it("refuses anything that is not an absolute URL", () => {
+    expect(safeExternalUrl("example.org")).toBeNull();
+    expect(safeExternalUrl("/internal/path")).toBeNull();
+    expect(safeExternalUrl("")).toBeNull();
+    expect(safeExternalUrl(null)).toBeNull();
+    expect(safeExternalUrl(undefined)).toBeNull();
   });
 });
 

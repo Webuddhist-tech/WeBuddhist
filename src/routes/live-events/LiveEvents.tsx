@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "react-query";
 import { useTolgee, useTranslate } from "@tolgee/react";
 import SectionHeading from "../../components/SectionHeading.tsx";
@@ -41,14 +41,26 @@ const LiveEvents = () => {
     },
   );
 
+  // Which band an event falls into is a function of the clock as much as of the
+  // payload. A refetch that returns identical data keeps the same `data`
+  // reference through react-query's structural sharing, so keying the split on
+  // `data` alone would leave an event that has just started sitting under
+  // "Coming up" until something else happens to change the response.
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), REFRESH_MS);
+    return () => clearInterval(timer);
+  }, []);
+
   const { live, upcoming, past } = useMemo(() => {
-    const events = sortByPhaseThenTime(data ?? []);
+    const events = sortByPhaseThenTime(data ?? [], now);
     return {
-      live: events.filter((event) => eventPhase(event) === "live"),
-      upcoming: events.filter((event) => eventPhase(event) === "upcoming"),
-      past: events.filter((event) => eventPhase(event) === "past"),
+      live: events.filter((event) => eventPhase(event, now) === "live"),
+      upcoming: events.filter((event) => eventPhase(event, now) === "upcoming"),
+      past: events.filter((event) => eventPhase(event, now) === "past"),
     };
-  }, [data]);
+  }, [data, now]);
 
   // react-query types `error` as `unknown`, which is not renderable on its own.
   const hasError = Boolean(error);

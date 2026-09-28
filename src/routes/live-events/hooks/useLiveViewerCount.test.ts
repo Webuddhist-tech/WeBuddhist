@@ -173,6 +173,52 @@ describe("useLiveViewerCount", () => {
     }
   });
 
+  it("reconnects with the current token, not the one the page opened with", () => {
+    vi.useFakeTimers();
+    try {
+      renderHook(() => useLiveViewerCount("event-1"));
+      expect(FakeSocket.latest?.url).toContain("token=app-token");
+
+      // The app refreshes this token on a timer; a reconnect has to present
+      // whatever is current rather than the one captured at mount.
+      sessionStorage.setItem(ACCESS_TOKEN, "refreshed-token");
+
+      act(() => {
+        FakeSocket.latest?.onclose?.({ code: 1006 });
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(FakeSocket.opened).toBe(2);
+      expect(FakeSocket.latest?.url).toContain("token=refreshed-token");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not reconnect on a credential the reader has signed out of", () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => useLiveViewerCount("event-1"));
+      expect(FakeSocket.opened).toBe(1);
+
+      sessionStorage.removeItem(ACCESS_TOKEN);
+
+      act(() => {
+        FakeSocket.latest?.onclose?.({ code: 1006 });
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(FakeSocket.opened).toBe(1);
+      expect(result.current.status).toBe("signed-out");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("ignores a malformed frame instead of throwing", () => {
     const { result } = renderHook(() => useLiveViewerCount("event-1"));
 

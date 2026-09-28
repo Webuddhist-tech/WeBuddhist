@@ -1,6 +1,10 @@
 import { useTranslate } from "@tolgee/react";
 import type { EventDTO } from "../types.ts";
-import { preferredVideo, youtubeEmbedUrl } from "../utils/eventUtils.ts";
+import {
+  preferredVideo,
+  safeExternalUrl,
+  youtubeEmbedUrl,
+} from "../utils/eventUtils.ts";
 
 type EventVideoProps = {
   event: EventDTO;
@@ -14,7 +18,8 @@ type EventVideoProps = {
  *
  * Organizers add one YouTube entry per language for the same puja, so the entry
  * is picked by language rather than by position. A non-YouTube URL is offered as
- * a link instead of being forced into an iframe that would not load.
+ * a link instead of being forced into an iframe that would not load, provided
+ * its scheme is one a browser can safely follow.
  */
 const EventVideo = ({ event, language, isLive }: EventVideoProps) => {
   const { t } = useTranslate();
@@ -24,9 +29,14 @@ const EventVideo = ({ event, language, isLive }: EventVideoProps) => {
   const embedUrl = youtubeEmbedUrl(video.url);
 
   if (!embedUrl) {
+    // The fallback hands the organizer's URL straight to an anchor, so it has
+    // to clear the same scheme check the embed path gets for free.
+    const streamUrl = safeExternalUrl(video.url);
+    if (!streamUrl) return null;
+
     return (
       <a
-        href={video.url}
+        href={streamUrl}
         target="_blank"
         rel="noreferrer noopener"
         className="inline-flex items-center gap-2 rounded-full bg-[#102544] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#1b3a67]"

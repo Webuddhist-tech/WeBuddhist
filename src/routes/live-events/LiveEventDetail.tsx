@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "react-query";
 import { useTolgee, useTranslate } from "@tolgee/react";
@@ -19,6 +20,7 @@ import {
   eventTitleLanguage,
   formatEventWindow,
   locationLabel,
+  safeExternalUrl,
 } from "./utils/eventUtils.ts";
 
 /** Keeps the phase honest while the page sits open across a start time. */
@@ -50,6 +52,16 @@ const LiveEventDetail = () => {
     () => fetchEventById(eventId as string, apiLanguage),
     { enabled: Boolean(eventId), refetchInterval: REFRESH_MS },
   );
+
+  // A refetch that returns identical data keeps the same `data` reference, so
+  // the render that would move this event from "upcoming" to "live" never
+  // happens on the response alone - the clock has to be its own input.
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), REFRESH_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   const backLink = (
     <Link
@@ -85,7 +97,7 @@ const LiveEventDetail = () => {
 
   const title = eventTitle(event, apiLanguage) || t("live_events.untitled");
   const description = eventDescription(event, apiLanguage);
-  const phase = eventPhase(event);
+  const phase = eventPhase(event, now);
   const isLive = phase === "live";
   const where = locationLabel(event);
   const imageUrl = eventImageUrl(event);
@@ -93,7 +105,12 @@ const LiveEventDetail = () => {
   const titleFontClass = getLanguageClass(
     eventTitleLanguage(event, apiLanguage),
   );
-  const otherLinks = event.links ?? [];
+  // Organizer-supplied links. Anything that is not an absolute http(s) URL is
+  // dropped rather than offered as a clickable unknown scheme.
+  const otherLinks = (event.links ?? []).flatMap((link) => {
+    const href = safeExternalUrl(link.url);
+    return href ? [{ ...link, href }] : [];
+  });
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -225,12 +242,12 @@ const LiveEventDetail = () => {
                 {otherLinks.map((link) => (
                   <li key={link.id}>
                     <a
-                      href={link.url}
+                      href={link.href}
                       target="_blank"
                       rel="noreferrer noopener"
                       className="block truncate text-sm text-[#1b3a67] underline decoration-slate-300 underline-offset-4 transition hover:decoration-[#1b3a67]"
                     >
-                      {link.label?.trim() || link.url}
+                      {link.label?.trim() || link.href}
                     </a>
                   </li>
                 ))}

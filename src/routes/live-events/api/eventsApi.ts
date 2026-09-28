@@ -6,24 +6,24 @@ import type { EventDTO } from "../types.ts";
  * `is_joined` comes back filled in for a signed-in visitor and null otherwise -
  * the axios instance attaches the header, so nothing is needed here.
  */
-export async function fetchFeaturedEvents(
+export const fetchFeaturedEvents = async (
   language: string,
   limit = 20,
-): Promise<EventDTO[]> {
+): Promise<EventDTO[]> => {
   const { data } = await axiosInstance.get<EventDTO[]>(
     "/api/v1/events/featured",
     { params: { language, limit } },
   );
   return data;
-}
+};
 
-export async function fetchEventById(
+export const fetchEventById = async (
   eventId: string,
   language: string,
-): Promise<EventDTO> {
+): Promise<EventDTO> => {
   const { data } = await axiosInstance.get<EventDTO>(
     `/api/v1/events/${eventId}`,
     { params: { language } },
   );
   return data;
-}
+};
