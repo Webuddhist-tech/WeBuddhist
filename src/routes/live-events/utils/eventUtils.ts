@@ -247,10 +247,16 @@ export const formatEventWindow = (event: EventDTO, locale: string): string => {
     minute: "2-digit",
     timeZone,
   };
-  // Named once, on the closing time, so a range does not repeat the offset.
+  // Named once, on the closing value, so a range does not repeat the offset.
   const zonedTimeOptions: Intl.DateTimeFormatOptions = timeZone
     ? { ...timeOptions, timeZoneName: "short" }
     : timeOptions;
+  // A multi-day range prints no clock, so the zone has to ride on the date
+  // instead: these are the event's local dates, and an event that opens near
+  // midnight lands on a different date than the reader's own calendar shows.
+  const zonedDateOptions: Intl.DateTimeFormatOptions = timeZone
+    ? { ...dateOptions, timeZoneName: "short" }
+    : dateOptions;
 
   // "Same day" has to be judged in the zone being rendered, or an evening
   // event splits across two dates for a reader the other side of midnight.
@@ -277,7 +283,7 @@ export const formatEventWindow = (event: EventDTO, locale: string): string => {
 
   return `${start.toLocaleDateString(locale, dateOptions)} – ${end.toLocaleDateString(
     locale,
-    dateOptions,
+    zonedDateOptions,
   )}`;
 };
 

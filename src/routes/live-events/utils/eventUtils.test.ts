@@ -249,6 +249,21 @@ describe("formatEventWindow", () => {
       toMatch(/GMT\+5:45/);
   });
 
+  it("names the zone on a multi-day range, whose dates are event-local", () => {
+    // 23:30 UTC on the 10th is already the 11th in Kathmandu. The card shows
+    // this string alone, so the dates cannot be event-local without saying so.
+    const formatted = formatEventWindow(
+      event({
+        start_date: "2026-03-10T23:30:00Z",
+        end_date: "2026-03-13T12:00:00Z",
+        timezone: "Asia/Kathmandu",
+      }),
+      "en-GB",
+    );
+    expect(formatted).toContain("11 Mar");
+    expect(formatted).toMatch(/GMT\+5:45/);
+  });
+
   it("judges same-day in the event's zone, not the reader's", () => {
     // 20:00-22:00 in Kathmandu is 14:15-16:15 UTC: one day there, and it must
     // not be split across two dates.
