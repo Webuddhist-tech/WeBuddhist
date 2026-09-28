@@ -1,0 +1,227 @@
+import type {
+  EventDTO,
+  EventMetadataDTO,
+  EventMetadataResponse,
+} from "../types.ts";
+
+/**
+ * Where an event sits relative to now.
+ *
+ * The backend has no `is_live` flag, so this is derived from the event's own
+ * window. `start_date` and `end_date` are timezone-aware on the server and
+ * serialize with an offset, so comparing them as instants is correct wherever
+ * the visitor happens to be - the event's `timezone` is for display only.
+ */
+export type EventPhase = "live" | "upcoming" | "past";
+
+export const eventPhase = (
+  event: EventDTO,
+  now: Date = new Date(),
+): EventPhase => {
+  const start = new Date(event.start_date).getTime();
+  const end = new Date(event.end_date).getTime();
+  const at = now.getTime();
+
+  // An unparseable date should not claim to be live.
+  if (Number.isNaN(start) || Number.isNaN(end)) return "upcoming";
+  if (at < start) return "upcoming";
+  if (at > end) return "past";
+  return "live";
+};
+
+const PHASE_ORDER: Record<EventPhase, number> = {
+  live: 0,
+  upcoming: 1,
+  past: 2,
+};
+
+/**
+ * Live events first, then what is coming up soonest, then what has finished
+ * most recently. Featured order from the API is not chronological, and a page
+ * called Live Events that buries the live one reads as broken.
+ */
+export const sortByPhaseThenTime = (
+  events: EventDTO[],
+  now: Date = new Date(),
+): EventDTO[] =>
+  [...events].sort((a, b) => {
+    const phaseA = eventPhase(a, now);
+    const phaseB = eventPhase(b, now);
+    if (phaseA !== phaseB) return PHASE_ORDER[phaseA] - PHASE_ORDER[phaseB];
+
+    const startA = new Date(a.start_date).getTime();
+    const startB = new Date(b.start_date).getTime();
+    if (Number.isNaN(startA) || Number.isNaN(startB)) return 0;
+    // Past events read best newest-first; everything else soonest-first.
+    return phaseA === "past" ? startB - startA : startA - startB;
+  });
+
+const metadataList = (metadata: EventMetadataResponse): EventMetadataDTO[] => {
+  if (!metadata) return [];
+  return Array.isArray(metadata) ? metadata : [metadata];
+};
+
+/**
+ * The metadata entry for a language, falling back to English and then to
+ * whatever the event has. An event titled only in Tibetan should still show
+ * its Tibetan title to an English reader rather than nothing.
+ */
+export const metadataForLanguage = (
+  metadata: EventMetadataResponse,
+  language: string,
+): EventMetadataDTO | null => {
+  const entries = metadataList(metadata);
+  if (entries.length === 0) return null;
+
+  const wanted = language.trim().toLowerCase().split("-")[0];
+  const match = entries.find(
+    (entry) => entry.language?.trim().toLowerCase().split("-")[0] === wanted,
+  );
+  if (match) return match;
+
+  const english = entries.find(
+    (entry) => entry.language?.trim().toLowerCase().split("-")[0] === "en",
+  );
+  return english ?? entries[0];
+};
+
+export const eventTitle = (event: EventDTO, language: string): string =>
+  metadataForLanguage(event.metadata, language)?.name?.trim() || "";
+
+export const eventDescription = (event: EventDTO, language: string): string =>
+  metadataForLanguage(event.metadata, language)?.description?.trim() || "";
+
+/** The language of the entry actually shown, for picking the right font class. */
+export const eventTitleLanguage = (event: EventDTO, language: string): string =>
+  metadataForLanguage(event.metadata, language)?.language || language;
+
+export const eventImageUrl = (event: EventDTO): string | null =>
+  event.image_url?.trim() || event.image?.url?.trim() || null;
+
+/**
+ * The YouTube video id in any of the shapes an organizer might paste: a watch
+ * link, a short youtu.be link, an embed link, or a live URL. Returns null for
+ * anything else, so a Vimeo or Zoom link is offered as a plain link instead of
+ * being forced into a YouTube iframe.
+ */
+export const youtubeVideoId = (url: string): string | null => {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+
+  const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+  const idPattern = /^[\w-]{11}$/;
+
+  if (host === "youtu.be") {
+    const id = parsed.pathname.slice(1).split("/")[0];
+    return idPattern.test(id) ? id : null;
+  }
+
+  if (
+    host !== "youtube.com" &&
+    host !== "m.youtube.com" &&
+    host !== "youtube-nocookie.com"
+  ) {
+    return null;
+  }
+
+  const queryId = parsed.searchParams.get("v");
+  if (queryId && idPattern.test(queryId)) return queryId;
+
+  // /embed/<id>, /live/<id>, /v/<id>, /shorts/<id>
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  if (
+    segments.length >= 2 &&
+    ["embed", "live", "v", "shorts"].includes(segments[0])
+  ) {
+    return idPattern.test(segments[1]) ? segments[1] : null;
+  }
+
+  return null;
+};
+
+/** nocookie host: this page embeds third-party video on an otherwise first-party page. */
+export const youtubeEmbedUrl = (url: string): string | null => {
+  const id = youtubeVideoId(url);
+  return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+};
+
+/**
+ * The video to feature, preferring one in the reader's language. Organizers add
+ * one stream per language for the same puja, so picking the first would show a
+ * Tibetan reader the English overlay.
+ */
+export const preferredVideo = (event: EventDTO, language: string) => {
+  const videos = [...(event.youtube ?? [])].sort(
+    (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+  );
+  if (videos.length === 0) return null;
+
+  const wanted = language.trim().toLowerCase().split("-")[0];
+  return (
+    videos.find(
+      (video) => video.language?.trim().toLowerCase().split("-")[0] === wanted,
+    ) ??
+    videos.find(
+      (video) => video.language?.trim().toLowerCase().split("-")[0] === "en",
+    ) ??
+    videos[0]
+  );
+};
+
+/**
+ * The event's window in the reader's locale. A single-day event collapses to
+ * one date and a time range; anything longer spells out both ends, because
+ * "10:00 - 14:00" across a three-day retreat tells the reader nothing.
+ */
+export const formatEventWindow = (event: EventDTO, locale: string): string => {
+  const start = new Date(event.start_date);
+  const end = new Date(event.end_date);
+  if (Number.isNaN(start.getTime())) return "";
+
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  };
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "2-digit",
+  };
+
+  const sameDay =
+    !Number.isNaN(end.getTime()) && start.toDateString() === end.toDateString();
+
+  if (sameDay) {
+    return `${start.toLocaleDateString(locale, dateOptions)} · ${start.toLocaleTimeString(
+      locale,
+      timeOptions,
+    )} – ${end.toLocaleTimeString(locale, timeOptions)}`;
+  }
+
+  if (Number.isNaN(end.getTime())) {
+    return `${start.toLocaleDateString(locale, dateOptions)} · ${start.toLocaleTimeString(locale, timeOptions)}`;
+  }
+
+  return `${start.toLocaleDateString(locale, dateOptions)} – ${end.toLocaleDateString(
+    locale,
+    dateOptions,
+  )}`;
+};
+
+export const locationLabel = (event: EventDTO): string => {
+  const parts = [
+    event.location?.name,
+    event.location?.city,
+    event.location?.country,
+  ]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part));
+  return parts.join(", ");
+};

@@ -31,6 +31,18 @@ server {
   location /api {
     proxy_pass ${VITE_BACKEND_BASE_URL};
     proxy_ssl_server_name on;
+
+    # The live recitation socket lives under /api. `Upgrade` and `Connection`
+    # are hop-by-hop headers, so nginx drops them unless they are set again
+    # here - without this the handshake comes out the other side as a plain
+    # GET and the socket never opens.
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    # A live puja can run for hours with long quiet stretches between frames,
+    # and the default 60s read timeout would cut the socket mid-session.
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
   }
 
   # Library (OpenPecha) API. The trailing slash strips the /library/ prefix, so
