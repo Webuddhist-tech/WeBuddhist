@@ -117,11 +117,11 @@ const LiveEvents = () => {
       {!isLoading &&
         !hasError &&
         bands.map((band) => (
-          <section key={band.key} className="mt-10 first:mt-0">
-            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <section key={band.key} className="mt-12 first:mt-8">
+            <h2 className="mb-6 text-sm font-semibold uppercase tracking-wide text-slate-500">
               {band.heading}
             </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
               {band.events.map((event) => (
                 <LiveEventCard
                   key={`${event.id}-${event.occurrence_date ?? ""}`}

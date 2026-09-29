@@ -104,6 +104,28 @@ describe("LiveEvents", () => {
     );
   });
 
+  it("shows a plain-text excerpt on the card when a description exists", () => {
+    mockQuery({
+      data: [
+        event({
+          id: "live-1",
+          metadata: {
+            id: "m1",
+            name: "Morning Puja",
+            description: "**Bold lead** about the gathering.",
+            language: "en",
+          },
+        }),
+      ],
+    });
+
+    renderPage();
+
+    expect(
+      screen.getByText("Bold lead about the gathering."),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty state rather than a bare page", () => {
     mockQuery({ data: [] });
 
