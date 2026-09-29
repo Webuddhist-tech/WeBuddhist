@@ -22,6 +22,7 @@ import {
   getSegmentById,
   getSegmentCommentaries,
   getSegmentInfo,
+  getSegmentRootText,
   getSegmentTranslations,
 } from "./segments.ts";
 
@@ -174,6 +175,18 @@ describe("relations from anywhere in a family", () => {
       translation_of: null,
       commentary_of: "root",
     },
+    // An English rendering of the commentary: it only points at what it
+    // translates, never at the root the commentary is on.
+    commEn: {
+      id: "commEn",
+      title: { en: "Commentary in English" },
+      language: "en",
+      category_id: "cat-1",
+      translations: [],
+      commentaries: [],
+      translation_of: "comm",
+      commentary_of: null,
+    },
   };
 
   /** What /segments/{id}/related returns for the segment under test. */
@@ -204,11 +217,11 @@ describe("relations from anywhere in a family", () => {
 
     expect(result.segment_info).toMatchObject({
       text_id: "fr",
-      // The sibling `zh` and the `root` it was translated from: everything that
-      // is not a commentary is a translation, so the root is counted here as
-      // well as under its own button. `fr` is the text being read, so it drops.
+      // The sibling `zh` and the `root` it was translated from are both
+      // translations. Only a commentary has a root text, so a translation's
+      // original gets no button of its own. `fr` is the text being read.
       translations: 2,
-      related_text: { commentaries: 1, root_text: 1 },
+      related_text: { commentaries: 1, root_text: 0 },
     });
   });
 
@@ -235,7 +248,7 @@ describe("relations from anywhere in a family", () => {
 
     expect(result.segment_info).toMatchObject({
       translations: 2,
-      // The root has no ancestor of its own in this fixture.
+      // The root comments on nothing, so it has no root text.
       related_text: { commentaries: 1, root_text: 0 },
     });
   });
@@ -407,6 +420,59 @@ describe("relations from anywhere in a family", () => {
     expect(list.translations.map((g) => g.text_id)).toEqual(["zh"]);
   });
 
+  test("a translated commentary is a commentary, not a translation", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "root"));
+    relatedTo(["fr", "comm", "commEn"]);
+
+    const info = await getSegmentInfo("seg-1");
+    const translations = await getSegmentTranslations({ segmentId: "seg-1" });
+    const commentaries = await getSegmentCommentaries({ segmentId: "seg-1" });
+
+    expect(info.segment_info).toMatchObject({
+      translations: 1,
+      related_text: { commentaries: 2, root_text: 0 },
+    });
+    expect(translations.translations.map((g) => g.text_id)).toEqual(["fr"]);
+    expect(commentaries.commentaries.map((g) => g.text_id)).toEqual([
+      "comm",
+      "commEn",
+    ]);
+  });
+
+  test("reading a commentary, the root in any language is its root text", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "comm"));
+    relatedTo(["root", "fr", "commEn"]);
+
+    const info = await getSegmentInfo("seg-1");
+    const translations = await getSegmentTranslations({ segmentId: "seg-1" });
+    const rootText = await getSegmentRootText({ segmentId: "seg-1" });
+
+    expect(info.segment_info).toMatchObject({
+      translations: 1,
+      related_text: { commentaries: 0, root_text: 2 },
+    });
+    // Its own English rendering is the commentary's translation...
+    expect(translations.translations.map((g) => g.text_id)).toEqual([
+      "commEn",
+    ]);
+    // ...while the work it comments on is the root, not a translation.
+    expect(rootText.root_text.map((g) => g.text_id)).toEqual(["root", "fr"]);
+  });
+
+  test("reading a translated commentary, the root is the commented work", async () => {
+    mocked(fetchSegmentContent).mockResolvedValue("text");
+    mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 4]], "commEn"));
+    relatedTo(["comm", "root", "zh"]);
+
+    const translations = await getSegmentTranslations({ segmentId: "seg-1" });
+    const rootText = await getSegmentRootText({ segmentId: "seg-1" });
+
+    expect(translations.translations.map((g) => g.text_id)).toEqual(["comm"]);
+    expect(rootText.root_text.map((g) => g.text_id)).toEqual(["root", "zh"]);
+  });
+
   test("the panel counts each text once, however many segments it has", async () => {
     mocked(fetchSegmentDetail).mockResolvedValue(detail([[0, 5]], "fr"));
     mocked(fetchRelatedSegments).mockResolvedValue({
@@ -427,7 +493,7 @@ describe("relations from anywhere in a family", () => {
       // `zh` contributes two segments but is one entry in the list, so the
       // button says two texts rather than three segments.
       translations: 2,
-      related_text: { commentaries: 1, root_text: 1 },
+      related_text: { commentaries: 1, root_text: 0 },
     });
   });
 });

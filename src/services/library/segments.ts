@@ -21,24 +21,12 @@ import type {
 
 const TRANSLATION = "translation";
 const COMMENTARY = "commentary";
-const MAX_SKIP = 10000;
+const ROOT_TEXT = "root_text";
 const MAX_LIMIT = 100;
 /** Enough for 2000 related segments; a stop so a bad `has_more` cannot spin. */
 const RELATED_SCAN_MAX_PAGES = 20;
-
-/**
- * A related text is a commentary when it says so, and a translation otherwise.
- *
- * Only `commentary_of` earns a list of its own. Everything else lands in the
- * translations list: a text carrying `translation_of`, the root text those
- * point back at, a text carrying neither pointer, and one whose metadata could
- * not be fetched. The segment's own type does not route it anywhere - a title
- * or front matter sits in the list alongside the verses, labelled with its type
- * so the reader can tell them apart. Matching on both pointers used to leave a
- * related segment in no list at all, dropping it from the panel silently.
- */
-const classifyText = (text: LibraryText | null | undefined): string =>
-  text?.commentary_of ? COMMENTARY : TRANSLATION;
+/** A stop for a `translation_of` chain that loops or runs on. */
+const MAX_LINEAGE_DEPTH = 10;
 
 const fetchTextSafe = async (
   textId: string | null | undefined,
@@ -49,6 +37,90 @@ const fetchTextSafe = async (
   } catch {
     return null;
   }
+};
+
+/**
+ * The work a text is a version of: follow `translation_of` up to the text that
+ * is not itself a translation. An English rendering of a commentary belongs to
+ * that commentary's work, and only the top of the chain says `commentary_of` -
+ * judging a related text by its own pointers alone is what put every
+ * translated commentary in the translations list.
+ */
+const workOf = async (
+  textId: string,
+): Promise<{ id: string; text: LibraryText | null }> => {
+  let id = textId;
+  let text = await fetchTextSafe(id);
+  const seen = new Set([id]);
+  while (
+    text?.translation_of &&
+    !seen.has(text.translation_of) &&
+    seen.size < MAX_LINEAGE_DEPTH
+  ) {
+    id = text.translation_of;
+    seen.add(id);
+    text = await fetchTextSafe(id);
+  }
+  return { id, text };
+};
+
+/** Where the text being read sits: its own work, and the work that comments on. */
+type Lineage = {
+  ownWorkId: string | null;
+  rootWorkId: string | null;
+};
+
+const lineageOf = async (ownTextId: string | null): Promise<Lineage> => {
+  if (!ownTextId) return { ownWorkId: null, rootWorkId: null };
+  const ownWork = await workOf(ownTextId);
+  const commented = ownWork.text?.commentary_of;
+  return {
+    ownWorkId: ownWork.id,
+    rootWorkId: commented ? (await workOf(commented)).id : null,
+  };
+};
+
+/**
+ * The panel list a related text belongs in, judged against the text being read.
+ *
+ * - The same work in another language, the original included: a translation.
+ * - The work the open text comments on, in any language: the root text.
+ * - Any other commentary, or a translation of one: a commentary.
+ * - Anything else, metadata missing included: a translation, so nothing aligned
+ *   to the segment silently drops out of the panel.
+ *
+ * Only a commentary (or a translation of one) has a root text: the work it
+ * comments on. A plain translation's original is listed under translations.
+ * The segment's own type routes nothing - a title or front matter is listed
+ * with the verses and labelled with its type.
+ */
+const relationOf = async (textId: string, lineage: Lineage): Promise<string> => {
+  const work = await workOf(textId);
+  if (lineage.ownWorkId && work.id === lineage.ownWorkId) return TRANSLATION;
+  if (lineage.rootWorkId && work.id === lineage.rootWorkId) return ROOT_TEXT;
+  if (work.text?.commentary_of) return COMMENTARY;
+  return TRANSLATION;
+};
+
+/** Every related text other than the one being read, with its metadata and relation. */
+const classifyRelatedTexts = async (
+  items: LibraryRelatedSegment[],
+  ownTextId: string | null,
+): Promise<Map<string, { text: LibraryText | null; relation: string }>> => {
+  // The related lookup also returns other segments of the text being read.
+  // Listing the open text among its own relations is noise, so drop it.
+  const textIds = uniqueTextIds(items).filter((id) => id !== ownTextId);
+  const lineage = await lineageOf(ownTextId);
+  const entries = await Promise.all(
+    textIds.map(async (textId) => {
+      const [text, relation] = await Promise.all([
+        fetchTextSafe(textId),
+        relationOf(textId, lineage),
+      ]);
+      return [textId, { text, relation }] as const;
+    }),
+  );
+  return new Map(entries);
 };
 
 /**
@@ -114,16 +186,6 @@ const fetchParentSegmentWithText = async (
   };
 };
 
-const fetchParentSegment = async (
-  segmentId: string,
-): Promise<ParentSegment> => {
-  const content = await fetchContentSafe(segmentId);
-  if (content === null) {
-    throw new LibraryError(`Segment with id '${segmentId}' not found`, 404);
-  }
-  return { segment_id: segmentId, content };
-};
-
 const uniqueTextIds = (items: LibraryRelatedSegment[]): string[] => [
   ...new Set(
     items
@@ -160,18 +222,13 @@ const fetchAllRelatedSegments = async (
 /** The related segments of `relatedType`, keyed by the text they belong to. */
 const groupRelatedByText = (
   items: LibraryRelatedSegment[],
-  ownTextId: string | null,
-  textById: Map<string, LibraryText | null>,
+  classified: Map<string, { relation: string }>,
   relatedType: string,
 ): Map<string, LibraryRelatedSegment[]> => {
   const byText = new Map<string, LibraryRelatedSegment[]>();
   items.forEach((item) => {
     const textId = item.text_id;
-    // The related lookup also returns other segments of the text being read.
-    // Listing the open text as its own translation or commentary is noise, so
-    // drop it - a commentary was otherwise shown as a commentary on itself.
-    if (!textId || textId === ownTextId) return;
-    if (classifyText(textById.get(textId)) !== relatedType) return;
+    if (!textId || classified.get(textId)?.relation !== relatedType) return;
     const existing = byText.get(textId);
     if (existing) existing.push(item);
     else byText.set(textId, [item]);
@@ -198,18 +255,8 @@ const relatedSegmentsGroupedByType = async (args: {
     return { parentSegment, groups: [], hasMore: false };
   }
 
-  const textIds = uniqueTextIds(items);
-  const texts = await Promise.all(
-    textIds.map((textId) => fetchTextSafe(textId)),
-  );
-  const textById = new Map(textIds.map((textId, i) => [textId, texts[i]]));
-
-  const byText = groupRelatedByText(
-    items,
-    ownTextId,
-    textById,
-    args.relatedType,
-  );
+  const classified = await classifyRelatedTexts(items, ownTextId);
+  const byText = groupRelatedByText(items, classified, args.relatedType);
 
   // Group first, then page. Each list shows one entry per text and its button
   // counts texts, so the window has to be over texts too - paging over raw
@@ -220,7 +267,7 @@ const relatedSegmentsGroupedByType = async (args: {
   // Content and source links only for the texts actually being returned.
   const groups = await Promise.all(
     page.map(async ([textId, segments]) => {
-      const text = textById.get(textId);
+      const text = classified.get(textId)?.text;
       const [sourceLink, contents] = await Promise.all([
         fetchTextSourceLink(textId),
         Promise.all(segments.map((segment) => fetchContentSafe(segment.id))),
@@ -292,79 +339,27 @@ export const getSegmentCommentaries = async (params: {
 };
 
 /**
- * Callers do not know a segment's root text ahead of time, so resolve it from
- * the segment's own text's translation_of/commentary_of pointer - the inverse of
- * the direction classifyText uses.
+ * The work the text being read comments on, in every language aligned to this
+ * segment. Empty unless the text being read is a commentary.
  */
-const resolveRootTextId = async (segmentId: string): Promise<string | null> => {
-  const detail = await fetchSegmentDetail(segmentId);
-  if (!detail) return null;
-  const text = await fetchTextById(detail.text_id);
-  if (!text) return null;
-  return text.translation_of ?? text.commentary_of ?? null;
-};
-
 export const getSegmentRootText = async (params: {
   segmentId: string;
-  textId?: string | null;
   skip?: number;
   limit?: number;
 }): Promise<V2SegmentRootTextResponse> => {
   const skip = params.skip ?? 0;
   const limit = params.limit ?? 10;
-
-  const textId = params.textId ?? (await resolveRootTextId(params.segmentId));
-
-  if (!textId) {
-    return {
-      parent_segment: await fetchParentSegment(params.segmentId),
-      root_text: [],
+  const { parentSegment, groups, hasMore } = await relatedSegmentsGroupedByType(
+    {
+      segmentId: params.segmentId,
+      relatedType: ROOT_TEXT,
       skip,
       limit,
-      has_more: false,
-    };
-  }
-
-  const [parentSegment, relatedPage] = await Promise.all([
-    fetchParentSegment(params.segmentId),
-    fetchRelatedSegments(params.segmentId, {
-      limit: Math.max(1, Math.min(limit, MAX_LIMIT)),
-      offset: Math.max(0, Math.min(skip, MAX_SKIP)),
-      text_id: textId,
-    }),
-  ]);
-
-  const items = relatedPage.items ?? [];
-  const hasMore = Boolean(relatedPage.has_more);
-  if (items.length === 0) {
-    return {
-      parent_segment: parentSegment,
-      root_text: [],
-      skip,
-      limit,
-      has_more: hasMore,
-    };
-  }
-
-  const [text, contents] = await Promise.all([
-    fetchTextSafe(textId),
-    Promise.all(items.map((item) => fetchContentSafe(item.id))),
-  ]);
-
+    },
+  );
   return {
     parent_segment: parentSegment,
-    root_text: [
-      {
-        text_id: textId,
-        title: extractTitle(text?.title),
-        language: text?.language ?? null,
-        segments: items.map((item, index) => ({
-          id: item.id,
-          content: contents[index],
-          type: item.type ?? null,
-        })),
-      },
-    ],
+    root_text: groups,
     skip,
     limit,
     has_more: hasMore,
@@ -428,26 +423,12 @@ export const getSegmentInfo = async (
     throw new LibraryError(`Text with id '${textId}' not found`, 404);
   }
 
-  const rootTextId = text.translation_of ?? text.commentary_of ?? null;
-  const items = allRelated.filter(
-    (item) => item.text_id && item.text_id !== textId,
-  );
-  const relatedTextIds = [...new Set(items.map((item) => item.text_id!))];
-  const relatedTexts = await Promise.all(
-    relatedTextIds.map((id) => fetchTextSafe(id)),
-  );
-  const textById = new Map(
-    relatedTextIds.map((id, index) => [id, relatedTexts[index]]),
-  );
+  const classified = await classifyRelatedTexts(allRelated, textId);
 
   // Each list renders one group per text, so the button counts texts rather
   // than segments.
   const countOfType = (type: string) =>
-    new Set(
-      items
-        .filter((item) => classifyText(textById.get(item.text_id!)) === type)
-        .map((item) => item.text_id!),
-    ).size;
+    [...classified.values()].filter(({ relation }) => relation === type).length;
 
   return {
     segment_info: {
@@ -456,7 +437,7 @@ export const getSegmentInfo = async (
       translations: countOfType(TRANSLATION),
       related_text: {
         commentaries: countOfType(COMMENTARY),
-        root_text: rootTextId && relatedTextIds.includes(rootTextId) ? 1 : 0,
+        root_text: countOfType(ROOT_TEXT),
       },
       resources: { sheets: 0 },
     },

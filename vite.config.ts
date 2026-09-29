@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => {
       target: target("VITE_BACKEND_BASE_URL", "http://127.0.0.1:8000"),
       changeOrigin: true,
       secure: true,
+      // The live recitation socket is served under /api, and without this the
+      // upgrade request is proxied as a plain GET and the handshake fails.
+      ws: true,
     },
     // Keeps the library API behind our own origin, so its host never appears in
     // a browser request and the X-Application header is added server-side

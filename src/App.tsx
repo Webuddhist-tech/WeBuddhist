@@ -71,6 +71,10 @@ const DeleteAccount = lazy(
 );
 const AppShare = lazy(() => import("./routes/app-share/AppShare.tsx"));
 const OpenReader = lazy(() => import("./routes/open-reader/OpenReader.tsx"));
+const LiveEvents = lazy(() => import("./routes/live-events/LiveEvents.tsx"));
+const LiveEventDetail = lazy(
+  () => import("./routes/live-events/LiveEventDetail.tsx"),
+);
 
 type Auth0UserType = {
   getAccessTokenSilently: (options?: {
@@ -294,6 +298,8 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/plans" element={<Planviewer />} />
+          <Route path="/live" element={<LiveEvents />} />
+          <Route path="/live/:eventId" element={<LiveEventDetail />} />
           <Route path="/collections" element={<Collections />} />
           <Route
             path="/profile"

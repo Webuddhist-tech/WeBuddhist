@@ -134,6 +134,7 @@ const Navigation = () => {
 
   const navItems = [
     { to: "/plans", label: t("header.plans"), key: "plans" },
+    { to: "/live", label: t("header.live"), key: "live" },
     { to: "/collections", label: t("header.text"), key: "collections" },
     { to: "/about-us", label: t("about.tag"), key: "about" },
   ];
