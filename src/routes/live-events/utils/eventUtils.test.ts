@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventDTO } from "../types.ts";
 import {
+  eventDescriptionExcerpt,
   eventPhase,
   eventTitle,
   formatEventWindow,
@@ -9,6 +10,8 @@ import {
   preferredVideo,
   safeExternalUrl,
   sortByPhaseThenTime,
+  stripMarkdownForExcerpt,
+  truncateExcerpt,
   youtubeEmbedUrl,
   youtubeVideoId,
 } from "./eventUtils.ts";
@@ -134,6 +137,45 @@ describe("eventTitle", () => {
   });
 });
 
+describe("stripMarkdownForExcerpt", () => {
+  it("removes common markdown syntax for card snippets", () => {
+    expect(
+      stripMarkdownForExcerpt(
+        "**Bold lead**\n\n- First item\n\n[Join us](https://example.com)",
+      ),
+    ).toBe("Bold lead First item Join us");
+  });
+});
+
+describe("truncateExcerpt", () => {
+  it("shortens long copy on a word boundary", () => {
+    const long = "word ".repeat(40).trim();
+    const result = truncateExcerpt(long, 50);
+    expect(result.endsWith("…")).toBe(true);
+    expect(result.length).toBeLessThanOrEqual(52);
+  });
+});
+
+describe("eventDescriptionExcerpt", () => {
+  it("returns empty when there is no description", () => {
+    expect(eventDescriptionExcerpt(event(), "en")).toBe("");
+  });
+
+  it("uses localized metadata like the detail page", () => {
+    const withDesc = event({
+      metadata: {
+        id: "m1",
+        name: "Puja",
+        description: "**Welcome** to the session.",
+        language: "en",
+      },
+    });
+    expect(eventDescriptionExcerpt(withDesc, "en")).toBe(
+      "Welcome to the session.",
+    );
+  });
+});
+
 describe("youtubeVideoId", () => {
   it("reads the id from every shape an organizer might paste", () => {
     expect(youtubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
@@ -245,8 +287,9 @@ describe("formatEventWindow", () => {
   });
 
   it("names the zone so an event-local time is not silently foreign", () => {
-    expect(formatEventWindow(event({ timezone: "Asia/Kathmandu" }), "en-GB")).
-      toMatch(/GMT\+5:45/);
+    expect(
+      formatEventWindow(event({ timezone: "Asia/Kathmandu" }), "en-GB"),
+    ).toMatch(/GMT\+5:45/);
   });
 
   it("names the zone on a multi-day range, whose dates are event-local", () => {
@@ -283,9 +326,9 @@ describe("formatEventWindow", () => {
     expect(() =>
       formatEventWindow(event({ timezone: "Not/AZone" }), "en-GB"),
     ).not.toThrow();
-    expect(formatEventWindow(event({ timezone: "Not/AZone" }), "en-GB")).not.toBe(
-      "",
-    );
+    expect(
+      formatEventWindow(event({ timezone: "Not/AZone" }), "en-GB"),
+    ).not.toBe("");
   });
 });
 
@@ -305,7 +348,9 @@ describe("safeExternalUrl", () => {
     // javascript: - the check has to see it the way the browser will.
     expect(safeExternalUrl("java\nscript:alert(1)")).toBeNull();
     expect(safeExternalUrl("JaVaScRiPt:alert(1)")).toBeNull();
-    expect(safeExternalUrl("data:text/html,<script>alert(1)</script>")).toBeNull();
+    expect(
+      safeExternalUrl("data:text/html,<script>alert(1)</script>"),
+    ).toBeNull();
     expect(safeExternalUrl("vbscript:msgbox(1)")).toBeNull();
   });
 

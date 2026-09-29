@@ -9,6 +9,7 @@ import {
   mapLanguageCode,
 } from "../../utils/helperFunctions.tsx";
 import { fetchEventById } from "./api/eventsApi.ts";
+import EventDescriptionMarkdown from "./components/EventDescriptionMarkdown.tsx";
 import EventVideo from "./components/EventVideo.tsx";
 import LivePill from "./components/LivePill.tsx";
 import LiveViewerCount from "./components/LiveViewerCount.tsx";
@@ -172,14 +173,20 @@ const LiveEventDetail = () => {
           )}
 
           {description && (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <section
+              aria-labelledby="live-event-about-heading"
+              className="rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-900/5 sm:p-8"
+            >
+              <h2
+                id="live-event-about-heading"
+                className="text-sm font-semibold uppercase tracking-wide text-slate-500"
+              >
                 {t("live_events.about")}
               </h2>
-              <p className="whitespace-pre-line text-[0.975rem] leading-relaxed text-slate-700">
-                {description}
-              </p>
-            </div>
+              <div className="mt-4">
+                <EventDescriptionMarkdown content={description} />
+              </div>
+            </section>
           )}
         </div>
 

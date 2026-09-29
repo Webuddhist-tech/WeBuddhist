@@ -85,6 +85,46 @@ describe("LiveEventDetail", () => {
     expect(screen.getByText("Asia/Kolkata")).toBeInTheDocument();
   });
 
+  it("renders markdown in the description", () => {
+    mockQuery({
+      data: event({
+        metadata: {
+          id: "m1",
+          name: "Morning Puja",
+          description: "**Bold lead**\n\n- First item\n- Second item",
+          language: "en",
+        },
+      }),
+    });
+
+    renderPage();
+
+    const bold = screen.getByText("Bold lead");
+    expect(bold.tagName).toBe("STRONG");
+    expect(screen.getByText("First item")).toBeInTheDocument();
+    expect(screen.getByText("Second item")).toBeInTheDocument();
+  });
+
+  it("opens safe links from markdown in a new tab", () => {
+    mockQuery({
+      data: event({
+        metadata: {
+          id: "m1",
+          name: "Morning Puja",
+          description: "Join us at [our site](https://example.com/puja).",
+          language: "en",
+        },
+      }),
+    });
+
+    renderPage();
+
+    const link = screen.getByRole("link", { name: "our site" });
+    expect(link).toHaveAttribute("href", "https://example.com/puja");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("embeds the stream for the reader's language", () => {
     mockQuery({
       data: event({

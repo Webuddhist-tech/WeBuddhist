@@ -2,6 +2,7 @@ import { useTranslate } from "@tolgee/react";
 import { Link } from "react-router-dom";
 import type { EventDTO } from "../types.ts";
 import {
+  eventDescriptionExcerpt,
   eventImageUrl,
   eventPhase,
   eventTitle,
@@ -28,6 +29,7 @@ type LiveEventCardProps = {
 const LiveEventCard = ({ event, language, locale }: LiveEventCardProps) => {
   const { t } = useTranslate();
   const title = eventTitle(event, language) || t("live_events.untitled");
+  const excerpt = eventDescriptionExcerpt(event, language);
   const phase = eventPhase(event);
   const imageUrl = eventImageUrl(event);
   const where = locationLabel(event);
@@ -64,7 +66,7 @@ const LiveEventCard = ({ event, language, locale }: LiveEventCardProps) => {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 p-5">
+      <div className="flex flex-1 flex-col gap-3.5 p-5 sm:p-6">
         {event.group_name && (
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
             {event.group_avatar_url && (
@@ -79,12 +81,18 @@ const LiveEventCard = ({ event, language, locale }: LiveEventCardProps) => {
         )}
 
         <h3
-          className={`text-balance text-lg font-semibold leading-snug text-[#102544] ${titleFontClass}`}
+          className={`text-balance text-lg font-semibold leading-snug tracking-tight text-[#102544] ${titleFontClass}`}
         >
           {title}
         </h3>
 
-        <p className="text-sm text-slate-600">
+        {excerpt && (
+          <p className="line-clamp-3 text-sm leading-relaxed text-slate-600">
+            {excerpt}
+          </p>
+        )}
+
+        <p className="text-sm leading-snug text-slate-600">
           {formatEventWindow(event, locale)}
         </p>
 

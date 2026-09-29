@@ -91,6 +91,45 @@ export const eventTitle = (event: EventDTO, language: string): string =>
 export const eventDescription = (event: EventDTO, language: string): string =>
   metadataForLanguage(event.metadata, language)?.description?.trim() || "";
 
+/**
+ * Plain text for list-card excerpts. Full Markdown is rendered on the detail
+ * page; cards only need a readable snippet without markup syntax showing.
+ */
+export const stripMarkdownForExcerpt = (markdown: string): string => {
+  let text = markdown.trim();
+  if (!text) return "";
+
+  text = text.replace(/!\[[^\]]*]\([^)]*\)/g, "");
+  text = text.replace(/\[([^\]]*)]\([^)]*\)/g, "$1");
+  text = text.replace(/^#{1,6}\s+/gm, "");
+  text = text.replace(/(\*\*|__)(.*?)\1/g, "$2");
+  text = text.replace(/(\*|_)(.*?)\1/g, "$2");
+  text = text.replace(/`([^`]*)`/g, "$1");
+  text = text.replace(/^>\s?/gm, "");
+  text = text.replace(/^[-*+]\s+/gm, "");
+  text = text.replace(/^\d+\.\s+/gm, "");
+  text = text.replace(/\s+/g, " ").trim();
+  return text;
+};
+
+export const truncateExcerpt = (text: string, maxLength = 160): string => {
+  if (text.length <= maxLength) return text;
+  const sliced = text.slice(0, maxLength);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const cut = lastSpace > maxLength * 0.6 ? sliced.slice(0, lastSpace) : sliced;
+  return `${cut.trim()}…`;
+};
+
+export const eventDescriptionExcerpt = (
+  event: EventDTO,
+  language: string,
+  maxLength = 160,
+): string => {
+  const raw = eventDescription(event, language);
+  if (!raw) return "";
+  return truncateExcerpt(stripMarkdownForExcerpt(raw), maxLength);
+};
+
 /** The language of the entry actually shown, for picking the right font class. */
 export const eventTitleLanguage = (event: EventDTO, language: string): string =>
   metadataForLanguage(event.metadata, language)?.language || language;
