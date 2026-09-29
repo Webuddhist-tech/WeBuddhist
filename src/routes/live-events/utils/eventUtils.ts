@@ -3,6 +3,10 @@ import type {
   EventMetadataDTO,
   EventMetadataResponse,
 } from "../types.ts";
+import {
+  EXCERPT_MARKDOWN_PARSE_LIMIT,
+  markdownToPlainText,
+} from "./descriptionMarkdown.ts";
 
 /**
  * Where an event sits relative to now.
@@ -96,20 +100,15 @@ export const eventDescription = (event: EventDTO, language: string): string =>
  * page; cards only need a readable snippet without markup syntax showing.
  */
 export const stripMarkdownForExcerpt = (markdown: string): string => {
-  let text = markdown.trim();
+  const text = markdown.trim();
   if (!text) return "";
 
-  text = text.replace(/!\[[^\]]*]\([^)]*\)/g, "");
-  text = text.replace(/\[([^\]]*)]\([^)]*\)/g, "$1");
-  text = text.replace(/^#{1,6}\s+/gm, "");
-  text = text.replace(/(\*\*|__)(.*?)\1/g, "$2");
-  text = text.replace(/(\*|_)(.*?)\1/g, "$2");
-  text = text.replace(/`([^`]*)`/g, "$1");
-  text = text.replace(/^>\s?/gm, "");
-  text = text.replace(/^[-*+]\s+/gm, "");
-  text = text.replace(/^\d+\.\s+/gm, "");
-  text = text.replace(/\s+/g, " ").trim();
-  return text;
+  const bounded =
+    text.length > EXCERPT_MARKDOWN_PARSE_LIMIT
+      ? text.slice(0, EXCERPT_MARKDOWN_PARSE_LIMIT)
+      : text;
+
+  return markdownToPlainText(bounded);
 };
 
 export const truncateExcerpt = (text: string, maxLength = 160): string => {

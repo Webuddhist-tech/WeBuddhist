@@ -145,6 +145,20 @@ describe("stripMarkdownForExcerpt", () => {
       ),
     ).toBe("Bold lead First item Join us");
   });
+
+  it("keeps underscore literals the detail renderer would not emphasize", () => {
+    expect(stripMarkdownForExcerpt("Morning_puja_and")).toBe(
+      "Morning_puja_and",
+    );
+  });
+
+  it("bounds parsing on very long descriptions", () => {
+    const brackets = "[".repeat(20_000);
+    const started = performance.now();
+    const excerpt = stripMarkdownForExcerpt(brackets);
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(excerpt.length).toBeLessThanOrEqual(4096);
+  });
 });
 
 describe("truncateExcerpt", () => {

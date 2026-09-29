@@ -1,5 +1,6 @@
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
+import { eventDescriptionRemarkPlugins } from "../utils/descriptionMarkdown.ts";
 import { safeExternalUrl } from "../utils/eventUtils.ts";
 
 type EventDescriptionMarkdownProps = {
@@ -24,6 +25,11 @@ const markdownComponents: Components = {
     </ol>
   ),
   li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  h1: ({ children }) => (
+    <h3 className="mt-6 text-base font-semibold text-[#102544] first:mt-0">
+      {children}
+    </h3>
+  ),
   h2: ({ children }) => (
     <h2 className="mt-6 text-base font-semibold text-[#102544] first:mt-0">
       {children}
@@ -31,6 +37,17 @@ const markdownComponents: Components = {
   ),
   h3: ({ children }) => (
     <h3 className="mt-5 text-sm font-semibold text-[#102544]">{children}</h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="mt-4 text-sm font-semibold text-[#102544]">{children}</h4>
+  ),
+  h5: ({ children }) => (
+    <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      {children}
+    </h5>
+  ),
+  h6: ({ children }) => (
+    <h6 className="mt-3 text-xs font-semibold text-slate-600">{children}</h6>
   ),
   strong: ({ children }) => (
     <strong className="font-semibold text-slate-900">{children}</strong>
@@ -64,7 +81,12 @@ const EventDescriptionMarkdown = ({
   className = "",
 }: EventDescriptionMarkdownProps) => (
   <div className={`min-w-0 ${className}`}>
-    <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
+    <ReactMarkdown
+      remarkPlugins={eventDescriptionRemarkPlugins}
+      components={markdownComponents}
+    >
+      {content}
+    </ReactMarkdown>
   </div>
 );
 
