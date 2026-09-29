@@ -22,10 +22,10 @@ describe("EventDescriptionMarkdown", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "Section title" }),
+      screen.getByRole("heading", { level: 4, name: "Section title" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 3, name: "Subheading" }),
+      screen.getByRole("heading", { level: 5, name: "Subheading" }),
     ).toBeInTheDocument();
 
     const emphasis = screen.getByText("Emphasized");
@@ -84,6 +84,20 @@ describe("EventDescriptionMarkdown", () => {
       name: "Schedule details",
     });
     expect(subheading).toHaveClass("font-semibold", "text-[#102544]");
+  });
+
+  it("keeps markdown heading levels in order beneath About", () => {
+    render(<EventDescriptionMarkdown content={"# Schedule\n\n## Timing"} />);
+
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+
+    const headings = screen.getAllByRole("heading");
+    expect(headings).toHaveLength(2);
+    expect(headings[0]).toHaveTextContent("Schedule");
+    expect(headings[0].tagName).toBe("H3");
+    expect(headings[1]).toHaveTextContent("Timing");
+    expect(headings[1].tagName).toBe("H4");
   });
 
   it("merges an optional className onto the wrapper", () => {

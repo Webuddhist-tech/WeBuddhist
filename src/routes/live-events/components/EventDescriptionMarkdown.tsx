@@ -8,6 +8,11 @@ type EventDescriptionMarkdownProps = {
   className?: string;
 };
 
+/** About is an h2; shift markdown headings down so # → h3, ## → h4, and so on. */
+const descriptionHeading =
+  (Tag: "h3" | "h4" | "h5" | "h6", className: string): Components["h1"] =>
+  ({ children }) => <Tag className={className}>{children}</Tag>;
+
 const markdownComponents: Components = {
   p: ({ children }) => (
     <p className="text-sm leading-relaxed text-slate-700 sm:text-[15px] sm:leading-7 [&:not(:first-child)]:mt-4">
@@ -25,30 +30,18 @@ const markdownComponents: Components = {
     </ol>
   ),
   li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-  h1: ({ children }) => (
-    <h3 className="mt-6 text-base font-semibold text-[#102544] first:mt-0">
-      {children}
-    </h3>
+  h1: descriptionHeading(
+    "h3",
+    "mt-6 text-base font-semibold text-[#102544] first:mt-0",
   ),
-  h2: ({ children }) => (
-    <h2 className="mt-6 text-base font-semibold text-[#102544] first:mt-0">
-      {children}
-    </h2>
+  h2: descriptionHeading("h4", "mt-5 text-sm font-semibold text-[#102544]"),
+  h3: descriptionHeading("h5", "mt-4 text-sm font-semibold text-[#102544]"),
+  h4: descriptionHeading("h6", "mt-4 text-xs font-semibold text-[#102544]"),
+  h5: descriptionHeading(
+    "h6",
+    "mt-4 text-xs font-semibold uppercase tracking-wide text-slate-600",
   ),
-  h3: ({ children }) => (
-    <h3 className="mt-5 text-sm font-semibold text-[#102544]">{children}</h3>
-  ),
-  h4: ({ children }) => (
-    <h4 className="mt-4 text-sm font-semibold text-[#102544]">{children}</h4>
-  ),
-  h5: ({ children }) => (
-    <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-600">
-      {children}
-    </h5>
-  ),
-  h6: ({ children }) => (
-    <h6 className="mt-3 text-xs font-semibold text-slate-600">{children}</h6>
-  ),
+  h6: descriptionHeading("h6", "mt-3 text-xs font-semibold text-slate-600"),
   strong: ({ children }) => (
     <strong className="font-semibold text-slate-900">{children}</strong>
   ),
