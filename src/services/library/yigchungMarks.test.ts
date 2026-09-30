@@ -42,4 +42,22 @@ describe("getYigchungMarkSpans", () => {
     await getYigchungMarkSpans("ed-1");
     expect(libraryGet).toHaveBeenCalledTimes(1);
   });
+
+  test("does not cache failed mark requests", async () => {
+    vi.mocked(libraryGet)
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce([
+        {
+          id: "m1",
+          edition_id: "ed-1",
+          text_id: "t1",
+          span: { start: 0, end: 2 },
+        },
+      ]);
+
+    await expect(getYigchungMarkSpans("ed-1")).rejects.toThrow("network");
+    const marks = await getYigchungMarkSpans("ed-1");
+    expect(marks).toHaveLength(1);
+    expect(libraryGet).toHaveBeenCalledTimes(2);
+  });
 });

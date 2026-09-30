@@ -177,12 +177,14 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     highlightedYigchungIndex,
     resourcesSubView,
     resourcesSubViewNonce,
+    clearResourcesSubView,
     contentsScrollClassName,
     bodyTextSizeClass,
   } = useYigchungReader({
     contentsContainerRef,
     canShowYigchungs,
     yigchungCount,
+    selectSegmentId: setSelectedSegmentId,
     openResourcesPanel,
     isResourcesPanelOpen,
     layoutMode,
@@ -529,15 +531,15 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       segment.segment_id,
     );
     return (
-      <span
+      <button
+        type="button"
         key={segment.segment_id}
-        className={`inline cursor-pointer ${bodyTextSizeClass} mr-0.5 ${
+        data-segment-id={segment.segment_id}
+        className={`inline cursor-pointer border-0 bg-transparent p-0 font-inherit text-inherit ${bodyTextSizeClass} mr-0.5 ${
           isSelected && "bg-blue-50"
         }`}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
         aria-label={
           segment.reference
             ? `Open resources for segment ${segment.reference}`
@@ -563,7 +565,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
               }}
             />
           )}
-      </span>
+      </button>
     );
   };
 
@@ -576,6 +578,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     return (
       <div
         key={segment.segment_id}
+        data-segment-id={segment.segment_id}
         className={`cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4`}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
@@ -750,9 +753,11 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
         handleSegmentNavigate={handleSegmentNavigate}
         textId={textId}
         canShowTableOfContents={canShowTableOfContents}
+        canShowYigchungs={canShowYigchungs}
         highlightedYigchungIndex={highlightedYigchungIndex}
         resourcesSubView={resourcesSubView}
         resourcesSubViewNonce={resourcesSubViewNonce}
+        onResourcesSubViewApplied={clearResourcesSubView}
       />
     );
   };

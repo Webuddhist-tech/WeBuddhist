@@ -1,7 +1,7 @@
 import { useQuery } from "react-query";
 import { IoLanguage, IoNewspaperOutline } from "react-icons/io5";
 import { BiSearch, BiBookOpen } from "react-icons/bi";
-import { LuList } from "react-icons/lu";
+import { LuList, LuStickyNote } from "react-icons/lu";
 import { useEffect, useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import ShareView from "./components/share-view/ShareView.tsx";
@@ -36,9 +36,11 @@ const Resources = ({
   handleSegmentNavigate,
   textId,
   canShowTableOfContents = false,
+  canShowYigchungs = false,
   highlightedYigchungIndex = null,
   resourcesSubView = null,
   resourcesSubViewNonce = 0,
+  onResourcesSubViewApplied,
 }: any) => {
   const { isResourcesPanelOpen, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
@@ -48,10 +50,10 @@ const Resources = ({
   const storedLanguage = localStorage.getItem("language");
 
   useEffect(() => {
-    if (resourcesSubView) {
-      setActiveView(resourcesSubView);
-    }
-  }, [resourcesSubView, resourcesSubViewNonce]);
+    if (!resourcesSubView) return;
+    setActiveView(resourcesSubView);
+    onResourcesSubViewApplied?.();
+  }, [resourcesSubView, resourcesSubViewNonce, onResourcesSubViewApplied]);
 
   const { data: sidePanelData } = useQuery(
     ["sidePanel", segmentId],
@@ -192,6 +194,17 @@ const Resources = ({
           >
             <LuList className="text-lg" />
             {t("text.table_of_contents")}
+          </Button>
+        )}
+        {canShowYigchungs && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setActiveView("yigchung")}
+            className="w-full flex justify-start gap-1.5"
+          >
+            <LuStickyNote className="text-lg" />
+            {t("text.yigchung")}
           </Button>
         )}
         {renderTranslationsSection()}

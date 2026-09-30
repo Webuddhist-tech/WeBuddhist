@@ -1,9 +1,10 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useCallback, useEffect, useState, type RefObject } from "react";
 
 type UseYigchungReaderArgs = {
   contentsContainerRef: RefObject<HTMLElement | null>;
   canShowYigchungs: boolean;
   yigchungCount: number;
+  selectSegmentId: (segmentId: string) => void;
   openResourcesPanel: () => void;
   isResourcesPanelOpen: boolean;
   layoutMode: string;
@@ -11,10 +12,21 @@ type UseYigchungReaderArgs = {
   contentSections: unknown;
 };
 
+const findFootnoteMarker = (target: EventTarget | null): HTMLElement | null => {
+  if (!(target instanceof HTMLElement)) return null;
+  return target.closest(".footnote-marker");
+};
+
+const findSegmentIdForMarker = (marker: HTMLElement): string | null => {
+  const host = marker.closest("[data-segment-id]");
+  return host?.getAttribute("data-segment-id") ?? null;
+};
+
 export const useYigchungReader = ({
   contentsContainerRef,
   canShowYigchungs,
   yigchungCount,
+  selectSegmentId,
   openResourcesPanel,
   isResourcesPanelOpen,
   layoutMode,
@@ -26,6 +38,26 @@ export const useYigchungReader = ({
   const [resourcesSubView, setResourcesSubView] = useState<string | null>(null);
   const [resourcesSubViewNonce, setResourcesSubViewNonce] = useState(0);
 
+  const clearResourcesSubView = useCallback(() => {
+    setResourcesSubView(null);
+  }, []);
+
+  const openYigchungPanel = useCallback(
+    (marker: HTMLElement, index: number | null) => {
+      const segmentId = findSegmentIdForMarker(marker);
+      if (segmentId) {
+        selectSegmentId(segmentId);
+      }
+      if (index !== null) {
+        setHighlightedYigchungIndex(index);
+      }
+      setResourcesSubView("yigchung");
+      setResourcesSubViewNonce((value) => value + 1);
+      openResourcesPanel();
+    },
+    [openResourcesPanel, selectSegmentId],
+  );
+
   useEffect(() => {
     const container = contentsContainerRef.current;
     if (!container) return;
@@ -33,52 +65,62 @@ export const useYigchungReader = ({
     const toggleFootnoteVisibility = (target: HTMLElement) => {
       const footnote = target.nextElementSibling as HTMLElement | null;
       if (!footnote?.classList?.contains("footnote")) return;
-      const isHidden =
-        footnote.style.display === "" || footnote.style.display === "none";
-      footnote.style.display = isHidden ? "inline" : "none";
       footnote.classList.toggle("active");
     };
 
+    const activateYigchungMarker = (marker: HTMLElement) => {
+      const rawIndex = marker.dataset.yigchungIndex;
+      const index =
+        rawIndex !== undefined ? Number.parseInt(rawIndex, 10) : Number.NaN;
+      if (!Number.isNaN(index) && index >= 0 && index < yigchungCount) {
+        openYigchungPanel(marker, index);
+        return;
+      }
+      if (import.meta.env.DEV) {
+        console.warn(
+          "[yigchung] footnote marker count does not match library marks",
+        );
+      }
+      openYigchungPanel(marker, null);
+    };
+
+    const handleMarkerInteraction = (marker: HTMLElement) => {
+      if (canShowYigchungs) {
+        activateYigchungMarker(marker);
+        return;
+      }
+      toggleFootnoteVisibility(marker);
+    };
+
     const handleDocumentClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target?.classList?.contains("footnote-marker")) return;
+      const marker = findFootnoteMarker(event.target);
+      if (!marker) return;
       event.stopPropagation();
       event.preventDefault();
+      handleMarkerInteraction(marker);
+    };
 
-      if (canShowYigchungs) {
-        const rawIndex = target.dataset.yigchungIndex;
-        const index =
-          rawIndex !== undefined ? Number.parseInt(rawIndex, 10) : Number.NaN;
-        if (!Number.isNaN(index) && index >= 0 && index < yigchungCount) {
-          setHighlightedYigchungIndex(index);
-          setResourcesSubView("yigchung");
-          setResourcesSubViewNonce((value) => value + 1);
-          openResourcesPanel();
-        } else if (import.meta.env.DEV) {
-          console.warn(
-            "[yigchung] footnote marker count does not match library marks",
-          );
-          setResourcesSubView("yigchung");
-          setResourcesSubViewNonce((value) => value + 1);
-          openResourcesPanel();
-        }
-        return false;
-      }
-
-      toggleFootnoteVisibility(target);
-      return false;
+    const handleDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const marker = findFootnoteMarker(event.target);
+      if (!marker) return;
+      event.preventDefault();
+      event.stopPropagation();
+      handleMarkerInteraction(marker);
     };
 
     container.addEventListener("click", handleDocumentClick);
+    container.addEventListener("keydown", handleDocumentKeyDown);
     return () => {
       container.removeEventListener("click", handleDocumentClick);
+      container.removeEventListener("keydown", handleDocumentKeyDown);
     };
   }, [
     contentsContainerRef,
     isResourcesPanelOpen,
     canShowYigchungs,
     yigchungCount,
-    openResourcesPanel,
+    openYigchungPanel,
   ]);
 
   useEffect(() => {
@@ -90,70 +132,31 @@ export const useYigchungReader = ({
     const activeFootnotes = container.querySelectorAll(".footnote.active");
     activeFootnotes.forEach((footnote) => {
       footnote.classList.remove("active");
-      (footnote as HTMLElement).style.display = "none";
     });
   }, [contentsContainerRef, layoutMode, canShowYigchungs]);
 
   useEffect(() => {
+    if (canShowYigchungs) return;
+
     const container = contentsContainerRef.current;
     if (!container) return;
 
     const footnoteMarkers =
       container.querySelectorAll<HTMLElement>(".footnote-marker");
-    footnoteMarkers.forEach((marker, index) => {
-      marker.style.cursor = "pointer";
-      marker.style.zIndex = "2";
-      marker.style.padding = "0 2px";
-      if (canShowYigchungs) {
-        marker.dataset.yigchungIndex = String(index);
-        marker.setAttribute("aria-label", "Yigchung note");
-        marker.classList.add("yigchung-marker");
-        marker.style.color = "";
-        marker.style.fontWeight = "";
-        marker.style.fontSize = "";
-        marker.style.verticalAlign = "";
-        if (!marker.textContent?.trim()) {
-          marker.textContent = String(index + 1);
-        }
-      } else {
-        marker.classList.remove("yigchung-marker");
-        delete marker.dataset.yigchungIndex;
-        marker.style.color = "#007bff";
-        marker.style.fontWeight = "700";
-        marker.style.fontSize = "";
-        marker.style.verticalAlign = "";
-        if (!marker.textContent?.trim()) {
-          marker.textContent = "*";
-        }
+    footnoteMarkers.forEach((marker) => {
+      marker.classList.add("legacy-footnote-marker");
+      marker.classList.remove("yigchung-marker");
+      delete marker.dataset.yigchungIndex;
+      if (!marker.textContent?.trim()) {
+        marker.textContent = "*";
       }
     });
 
     const footnotes = container.querySelectorAll<HTMLElement>(".footnote");
     footnotes.forEach((footnote) => {
-      if (canShowYigchungs) {
-        footnote.classList.remove("yigchung-inline-hidden", "active");
-        footnote.classList.add("yigchung-inline");
-        footnote.style.display = "inline";
-        footnote.style.color = "";
-        footnote.style.fontWeight = "";
-        footnote.style.fontSize = "";
-        footnote.style.lineHeight = "";
-        footnote.style.backgroundColor = "";
-        footnote.style.padding = "";
-        footnote.style.margin = "";
-        footnote.style.borderRadius = "";
-        return;
-      }
       footnote.classList.remove("yigchung-inline");
-      footnote.style.display = "none";
-      footnote.style.color = "#484848";
-      footnote.style.margin = "4px";
-      footnote.style.fontSize = "0.9rem";
-      footnote.style.fontWeight = "";
-      footnote.style.lineHeight = "";
-      footnote.style.backgroundColor = "#f7f7f7";
-      footnote.style.padding = "2px 5px";
-      footnote.style.borderRadius = "3px";
+      footnote.classList.add("legacy-footnote");
+      footnote.classList.remove("active");
     });
   }, [
     contentsContainerRef,
@@ -161,10 +164,9 @@ export const useYigchungReader = ({
     layoutMode,
     isResourcesPanelOpen,
     canShowYigchungs,
-    yigchungCount,
   ]);
 
-  const contentsScrollClassName = `flex flex-1 min-h-0 w-full overflow-y-auto${
+  const contentsScrollClassName = `flex flex-1 min-h-0 w-full overflow-y-auto chapter-contents${
     canShowYigchungs ? " chapter-contents--yigchung" : ""
   }`;
   const bodyTextSizeClass = canShowYigchungs
@@ -175,6 +177,7 @@ export const useYigchungReader = ({
     highlightedYigchungIndex,
     resourcesSubView,
     resourcesSubViewNonce,
+    clearResourcesSubView,
     contentsScrollClassName,
     bodyTextSizeClass,
   };

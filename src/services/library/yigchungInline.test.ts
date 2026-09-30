@@ -28,7 +28,9 @@ describe("buildSegmentContentWithYigchung", () => {
       0,
     );
     expect(html).toContain("AB");
-    expect(html).toContain('class="footnote-marker">5</span>');
+    expect(html).toContain('data-yigchung-index="4"');
+    expect(html).toContain("<button");
+    expect(html).toContain(">5</button>");
     expect(html).toContain('class="footnote yigchung-inline">CDE</span>');
     expect(html).toContain("FGH");
   });

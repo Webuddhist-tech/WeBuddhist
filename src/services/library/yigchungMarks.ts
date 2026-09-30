@@ -27,10 +27,13 @@ export const fetchEditionYigchungMarks = (
     undefined,
     "yigchungs",
   )
-    .catch(() => [] as LibraryYigchungMark[])
     .then((marks) =>
       [...(marks ?? [])].sort((a, b) => a.span.start - b.span.start),
-    );
+    )
+    .catch((error) => {
+      marksByEdition.delete(editionId);
+      throw error;
+    });
 
   marksByEdition.set(editionId, pending);
   return pending;

@@ -381,7 +381,7 @@ export const getTextDetails = async (
   const spanEnd = Math.max(...lines.map((line) => line.end));
   const [windowContent, yigchungMarks] = await Promise.all([
     fetchEditionContent(context.editionId, spanStart, spanEnd),
-    getYigchungMarkSpans(context.editionId),
+    getYigchungMarkSpans(context.editionId).catch(() => []),
   ]);
 
   const segments = buildSegments(

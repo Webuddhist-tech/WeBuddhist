@@ -178,7 +178,7 @@ describe("UseChapterHook", () => {
                 segment_id: "seg1",
                 segment_number: 1,
                 content:
-                  '<span><span class="footnote-marker">1</span><span class="footnote">Footnote</span></span>',
+                  '<button type="button" class="footnote-marker yigchung-marker" data-yigchung-index="0">1</button><span class="footnote yigchung-inline">Footnote</span>',
                 translation: null,
               },
             ],
@@ -195,7 +195,6 @@ describe("UseChapterHook", () => {
     expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
     expect(footnote?.classList.contains("active")).toBe(false);
     expect(footnote?.classList.contains("yigchung-inline")).toBe(true);
-    expect((footnote as HTMLElement).style.display).toBe("inline");
     expect(
       container.querySelector(".chapter-contents--yigchung"),
     ).toBeInTheDocument();

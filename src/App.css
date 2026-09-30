@@ -77,12 +77,42 @@
   color: inherit;
 }
 
-.chapter-contents--yigchung .yigchung-marker {
+.chapter-contents--yigchung .footnote-marker.yigchung-marker {
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0 2px;
   color: #636363;
   font-weight: 500;
   font-size: 0.72em;
   vertical-align: super;
   line-height: 0;
+  font-family: inherit;
+}
+
+.chapter-contents .footnote-marker.legacy-footnote-marker {
+  cursor: pointer;
+  z-index: 2;
+  padding: 0 2px;
+  color: #007bff;
+  font-weight: 700;
+}
+
+.chapter-contents .footnote.legacy-footnote {
+  display: none;
+  color: #484848;
+  margin: 4px;
+  font-size: 0.9rem;
+  line-height: normal;
+  background-color: #f7f7f7;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.chapter-contents .footnote.legacy-footnote.active {
+  display: inline;
 }
 
 .bo-text {

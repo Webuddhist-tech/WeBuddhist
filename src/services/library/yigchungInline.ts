@@ -69,7 +69,7 @@ const renderEditionSlice = (
   const escaped = escapeHtml(text);
   if (part.yigchungIndex === undefined) return escaped;
   const label = part.yigchungIndex + 1;
-  return `<span class="footnote-marker">${label}</span><span class="footnote yigchung-inline">${escaped}</span>`;
+  return `<button type="button" class="footnote-marker yigchung-marker" data-yigchung-index="${part.yigchungIndex}" aria-label="Yigchung note ${label}">${label}</button><span class="footnote yigchung-inline">${escaped}</span>`;
 };
 
 const buildLineHtml = (

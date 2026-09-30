@@ -67,6 +67,7 @@ describe("getYigchungs", () => {
     const result = await getYigchungs("text-1");
     expect(result.items).toEqual([]);
     expect(mockedContent).not.toHaveBeenCalled();
+    expect(mockedSpans).not.toHaveBeenCalled();
   });
 
   test("documents a library text id that has yigchung marks for manual QA", () => {
@@ -89,11 +90,19 @@ describe("getYigchungs", () => {
         span: { start: 20, end: 23 },
       },
     ]);
-    mockedContent.mockResolvedValue("5678901234012");
+    mockedContent.mockImplementation(
+      (_editionId: string, start: number, end: number) => {
+        if (start === 10 && end === 15) return Promise.resolve("56789");
+        if (start === 20 && end === 23) return Promise.resolve("012");
+        return Promise.resolve("");
+      },
+    );
 
     const result = await getYigchungs("text-1");
 
-    expect(mockedContent).toHaveBeenCalledWith("ed-1", 10, 23);
+    expect(mockedContent).toHaveBeenCalledWith("ed-1", 10, 15);
+    expect(mockedContent).toHaveBeenCalledWith("ed-1", 20, 23);
+    expect(mockedContent).not.toHaveBeenCalledWith("ed-1", 10, 23);
     expect(result.items).toHaveLength(2);
     expect(result.items[0].label).toBe("a");
     expect(result.items[0].content).toBe("56789");
@@ -101,5 +110,30 @@ describe("getYigchungs", () => {
     expect(result.items[1].content).toBe("012");
     expect(result.items[0].index).toBe(0);
     expect(result.items[1].index).toBe(1);
+  });
+
+  test("resolves anchor segment when the mark starts on a later line", async () => {
+    mockedGet.mockResolvedValue([
+      {
+        id: "y1",
+        edition_id: "ed-1",
+        text_id: "text-1",
+        span: { start: 15, end: 18 },
+      },
+    ]);
+    mockedSpans.mockResolvedValue([
+      {
+        id: "s1",
+        lines: [
+          { start: 0, end: 10 },
+          { start: 10, end: 20 },
+        ],
+      },
+    ]);
+    mockedContent.mockResolvedValue("abc");
+
+    const result = await getYigchungs("text-1");
+
+    expect(result.items[0].anchorSegmentId).toBe("s1");
   });
 });
