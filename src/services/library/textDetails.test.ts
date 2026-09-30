@@ -13,6 +13,10 @@ vi.mock("./alignments.ts", () => ({
   resolveTranslationSegmentIds: vi.fn(),
 }));
 
+vi.mock("./yigchungMarks.ts", () => ({
+  getYigchungMarkSpans: vi.fn().mockResolvedValue([]),
+}));
+
 import {
   fetchEditionContent,
   fetchEditionSegmentation,

@@ -16,6 +16,9 @@ import type {
   TextDetailWithContentResponse,
   TextDetailsRequest,
 } from "./types.ts";
+import { buildSegmentContentWithYigchung } from "./yigchungInline.ts";
+import type { YigchungMarkSpan } from "./yigchungInline.ts";
+import { getYigchungMarkSpans } from "./yigchungMarks.ts";
 
 const SEGMENT_SCAN_PAGE_SIZE = 500;
 
@@ -159,18 +162,28 @@ const buildSegments = (
   windowContent: string,
   spanStart: number,
   startPosition: number,
+  yigchungMarks: YigchungMarkSpan[] = [],
 ): SegmentDTO[] =>
-  spans.map((span, index) => ({
-    segment_id: span.id,
-    segment_number: startPosition + index,
-    content: joinSegmentLines(span, windowContent, spanStart),
-    // The edition's own structural role and citation for this segment. The
-    // reference is what a reader would actually cite - "2-57" rather than the
-    // segment's position in the file.
-    type: span.type ?? null,
-    reference: span.reference ?? null,
-    translation: null,
-  }));
+  spans.map((span, index) => {
+    const plain = joinSegmentLines(span, windowContent, spanStart);
+    return {
+      segment_id: span.id,
+      segment_number: startPosition + index,
+      content: buildSegmentContentWithYigchung(
+        span.lines,
+        plain,
+        yigchungMarks,
+        windowContent,
+        spanStart,
+      ),
+      // The edition's own structural role and citation for this segment. The
+      // reference is what a reader would actually cite - "2-57" rather than the
+      // segment's position in the file.
+      type: span.type ?? null,
+      reference: span.reference ?? null,
+      translation: null,
+    };
+  });
 
 /**
  * Text for a set of segments of one edition, with their line breaks intact.
@@ -366,17 +379,17 @@ export const getTextDetails = async (
   const lines = spans.flatMap((span) => span.lines ?? []);
   const spanStart = Math.min(...lines.map((line) => line.start));
   const spanEnd = Math.max(...lines.map((line) => line.end));
-  const windowContent = await fetchEditionContent(
-    context.editionId,
-    spanStart,
-    spanEnd,
-  );
+  const [windowContent, yigchungMarks] = await Promise.all([
+    fetchEditionContent(context.editionId, spanStart, spanEnd),
+    getYigchungMarkSpans(context.editionId).catch(() => []),
+  ]);
 
   const segments = buildSegments(
     spans,
     windowContent,
     spanStart,
     windowStart + 1,
+    yigchungMarks,
   );
 
   if (request.version_id) {

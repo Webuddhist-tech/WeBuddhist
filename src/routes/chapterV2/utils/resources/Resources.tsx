@@ -1,8 +1,8 @@
 import { useQuery } from "react-query";
 import { IoLanguage, IoNewspaperOutline } from "react-icons/io5";
 import { BiSearch, BiBookOpen } from "react-icons/bi";
-import { LuList } from "react-icons/lu";
-import { useState } from "react";
+import { LuList, LuStickyNote } from "react-icons/lu";
+import { useEffect, useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import ShareView from "./components/share-view/ShareView.tsx";
 import TranslationView from "./components/translation-view/TranslationView.tsx";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import ResourceHeader from "./components/common/ResourceHeader.tsx";
 import CompareText from "./components/compare-text/CompareText.tsx";
 import TableOfContentsView from "./components/table-of-contents/TableOfContentsView.tsx";
+import YigchungView from "./components/yigchung/YigchungView.tsx";
 import { getSegmentInfo } from "@/services/library";
 
 type PanelContextValue = {
@@ -26,6 +27,23 @@ export const fetchSidePanelData = async (segmentId: string) => {
   return getSegmentInfo(segmentId);
 };
 
+type ResourcesProps = {
+  segmentId: string;
+  addChapter: (chapter: unknown, currentChapter: unknown) => void;
+  handleClose?: () => void;
+  currentChapter: unknown;
+  setVersionId: (versionId: string) => void;
+  handleSegmentNavigate: (segmentId: string) => void;
+  textId?: string;
+  canShowTableOfContents?: boolean;
+  canShowYigchungs?: boolean;
+  highlightedYigchungIndex?: number | null;
+  resourcesSubView?: string | null;
+  resourcesSubViewNonce?: number;
+  onResourcesSubViewApplied?: () => void;
+  onClearYigchungHighlight?: () => void;
+};
+
 const Resources = ({
   segmentId,
   addChapter,
@@ -35,13 +53,25 @@ const Resources = ({
   handleSegmentNavigate,
   textId,
   canShowTableOfContents = false,
-}: any) => {
+  canShowYigchungs = false,
+  highlightedYigchungIndex = null,
+  resourcesSubView = null,
+  resourcesSubViewNonce = 0,
+  onResourcesSubViewApplied,
+  onClearYigchungHighlight,
+}: ResourcesProps) => {
   const { isResourcesPanelOpen, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
   const showPanel = isResourcesPanelOpen;
   const [activeView, setActiveView] = useState("main");
   const { t } = useTranslate();
   const storedLanguage = localStorage.getItem("language");
+
+  useEffect(() => {
+    if (!resourcesSubView) return;
+    setActiveView(resourcesSubView);
+    onResourcesSubViewApplied?.();
+  }, [resourcesSubView, resourcesSubViewNonce, onResourcesSubViewApplied]);
 
   const { data: sidePanelData } = useQuery(
     ["sidePanel", segmentId],
@@ -184,6 +214,20 @@ const Resources = ({
             {t("text.table_of_contents")}
           </Button>
         )}
+        {canShowYigchungs && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              onClearYigchungHighlight?.();
+              setActiveView("yigchung");
+            }}
+            className="w-full flex justify-start gap-1.5"
+          >
+            <LuStickyNote className="text-lg" />
+            {t("text.yigchung")}
+          </Button>
+        )}
         {renderTranslationsSection()}
         {renderRelatedTextsSection()}
         {renderResourcesSection()}
@@ -236,6 +280,16 @@ const Resources = ({
         return (
           <TableOfContentsView
             textId={textId}
+            handleSegmentNavigate={handleSegmentNavigate}
+            handleNavigate={() => setActiveView("main")}
+            onClose={handleClosePanel}
+          />
+        );
+      case "yigchung":
+        return (
+          <YigchungView
+            textId={textId}
+            highlightedIndex={highlightedYigchungIndex}
             handleSegmentNavigate={handleSegmentNavigate}
             handleNavigate={() => setActiveView("main")}
             onClose={handleClosePanel}

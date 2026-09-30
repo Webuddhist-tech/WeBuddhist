@@ -164,6 +164,174 @@ describe("UseChapterHook", () => {
     expect(container.querySelector(".h-5")).toBeInTheDocument();
   });
 
+  test("yigchung marker click opens resources panel instead of inline footnote", () => {
+    const { container } = setup({
+      viewMode: VIEW_MODES.SOURCE,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                content:
+                  '<button type="button" class="footnote-marker yigchung-marker" data-yigchung-index="0">1</button><span class="footnote yigchung-inline">Footnote</span>',
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const marker = container.querySelector(".footnote-marker");
+    const footnote = marker?.nextElementSibling;
+    fireEvent.click(marker as Element);
+
+    expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
+    expect(footnote?.classList.contains("active")).toBe(false);
+    expect(footnote?.classList.contains("yigchung-inline")).toBe(true);
+    expect(container.querySelector(".chapter-contents")).toBeInTheDocument();
+  });
+
+  test("yigchung prose segment opens resources from keyboard on segment control", () => {
+    setup({
+      viewMode: VIEW_MODES.SOURCE,
+      layoutMode: LAYOUT_MODES.PROSE,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                reference: "1",
+                content: "<span>Segment text</span>",
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const segmentOpen = screen.getByRole("button", {
+      name: "Open resources for segment 1",
+    });
+    fireEvent.keyDown(segmentOpen, { key: "Enter" });
+
+    expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
+  });
+
+  test("yigchung segmented segment opens resources from keyboard on segment control", () => {
+    setup({
+      viewMode: VIEW_MODES.SOURCE,
+      layoutMode: LAYOUT_MODES.SEGMENTED,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                reference: "1",
+                content: "<span>Segment text</span>",
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const segmentOpen = screen.getByRole("button", {
+      name: "Open resources for segment 1",
+    });
+    fireEvent.keyDown(segmentOpen, { key: " " });
+
+    expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
+  });
+
+  test("legacy footnote marker toggles when yigchung layout is active", () => {
+    const { container } = setup({
+      viewMode: VIEW_MODES.SOURCE,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                content:
+                  '<button type="button" class="footnote-marker yigchung-marker" data-yigchung-index="0">1</button><span class="footnote yigchung-inline">Yig</span> plain <span class="footnote-marker">*</span><span class="footnote">Legacy note</span>',
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const legacyMarker = container.querySelector(".legacy-footnote-marker");
+    const legacyFootnote = legacyMarker?.nextElementSibling;
+
+    expect(legacyMarker).toBeInTheDocument();
+    expect(legacyFootnote?.classList.contains("active")).toBe(false);
+
+    fireEvent.click(legacyMarker as Element);
+    expect(legacyFootnote?.classList.contains("active")).toBe(true);
+    expect(mockState.panelContext.openResourcesPanel).not.toHaveBeenCalled();
+  });
+
+  test("legacy footnote marker responds to keyboard in yigchung segmented layout", () => {
+    const { container } = setup({
+      viewMode: VIEW_MODES.SOURCE,
+      layoutMode: LAYOUT_MODES.SEGMENTED,
+      canShowYigchungs: true,
+      yigchungCount: 0,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                reference: "1",
+                content:
+                  '<span class="footnote-marker">*</span><span class="footnote">Legacy note</span>',
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const legacyMarker = container.querySelector(".legacy-footnote-marker");
+    const legacyFootnote = legacyMarker?.nextElementSibling;
+
+    fireEvent.keyDown(legacyMarker as Element, { key: "Enter" });
+    expect(legacyFootnote?.classList.contains("active")).toBe(true);
+  });
+
   test("footnote marker click toggles active class", async () => {
     const { container } = setup({
       viewMode: VIEW_MODES.SOURCE,

@@ -24,6 +24,8 @@ import {
   NO_TOC_HEADINGS,
   type TocHeading,
 } from "@/hooks/useTableOfContents.ts";
+import { useYigchungReader } from "./useYigchungReader.ts";
+import { YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES } from "@/services/library/yigchungClasses.ts";
 
 /**
  * Weight for an inline section title, by how deep it sits in the outline.
@@ -116,6 +118,8 @@ type UseChapterHookProps = {
   totalChapters: number;
   canShowSectionTitles: boolean;
   canShowTableOfContents: boolean;
+  canShowYigchungs?: boolean;
+  yigchungCount?: number;
   setViewMode: (mode: ViewMode) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   sectionTitleMode?: string;
@@ -146,6 +150,8 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     totalChapters,
     canShowSectionTitles,
     canShowTableOfContents,
+    canShowYigchungs = false,
+    yigchungCount = 0,
     setViewMode,
     setLayoutMode,
     sectionTitleMode,
@@ -168,6 +174,24 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     showsBelow,
   } = useTransliteration();
   const contentsContainerRef = useRef<HTMLDivElement | null>(null);
+  const {
+    highlightedYigchungIndex,
+    resourcesSubView,
+    resourcesSubViewNonce,
+    clearResourcesSubView,
+    clearHighlightedYigchungIndex,
+    contentsScrollClassName,
+    bodyTextSizeClass,
+  } = useYigchungReader({
+    contentsContainerRef,
+    canShowYigchungs,
+    yigchungCount,
+    selectSegmentId: setSelectedSegmentId,
+    openResourcesPanel,
+    isResourcesPanelOpen,
+    layoutMode,
+    contentSections: content?.sections,
+  });
   const scrollRef = useRef({ isRestoring: false, previousScrollHeight: 0 });
   const sectionRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const { ref: topSentinelRef, inView: isTopSentinelVisible } = useInView({
@@ -355,73 +379,6 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   }, [currentSegmentId]);
 
   useEffect(() => {
-    const container = contentsContainerRef.current;
-    if (!container) return;
-    const toggleFootnoteVisibility = (target: HTMLElement) => {
-      const footnote = target.nextElementSibling as HTMLElement | null;
-      if (!footnote?.classList?.contains("footnote")) return;
-      const isHidden =
-        footnote.style.display === "" || footnote.style.display === "none";
-      footnote.style.display = isHidden ? "inline" : "none";
-      footnote.classList.toggle("active");
-    };
-
-    const handleDocumentClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target?.classList?.contains("footnote-marker")) return;
-      event.stopPropagation();
-      event.preventDefault();
-      toggleFootnoteVisibility(target);
-      return false;
-    };
-
-    container.addEventListener("click", handleDocumentClick);
-    return () => {
-      container.removeEventListener("click", handleDocumentClick);
-    };
-  }, [isResourcesPanelOpen]);
-
-  useEffect(() => {
-    const container = contentsContainerRef.current;
-    if (!container) return;
-
-    const activeFootnotes = container.querySelectorAll(".footnote.active");
-    activeFootnotes.forEach((footnote) => {
-      footnote.classList.remove("active");
-      (footnote as HTMLElement).style.display = "none";
-    });
-  }, [layoutMode]);
-
-  useEffect(() => {
-    const container = contentsContainerRef.current;
-    if (!container) return;
-
-    const footnoteMarkers =
-      container.querySelectorAll<HTMLElement>(".footnote-marker");
-    footnoteMarkers.forEach((marker) => {
-      marker.style.cursor = "pointer";
-      marker.style.color = "#007bff";
-      marker.style.fontWeight = "700";
-      marker.style.zIndex = "2";
-      marker.style.padding = "0 2px";
-      if (!marker.textContent?.trim()) {
-        marker.textContent = "*";
-      }
-    });
-
-    const footnotes = container.querySelectorAll<HTMLElement>(".footnote");
-    footnotes.forEach((footnote) => {
-      footnote.style.display = "none";
-      footnote.style.color = "#484848";
-      footnote.style.margin = "4px";
-      footnote.style.fontSize = "0.9rem";
-      footnote.style.backgroundColor = "#f7f7f7";
-      footnote.style.padding = "2px 5px";
-      footnote.style.borderRadius = "3px";
-    });
-  }, [content?.sections, layoutMode, isResourcesPanelOpen]);
-
-  useEffect(() => {
     if (scrollTrigger === lastScrollTriggerRef.current) return;
     lastScrollTriggerRef.current = scrollTrigger;
     if (!currentSegmentId || !content?.sections) return;
@@ -529,7 +486,10 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   };
 
   const createSegmentControlHandlers = (segmentId: string) => {
-    const handleClick = () => handleSegmentClick(segmentId);
+    const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+      if ((event.target as HTMLElement).closest(".footnote-marker")) return;
+      handleSegmentClick(segmentId);
+    };
     const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
@@ -570,27 +530,44 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
 
   const languageClass = contentClass(language || "en");
 
+  const yigchungSegmentOverlayButtonClassName =
+    "absolute inset-0 z-0 cursor-pointer border-0 bg-transparent p-0 font-inherit text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1";
+
+  const renderYigchungSegmentOpenButton = (
+    segmentId: string,
+    segmentLabel: string,
+    handleClick: (event: React.MouseEvent<HTMLElement>) => void,
+    handleKeyDown: (event: React.KeyboardEvent<HTMLElement>) => void,
+  ) => (
+    <button
+      type="button"
+      data-segment-open-control
+      data-segment-id={segmentId}
+      className={yigchungSegmentOverlayButtonClassName}
+      aria-label={segmentLabel}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+    >
+      <span className="sr-only">{segmentLabel}</span>
+    </button>
+  );
+
   const renderProseSegment = (segment: Segment) => {
     const isSelected = selectedSegmentId === segment.segment_id;
     const { handleClick, handleKeyDown } = createSegmentControlHandlers(
       segment.segment_id,
     );
-    return (
-      <span
-        key={segment.segment_id}
-        className={`inline cursor-pointer text-lg mr-0.5 ${
-          isSelected && "bg-blue-50"
-        }`}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
-        aria-label={
-          segment.reference
-            ? `Open resources for segment ${segment.reference}`
-            : "Open resources for this segment"
-        }
-      >
+    const segmentLabel = segment.reference
+      ? `Open resources for segment ${segment.reference}`
+      : "Open resources for this segment";
+    const proseClassName = `inline cursor-pointer ${bodyTextSizeClass} mr-0.5 text-left ${
+      isSelected && "bg-blue-50"
+    }`;
+    const yigchungProseTextClassName = `inline ${bodyTextSizeClass} mr-0.5 text-left ${
+      isSelected && "bg-blue-50"
+    }`;
+    const proseBody = (
+      <>
         {(viewMode === VIEW_MODES.SOURCE ||
           viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
           <span
@@ -610,7 +587,45 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
               }}
             />
           )}
-      </span>
+      </>
+    );
+
+    if (canShowYigchungs) {
+      // Segment text can contain yigchung marker <button>s; opener is a sibling overlay
+      // <button> so keyboard, Sonar, and HTML nesting rules stay satisfied.
+      return (
+        <span
+          key={segment.segment_id}
+          data-segment-id={segment.segment_id}
+          className="relative mr-0.5 inline align-baseline"
+        >
+          {renderYigchungSegmentOpenButton(
+            segment.segment_id,
+            segmentLabel,
+            handleClick,
+            handleKeyDown,
+          )}
+          <span
+            className={`${YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES} ${yigchungProseTextClassName}`}
+          >
+            {proseBody}
+          </span>
+        </span>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        key={segment.segment_id}
+        data-segment-id={segment.segment_id}
+        className={`${proseClassName} border-0 bg-transparent p-0 font-inherit text-inherit`}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        aria-label={segmentLabel}
+      >
+        {proseBody}
+      </button>
     );
   };
 
@@ -620,28 +635,18 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     const { handleClick, handleKeyDown } = createSegmentControlHandlers(
       segment.segment_id,
     );
-    return (
-      <div
-        key={segment.segment_id}
-        className={`cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4`}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        title={`#${segment.reference}_${segment.type}`}
-        role="button"
-        tabIndex={0}
-        aria-label={
-          segment.reference
-            ? `Open resources for segment ${segment.reference}`
-            : "Open resources for this segment"
-        }
-      >
+    const segmentLabel = segment.reference
+      ? `Open resources for segment ${segment.reference}`
+      : "Open resources for this segment";
+    const segmentedBody = (
+      <>
         <div className="md:mr-4 flex shrink-0 flex-col items-start">
           <p className="text-xs" title={`#${segment.segment_number}`}>
             {segment.reference}
           </p>
         </div>
         <div
-          className={`flex flex-col items-start text-lg w-full text-justify ${isSelected && "bg-blue-50"}`}
+          className={`flex flex-col items-start ${bodyTextSizeClass} w-full text-justify ${isSelected && "bg-blue-50"}`}
         >
           {(viewMode === VIEW_MODES.SOURCE ||
             viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
@@ -673,7 +678,45 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
               />
             )}
         </div>
-      </div>
+      </>
+    );
+
+    if (canShowYigchungs) {
+      return (
+        <div
+          key={segment.segment_id}
+          data-segment-id={segment.segment_id}
+          className="relative mt-2.5 flex w-[700px] max-w-full items-baseline gap-4 text-left"
+          title={`#${segment.reference}_${segment.type}`}
+        >
+          {renderYigchungSegmentOpenButton(
+            segment.segment_id,
+            segmentLabel,
+            handleClick,
+            handleKeyDown,
+          )}
+          <div
+            className={`${YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES} flex flex-1 items-baseline gap-4`}
+          >
+            {segmentedBody}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        key={segment.segment_id}
+        data-segment-id={segment.segment_id}
+        className="cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4 border-0 bg-transparent p-0 font-inherit text-inherit text-left"
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        title={`#${segment.reference}_${segment.type}`}
+        aria-label={segmentLabel}
+      >
+        {segmentedBody}
+      </button>
     );
   };
 
@@ -744,7 +787,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
             ? groups.map((group, index) => (
                 <React.Fragment key={group.key}>
                   {renderSectionHeadings(group.headings, index)}
-                  <p className="leading-7 text-justify m-0">
+                  <p className={`${bodyTextSizeClass} text-justify m-0`}>
                     {group.segments.map(renderProseSegment)}
                   </p>
                   {/* Prose runs segments together, so a line under each one
@@ -797,6 +840,12 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
         handleSegmentNavigate={handleSegmentNavigate}
         textId={textId}
         canShowTableOfContents={canShowTableOfContents}
+        canShowYigchungs={canShowYigchungs}
+        highlightedYigchungIndex={highlightedYigchungIndex}
+        resourcesSubView={resourcesSubView}
+        resourcesSubViewNonce={resourcesSubViewNonce}
+        onResourcesSubViewApplied={clearResourcesSubView}
+        onClearYigchungHighlight={clearHighlightedYigchungIndex}
       />
     );
   };
@@ -810,7 +859,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
               <div className="flex flex-col w-full h-full overflow-hidden">
                 {renderChapterHeader()}
                 <div
-                  className="flex flex-1 min-h-0 w-full overflow-y-auto"
+                  className={contentsScrollClassName}
                   ref={contentsContainerRef}
                 >
                   {renderContents()}
@@ -825,10 +874,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
         ) : (
           <>
             {renderChapterHeader()}
-            <div
-              className="flex flex-1 min-h-0 w-full overflow-y-auto"
-              ref={contentsContainerRef}
-            >
+            <div className={contentsScrollClassName} ref={contentsContainerRef}>
               {renderContents()}
             </div>
           </>
@@ -841,10 +887,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     return (
       <div className="flex flex-col w-full h-full overflow-hidden min-h-0">
         {renderChapterHeader()}
-        <div
-          className="flex flex-1 min-h-0 w-full overflow-y-auto"
-          ref={contentsContainerRef}
-        >
+        <div className={contentsScrollClassName} ref={contentsContainerRef}>
           {renderContents()}
         </div>
       </div>

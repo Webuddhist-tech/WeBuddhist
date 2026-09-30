@@ -24,6 +24,8 @@ export {
 export { getCollections } from "./collections.ts";
 export { getTableOfContents } from "./tableOfContents.ts";
 export type { TableOfContentsResponse, TocSection } from "./tableOfContents.ts";
+export { getYigchungs } from "./yigchungs.ts";
+export type { YigchungItem, YigchungsResponse } from "./yigchungs.ts";
 export { multilingualSearch } from "./search.ts";
 export type {
   MultilingualSearchResponse,
