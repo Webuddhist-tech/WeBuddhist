@@ -7,6 +7,9 @@ describe("yigchungsQueryKey", () => {
     expect(yigchungsQueryKey("text-1")).not.toEqual(
       yigchungsQueryKey("text-2"),
     );
+    expect(yigchungsQueryKey("text-1", false)).not.toEqual(
+      yigchungsQueryKey("text-1", true),
+    );
   });
 });
 

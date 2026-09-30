@@ -22,7 +22,9 @@ const YigchungView = ({
 }: YigchungViewProps) => {
   const { t } = useTranslate();
   const { displayContent, contentClass } = useTransliteration();
-  const { data, isLoading, error } = useYigchungs(textId);
+  const { data, isLoading, error } = useYigchungs(textId, {
+    includeContent: true,
+  });
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const languageClass = contentClass(data?.text_detail?.language || "en");
@@ -33,16 +35,6 @@ const YigchungView = ({
     const node = itemRefs.current[highlightedIndex];
     node?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [highlightedIndex, items.length]);
-
-  const handleNoteKeyDown =
-    (segmentId: string | undefined) =>
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (!segmentId) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        handleSegmentNavigate(segmentId);
-      }
-    };
 
   return (
     <div className="flex h-full flex-col">
@@ -94,7 +86,6 @@ const YigchungView = ({
                         onClick={() =>
                           handleSegmentNavigate(item.anchorSegmentId as string)
                         }
-                        onKeyDown={handleNoteKeyDown(item.anchorSegmentId)}
                       >
                         {t("text.yigchung_go_to_anchor")}
                       </button>

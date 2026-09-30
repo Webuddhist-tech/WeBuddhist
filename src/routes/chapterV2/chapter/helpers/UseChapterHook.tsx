@@ -178,6 +178,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     resourcesSubView,
     resourcesSubViewNonce,
     clearResourcesSubView,
+    clearHighlightedYigchungIndex,
     contentsScrollClassName,
     bodyTextSizeClass,
   } = useYigchungReader({
@@ -484,7 +485,10 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   };
 
   const createSegmentControlHandlers = (segmentId: string) => {
-    const handleClick = () => handleSegmentClick(segmentId);
+    const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+      if ((event.target as HTMLElement).closest(".footnote-marker")) return;
+      handleSegmentClick(segmentId);
+    };
     const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
@@ -525,27 +529,37 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
 
   const languageClass = contentClass(language || "en");
 
+  const segmentResourcesButtonClassName =
+    "sr-only focus:not-sr-only focus:absolute focus:left-0 focus:top-0 focus:z-20 focus:rounded focus:border focus:border-slate-300 focus:bg-white focus:px-2 focus:py-1 focus:text-xs focus:font-medium focus:text-[#102544]";
+
+  const renderSegmentResourcesButton = (
+    segmentId: string,
+    segmentLabel: string,
+  ) => (
+    <button
+      type="button"
+      className={segmentResourcesButtonClassName}
+      aria-label={segmentLabel}
+      onClick={(event) => {
+        event.stopPropagation();
+        handleSegmentClick(segmentId);
+      }}
+    />
+  );
+
   const renderProseSegment = (segment: Segment) => {
     const isSelected = selectedSegmentId === segment.segment_id;
     const { handleClick, handleKeyDown } = createSegmentControlHandlers(
       segment.segment_id,
     );
-    return (
-      <button
-        type="button"
-        key={segment.segment_id}
-        data-segment-id={segment.segment_id}
-        className={`inline cursor-pointer border-0 bg-transparent p-0 font-inherit text-inherit ${bodyTextSizeClass} mr-0.5 ${
-          isSelected && "bg-blue-50"
-        }`}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        aria-label={
-          segment.reference
-            ? `Open resources for segment ${segment.reference}`
-            : "Open resources for this segment"
-        }
-      >
+    const segmentLabel = segment.reference
+      ? `Open resources for segment ${segment.reference}`
+      : "Open resources for this segment";
+    const proseClassName = `inline cursor-pointer ${bodyTextSizeClass} mr-0.5 text-left ${
+      isSelected && "bg-blue-50"
+    }`;
+    const proseBody = (
+      <>
         {(viewMode === VIEW_MODES.SOURCE ||
           viewMode === VIEW_MODES.SOURCE_AND_TRANSLATIONS) && (
           <span
@@ -565,6 +579,35 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
               }}
             />
           )}
+      </>
+    );
+
+    if (canShowYigchungs) {
+      return (
+        <span
+          key={segment.segment_id}
+          data-segment-id={segment.segment_id}
+          className="relative mr-0.5 inline align-baseline"
+        >
+          {renderSegmentResourcesButton(segment.segment_id, segmentLabel)}
+          <span className={proseClassName} onClick={handleClick}>
+            {proseBody}
+          </span>
+        </span>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        key={segment.segment_id}
+        data-segment-id={segment.segment_id}
+        className={`${proseClassName} border-0 bg-transparent p-0 font-inherit text-inherit`}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        aria-label={segmentLabel}
+      >
+        {proseBody}
       </button>
     );
   };
@@ -575,22 +618,11 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     const { handleClick, handleKeyDown } = createSegmentControlHandlers(
       segment.segment_id,
     );
-    return (
-      <div
-        key={segment.segment_id}
-        data-segment-id={segment.segment_id}
-        className={`cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4`}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        title={`#${segment.reference}_${segment.type}`}
-        role="button"
-        tabIndex={0}
-        aria-label={
-          segment.reference
-            ? `Open resources for segment ${segment.reference}`
-            : "Open resources for this segment"
-        }
-      >
+    const segmentLabel = segment.reference
+      ? `Open resources for segment ${segment.reference}`
+      : "Open resources for this segment";
+    const segmentedBody = (
+      <>
         <div className="md:mr-4 flex shrink-0 flex-col items-start">
           <p className="text-xs" title={`#${segment.segment_number}`}>
             {segment.reference}
@@ -629,7 +661,41 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
               />
             )}
         </div>
-      </div>
+      </>
+    );
+
+    if (canShowYigchungs) {
+      return (
+        <div
+          key={segment.segment_id}
+          data-segment-id={segment.segment_id}
+          className="relative mt-2.5 flex w-[700px] max-w-full items-baseline gap-4 text-left"
+          title={`#${segment.reference}_${segment.type}`}
+        >
+          {renderSegmentResourcesButton(segment.segment_id, segmentLabel)}
+          <div
+            className="flex cursor-pointer flex-1 items-baseline gap-4"
+            onClick={handleClick}
+          >
+            {segmentedBody}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        key={segment.segment_id}
+        data-segment-id={segment.segment_id}
+        className="cursor-pointer flex items-baseline mt-2.5 w-[700px] max-w-full gap-4 border-0 bg-transparent p-0 font-inherit text-inherit text-left"
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        title={`#${segment.reference}_${segment.type}`}
+        aria-label={segmentLabel}
+      >
+        {segmentedBody}
+      </button>
     );
   };
 
@@ -758,6 +824,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
         resourcesSubView={resourcesSubView}
         resourcesSubViewNonce={resourcesSubViewNonce}
         onResourcesSubViewApplied={clearResourcesSubView}
+        onClearYigchungHighlight={clearHighlightedYigchungIndex}
       />
     );
   };

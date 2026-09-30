@@ -1,3 +1,7 @@
+import {
+  YIGCHUNG_INLINE_FOOTNOTE_CLASSES,
+  YIGCHUNG_MARKER_BUTTON_CLASSES,
+} from "./yigchungClasses.ts";
 import { sliceByCodePoints } from "./mappers.ts";
 import type { SegmentLine } from "./types.ts";
 
@@ -69,7 +73,7 @@ const renderEditionSlice = (
   const escaped = escapeHtml(text);
   if (part.yigchungIndex === undefined) return escaped;
   const label = part.yigchungIndex + 1;
-  return `<button type="button" class="footnote-marker yigchung-marker" data-yigchung-index="${part.yigchungIndex}" aria-label="Yigchung note ${label}">${label}</button><span class="footnote yigchung-inline">${escaped}</span>`;
+  return `<button type="button" class="${YIGCHUNG_MARKER_BUTTON_CLASSES}" data-yigchung-index="${part.yigchungIndex}" aria-label="Yigchung note ${label}">${label}</button><span class="${YIGCHUNG_INLINE_FOOTNOTE_CLASSES}">${escaped}</span>`;
 };
 
 const buildLineHtml = (

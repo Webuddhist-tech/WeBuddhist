@@ -30,8 +30,10 @@ describe("buildSegmentContentWithYigchung", () => {
     expect(html).toContain("AB");
     expect(html).toContain('data-yigchung-index="4"');
     expect(html).toContain("<button");
+    expect(html).toContain("yigchung-marker");
     expect(html).toContain(">5</button>");
-    expect(html).toContain('class="footnote yigchung-inline">CDE</span>');
+    expect(html).toContain("yigchung-inline");
+    expect(html).toContain(">CDE</span>");
     expect(html).toContain("FGH");
   });
 
@@ -48,7 +50,8 @@ describe("buildSegmentContentWithYigchung", () => {
       0,
     );
     expect(html).toContain("AAAA\n");
-    expect(html).toContain('yigchung-inline">BBBB</span>');
+    expect(html).toContain("yigchung-inline");
+    expect(html).toContain(">BBBB</span>");
   });
 
   test("does not double-wrap when footnotes already exist", () => {

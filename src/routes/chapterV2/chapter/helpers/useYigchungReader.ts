@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useState, type RefObject } from "react";
+import {
+  isLibraryYigchungMarker,
+  LEGACY_FOOTNOTE_CLASSES,
+  LEGACY_FOOTNOTE_MARKER_CLASSES,
+  YIGCHUNG_INLINE_FOOTNOTE_CLASSES,
+  YIGCHUNG_MARKER_BUTTON_CLASSES,
+  YIGCHUNG_READER_CONTAINER_CLASSES,
+} from "@/services/library/yigchungClasses.ts";
 
 type UseYigchungReaderArgs = {
   contentsContainerRef: RefObject<HTMLElement | null>;
@@ -22,6 +30,40 @@ const findSegmentIdForMarker = (marker: HTMLElement): string | null => {
   return host?.getAttribute("data-segment-id") ?? null;
 };
 
+const applyLegacyFootnoteClasses = (container: HTMLElement) => {
+  container
+    .querySelectorAll<HTMLElement>(".footnote-marker")
+    .forEach((marker) => {
+      if (isLibraryYigchungMarker(marker)) return;
+      marker.className = LEGACY_FOOTNOTE_MARKER_CLASSES;
+      if (!marker.textContent?.trim()) {
+        marker.textContent = "*";
+      }
+    });
+
+  container.querySelectorAll<HTMLElement>(".footnote").forEach((footnote) => {
+    if (footnote.classList.contains("yigchung-inline")) return;
+    footnote.className = LEGACY_FOOTNOTE_CLASSES;
+    footnote.classList.remove("active");
+  });
+};
+
+const restoreYigchungFootnoteClasses = (container: HTMLElement) => {
+  container
+    .querySelectorAll<HTMLElement>(".footnote-marker")
+    .forEach((marker) => {
+      if (!isLibraryYigchungMarker(marker)) return;
+      marker.className = YIGCHUNG_MARKER_BUTTON_CLASSES;
+    });
+
+  container
+    .querySelectorAll<HTMLElement>(".footnote.yigchung-inline")
+    .forEach((footnote) => {
+      footnote.className = YIGCHUNG_INLINE_FOOTNOTE_CLASSES;
+      footnote.classList.remove("active");
+    });
+};
+
 export const useYigchungReader = ({
   contentsContainerRef,
   canShowYigchungs,
@@ -40,6 +82,10 @@ export const useYigchungReader = ({
 
   const clearResourcesSubView = useCallback(() => {
     setResourcesSubView(null);
+  }, []);
+
+  const clearHighlightedYigchungIndex = useCallback(() => {
+    setHighlightedYigchungIndex(null);
   }, []);
 
   const openYigchungPanel = useCallback(
@@ -129,35 +175,21 @@ export const useYigchungReader = ({
     const container = contentsContainerRef.current;
     if (!container) return;
 
-    const activeFootnotes = container.querySelectorAll(".footnote.active");
-    activeFootnotes.forEach((footnote) => {
+    container.querySelectorAll(".footnote.active").forEach((footnote) => {
       footnote.classList.remove("active");
     });
   }, [contentsContainerRef, layoutMode, canShowYigchungs]);
 
   useEffect(() => {
-    if (canShowYigchungs) return;
-
     const container = contentsContainerRef.current;
     if (!container) return;
 
-    const footnoteMarkers =
-      container.querySelectorAll<HTMLElement>(".footnote-marker");
-    footnoteMarkers.forEach((marker) => {
-      marker.classList.add("legacy-footnote-marker");
-      marker.classList.remove("yigchung-marker");
-      delete marker.dataset.yigchungIndex;
-      if (!marker.textContent?.trim()) {
-        marker.textContent = "*";
-      }
-    });
+    if (canShowYigchungs) {
+      restoreYigchungFootnoteClasses(container);
+      return;
+    }
 
-    const footnotes = container.querySelectorAll<HTMLElement>(".footnote");
-    footnotes.forEach((footnote) => {
-      footnote.classList.remove("yigchung-inline");
-      footnote.classList.add("legacy-footnote");
-      footnote.classList.remove("active");
-    });
+    applyLegacyFootnoteClasses(container);
   }, [
     contentsContainerRef,
     contentSections,
@@ -167,7 +199,7 @@ export const useYigchungReader = ({
   ]);
 
   const contentsScrollClassName = `flex flex-1 min-h-0 w-full overflow-y-auto chapter-contents${
-    canShowYigchungs ? " chapter-contents--yigchung" : ""
+    canShowYigchungs ? ` ${YIGCHUNG_READER_CONTAINER_CLASSES}` : ""
   }`;
   const bodyTextSizeClass = canShowYigchungs
     ? "text-xl leading-8"
@@ -178,6 +210,7 @@ export const useYigchungReader = ({
     resourcesSubView,
     resourcesSubViewNonce,
     clearResourcesSubView,
+    clearHighlightedYigchungIndex,
     contentsScrollClassName,
     bodyTextSizeClass,
   };

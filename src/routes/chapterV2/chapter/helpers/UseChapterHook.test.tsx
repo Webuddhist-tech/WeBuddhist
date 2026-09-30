@@ -195,9 +195,7 @@ describe("UseChapterHook", () => {
     expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
     expect(footnote?.classList.contains("active")).toBe(false);
     expect(footnote?.classList.contains("yigchung-inline")).toBe(true);
-    expect(
-      container.querySelector(".chapter-contents--yigchung"),
-    ).toBeInTheDocument();
+    expect(container.querySelector(".chapter-contents")).toBeInTheDocument();
   });
 
   test("footnote marker click toggles active class", async () => {

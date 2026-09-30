@@ -27,6 +27,23 @@ export const fetchSidePanelData = async (segmentId: string) => {
   return getSegmentInfo(segmentId);
 };
 
+type ResourcesProps = {
+  segmentId: string;
+  addChapter: (chapter: unknown, currentChapter: unknown) => void;
+  handleClose?: () => void;
+  currentChapter: unknown;
+  setVersionId: (versionId: string) => void;
+  handleSegmentNavigate: (segmentId: string) => void;
+  textId?: string;
+  canShowTableOfContents?: boolean;
+  canShowYigchungs?: boolean;
+  highlightedYigchungIndex?: number | null;
+  resourcesSubView?: string | null;
+  resourcesSubViewNonce?: number;
+  onResourcesSubViewApplied?: () => void;
+  onClearYigchungHighlight?: () => void;
+};
+
 const Resources = ({
   segmentId,
   addChapter,
@@ -41,7 +58,8 @@ const Resources = ({
   resourcesSubView = null,
   resourcesSubViewNonce = 0,
   onResourcesSubViewApplied,
-}: any) => {
+  onClearYigchungHighlight,
+}: ResourcesProps) => {
   const { isResourcesPanelOpen, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
   const showPanel = isResourcesPanelOpen;
@@ -200,7 +218,10 @@ const Resources = ({
           <Button
             type="button"
             variant="ghost"
-            onClick={() => setActiveView("yigchung")}
+            onClick={() => {
+              onClearYigchungHighlight?.();
+              setActiveView("yigchung");
+            }}
             className="w-full flex justify-start gap-1.5"
           >
             <LuStickyNote className="text-lg" />

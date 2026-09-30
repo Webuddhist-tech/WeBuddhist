@@ -98,7 +98,7 @@ describe("getYigchungs", () => {
       },
     );
 
-    const result = await getYigchungs("text-1");
+    const result = await getYigchungs("text-1", { includeContent: true });
 
     expect(mockedContent).toHaveBeenCalledWith("ed-1", 10, 15);
     expect(mockedContent).toHaveBeenCalledWith("ed-1", 20, 23);
@@ -132,8 +132,26 @@ describe("getYigchungs", () => {
     ]);
     mockedContent.mockResolvedValue("abc");
 
-    const result = await getYigchungs("text-1");
+    const result = await getYigchungs("text-1", { includeContent: true });
 
     expect(result.items[0].anchorSegmentId).toBe("s1");
+  });
+
+  test("metadata-only fetch skips segment scan and content requests", async () => {
+    mockedGet.mockResolvedValue([
+      {
+        id: "y1",
+        edition_id: "ed-1",
+        text_id: "text-1",
+        span: { start: 10, end: 15 },
+      },
+    ]);
+
+    const result = await getYigchungs("text-1", { includeContent: false });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].content).toBe("");
+    expect(mockedSpans).not.toHaveBeenCalled();
+    expect(mockedContent).not.toHaveBeenCalled();
   });
 });
