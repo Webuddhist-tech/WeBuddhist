@@ -64,6 +64,27 @@ const restoreYigchungFootnoteClasses = (container: HTMLElement) => {
     });
 };
 
+/** Legacy HTML footnotes coexisting with library yigchung in the same edition. */
+const prepareLegacyFootnotesInYigchungLayout = (container: HTMLElement) => {
+  container
+    .querySelectorAll<HTMLElement>(".footnote-marker")
+    .forEach((marker) => {
+      if (isLibraryYigchungMarker(marker)) return;
+      marker.className = LEGACY_FOOTNOTE_MARKER_CLASSES;
+      if (!marker.textContent?.trim()) {
+        marker.textContent = "*";
+      }
+      marker.tabIndex = 0;
+      marker.setAttribute("role", "button");
+    });
+
+  container.querySelectorAll<HTMLElement>(".footnote").forEach((footnote) => {
+    if (footnote.classList.contains("yigchung-inline")) return;
+    footnote.className = LEGACY_FOOTNOTE_CLASSES;
+    footnote.classList.remove("active");
+  });
+};
+
 export const useYigchungReader = ({
   contentsContainerRef,
   canShowYigchungs,
@@ -131,7 +152,7 @@ export const useYigchungReader = ({
     };
 
     const handleMarkerInteraction = (marker: HTMLElement) => {
-      if (canShowYigchungs) {
+      if (canShowYigchungs && isLibraryYigchungMarker(marker)) {
         activateYigchungMarker(marker);
         return;
       }
@@ -186,6 +207,7 @@ export const useYigchungReader = ({
 
     if (canShowYigchungs) {
       restoreYigchungFootnoteClasses(container);
+      prepareLegacyFootnotesInYigchungLayout(container);
       return;
     }
 

@@ -7,7 +7,11 @@ export const YIGCHUNG_INLINE_FOOTNOTE_CLASSES =
 
 /** Legacy footnote markers (non-yigchung texts). */
 export const LEGACY_FOOTNOTE_MARKER_CLASSES =
-  "footnote-marker legacy-footnote-marker cursor-pointer z-[2] px-0.5 text-blue-600 font-bold";
+  "footnote-marker legacy-footnote-marker pointer-events-auto relative z-10 cursor-pointer px-0.5 text-blue-600 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1";
+
+/** Text layer inside yigchung segments: pass clicks to overlay except footnote markers. */
+export const YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES =
+  "relative z-[1] pointer-events-none [&_.footnote-marker]:pointer-events-auto [&_.footnote-marker]:relative [&_.footnote-marker]:z-10";
 
 export const LEGACY_FOOTNOTE_CLASSES =
   "footnote legacy-footnote hidden text-[#484848] my-1 text-[0.9rem] leading-normal bg-[#f7f7f7] px-1.5 py-0.5 rounded-sm [&.active]:inline";

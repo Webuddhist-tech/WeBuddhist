@@ -25,6 +25,7 @@ import {
   type TocHeading,
 } from "@/hooks/useTableOfContents.ts";
 import { useYigchungReader } from "./useYigchungReader.ts";
+import { YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES } from "@/services/library/yigchungClasses.ts";
 
 /**
  * Weight for an inline section title, by how deep it sits in the outline.
@@ -605,7 +606,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
             handleKeyDown,
           )}
           <span
-            className={`relative z-[1] pointer-events-none ${yigchungProseTextClassName}`}
+            className={`${YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES} ${yigchungProseTextClassName}`}
           >
             {proseBody}
           </span>
@@ -694,7 +695,9 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
             handleClick,
             handleKeyDown,
           )}
-          <div className="relative z-[1] pointer-events-none flex flex-1 items-baseline gap-4">
+          <div
+            className={`${YIGCHUNG_SEGMENT_TEXT_LAYER_CLASSES} flex flex-1 items-baseline gap-4`}
+          >
             {segmentedBody}
           </div>
         </div>
