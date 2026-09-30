@@ -198,6 +198,72 @@ describe("UseChapterHook", () => {
     expect(container.querySelector(".chapter-contents")).toBeInTheDocument();
   });
 
+  test("yigchung prose segment opens resources from keyboard on segment control", () => {
+    setup({
+      viewMode: VIEW_MODES.SOURCE,
+      layoutMode: LAYOUT_MODES.PROSE,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                reference: "1",
+                content: "<span>Segment text</span>",
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const segmentOpen = screen.getByRole("button", {
+      name: "Open resources for segment 1",
+    });
+    fireEvent.keyDown(segmentOpen, { key: "Enter" });
+
+    expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
+  });
+
+  test("yigchung segmented segment opens resources from keyboard on segment control", () => {
+    setup({
+      viewMode: VIEW_MODES.SOURCE,
+      layoutMode: LAYOUT_MODES.SEGMENTED,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                reference: "1",
+                content: "<span>Segment text</span>",
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const segmentOpen = screen.getByRole("button", {
+      name: "Open resources for segment 1",
+    });
+    fireEvent.keyDown(segmentOpen, { key: " " });
+
+    expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
+  });
+
   test("footnote marker click toggles active class", async () => {
     const { container } = setup({
       viewMode: VIEW_MODES.SOURCE,

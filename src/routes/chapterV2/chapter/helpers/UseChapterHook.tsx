@@ -529,22 +529,26 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
 
   const languageClass = contentClass(language || "en");
 
-  const segmentResourcesButtonClassName =
-    "sr-only focus:not-sr-only focus:absolute focus:left-0 focus:top-0 focus:z-20 focus:rounded focus:border focus:border-slate-300 focus:bg-white focus:px-2 focus:py-1 focus:text-xs focus:font-medium focus:text-[#102544]";
+  const yigchungSegmentOverlayButtonClassName =
+    "absolute inset-0 z-0 cursor-pointer border-0 bg-transparent p-0 font-inherit text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1";
 
-  const renderSegmentResourcesButton = (
+  const renderYigchungSegmentOpenButton = (
     segmentId: string,
     segmentLabel: string,
+    handleClick: (event: React.MouseEvent<HTMLElement>) => void,
+    handleKeyDown: (event: React.KeyboardEvent<HTMLElement>) => void,
   ) => (
     <button
       type="button"
-      className={segmentResourcesButtonClassName}
+      data-segment-open-control
+      data-segment-id={segmentId}
+      className={yigchungSegmentOverlayButtonClassName}
       aria-label={segmentLabel}
-      onClick={(event) => {
-        event.stopPropagation();
-        handleSegmentClick(segmentId);
-      }}
-    />
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+    >
+      <span className="sr-only">{segmentLabel}</span>
+    </button>
   );
 
   const renderProseSegment = (segment: Segment) => {
@@ -556,6 +560,9 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
       ? `Open resources for segment ${segment.reference}`
       : "Open resources for this segment";
     const proseClassName = `inline cursor-pointer ${bodyTextSizeClass} mr-0.5 text-left ${
+      isSelected && "bg-blue-50"
+    }`;
+    const yigchungProseTextClassName = `inline ${bodyTextSizeClass} mr-0.5 text-left ${
       isSelected && "bg-blue-50"
     }`;
     const proseBody = (
@@ -583,14 +590,23 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
     );
 
     if (canShowYigchungs) {
+      // Segment text can contain yigchung marker <button>s; opener is a sibling overlay
+      // <button> so keyboard, Sonar, and HTML nesting rules stay satisfied.
       return (
         <span
           key={segment.segment_id}
           data-segment-id={segment.segment_id}
           className="relative mr-0.5 inline align-baseline"
         >
-          {renderSegmentResourcesButton(segment.segment_id, segmentLabel)}
-          <span className={proseClassName} onClick={handleClick}>
+          {renderYigchungSegmentOpenButton(
+            segment.segment_id,
+            segmentLabel,
+            handleClick,
+            handleKeyDown,
+          )}
+          <span
+            className={`relative z-[1] pointer-events-none ${yigchungProseTextClassName}`}
+          >
             {proseBody}
           </span>
         </span>
@@ -672,11 +688,13 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
           className="relative mt-2.5 flex w-[700px] max-w-full items-baseline gap-4 text-left"
           title={`#${segment.reference}_${segment.type}`}
         >
-          {renderSegmentResourcesButton(segment.segment_id, segmentLabel)}
-          <div
-            className="flex cursor-pointer flex-1 items-baseline gap-4"
-            onClick={handleClick}
-          >
+          {renderYigchungSegmentOpenButton(
+            segment.segment_id,
+            segmentLabel,
+            handleClick,
+            handleKeyDown,
+          )}
+          <div className="relative z-[1] pointer-events-none flex flex-1 items-baseline gap-4">
             {segmentedBody}
           </div>
         </div>

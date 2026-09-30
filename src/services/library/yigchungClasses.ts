@@ -1,6 +1,6 @@
 /** Tailwind classes for library yigchung markup injected into segment HTML. */
 export const YIGCHUNG_MARKER_BUTTON_CLASSES =
-  "footnote-marker yigchung-marker cursor-pointer z-[2] m-0 border-0 bg-transparent px-0.5 font-inherit text-[#636363] font-medium text-[0.72em] align-super leading-none";
+  "footnote-marker yigchung-marker pointer-events-auto relative z-10 cursor-pointer m-0 border-0 bg-transparent px-0.5 font-inherit text-[#636363] font-medium text-[0.72em] align-super leading-none";
 
 export const YIGCHUNG_INLINE_FOOTNOTE_CLASSES =
   "footnote yigchung-inline inline text-[0.86em] font-normal leading-[1.35] text-[#636363] bg-transparent p-0 m-0 rounded-none align-baseline [&_*]:text-inherit [&_*]:text-[length:inherit] [&_*]:font-[inherit] [&_*]:leading-[inherit]";
