@@ -164,6 +164,43 @@ describe("UseChapterHook", () => {
     expect(container.querySelector(".h-5")).toBeInTheDocument();
   });
 
+  test("yigchung marker click opens resources panel instead of inline footnote", () => {
+    const { container } = setup({
+      viewMode: VIEW_MODES.SOURCE,
+      canShowYigchungs: true,
+      yigchungCount: 1,
+      content: {
+        sections: [
+          {
+            title: "Section 1",
+            segments: [
+              {
+                segment_id: "seg1",
+                segment_number: 1,
+                content:
+                  '<span><span class="footnote-marker">1</span><span class="footnote">Footnote</span></span>',
+                translation: null,
+              },
+            ],
+            sections: [],
+          },
+        ],
+      },
+    });
+
+    const marker = container.querySelector(".footnote-marker");
+    const footnote = marker?.nextElementSibling;
+    fireEvent.click(marker as Element);
+
+    expect(mockState.panelContext.openResourcesPanel).toHaveBeenCalled();
+    expect(footnote?.classList.contains("active")).toBe(false);
+    expect(footnote?.classList.contains("yigchung-inline")).toBe(true);
+    expect((footnote as HTMLElement).style.display).toBe("inline");
+    expect(
+      container.querySelector(".chapter-contents--yigchung"),
+    ).toBeInTheDocument();
+  });
+
   test("footnote marker click toggles active class", async () => {
     const { container } = setup({
       viewMode: VIEW_MODES.SOURCE,

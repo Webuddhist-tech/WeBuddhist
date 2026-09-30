@@ -42,6 +42,49 @@
   src: url("./assets/fonts/NotoSerifTC-Regular.ttf");
 }
 
+/*
+ * Pecha-style yigchung: root text is larger and near-black; commentary is clearly
+ * smaller but still readable (charcoal gray). Sizes assume body text-xl on the reader.
+ */
+.chapter-contents--yigchung {
+  color: #111827;
+}
+
+.chapter-contents--yigchung .bo-text,
+.chapter-contents--yigchung .en-text,
+.chapter-contents--yigchung .zh-text,
+.chapter-contents--yigchung .en-serif-text {
+  color: #111827;
+}
+
+.chapter-contents--yigchung .yigchung-inline {
+  display: inline;
+  font-size: 0.86em;
+  font-weight: 400;
+  line-height: 1.35;
+  color: #636363;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  vertical-align: baseline;
+}
+
+.chapter-contents--yigchung .yigchung-inline * {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.chapter-contents--yigchung .yigchung-marker {
+  color: #636363;
+  font-weight: 500;
+  font-size: 0.72em;
+  vertical-align: super;
+  line-height: 0;
+}
+
 .bo-text {
   font-family: "Atisha", sans-serif;
 }

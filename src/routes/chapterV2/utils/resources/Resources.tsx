@@ -2,7 +2,7 @@ import { useQuery } from "react-query";
 import { IoLanguage, IoNewspaperOutline } from "react-icons/io5";
 import { BiSearch, BiBookOpen } from "react-icons/bi";
 import { LuList } from "react-icons/lu";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import ShareView from "./components/share-view/ShareView.tsx";
 import TranslationView from "./components/translation-view/TranslationView.tsx";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import ResourceHeader from "./components/common/ResourceHeader.tsx";
 import CompareText from "./components/compare-text/CompareText.tsx";
 import TableOfContentsView from "./components/table-of-contents/TableOfContentsView.tsx";
+import YigchungView from "./components/yigchung/YigchungView.tsx";
 import { getSegmentInfo } from "@/services/library";
 
 type PanelContextValue = {
@@ -35,6 +36,9 @@ const Resources = ({
   handleSegmentNavigate,
   textId,
   canShowTableOfContents = false,
+  highlightedYigchungIndex = null,
+  resourcesSubView = null,
+  resourcesSubViewNonce = 0,
 }: any) => {
   const { isResourcesPanelOpen, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
@@ -42,6 +46,12 @@ const Resources = ({
   const [activeView, setActiveView] = useState("main");
   const { t } = useTranslate();
   const storedLanguage = localStorage.getItem("language");
+
+  useEffect(() => {
+    if (resourcesSubView) {
+      setActiveView(resourcesSubView);
+    }
+  }, [resourcesSubView, resourcesSubViewNonce]);
 
   const { data: sidePanelData } = useQuery(
     ["sidePanel", segmentId],
@@ -236,6 +246,16 @@ const Resources = ({
         return (
           <TableOfContentsView
             textId={textId}
+            handleSegmentNavigate={handleSegmentNavigate}
+            handleNavigate={() => setActiveView("main")}
+            onClose={handleClosePanel}
+          />
+        );
+      case "yigchung":
+        return (
+          <YigchungView
+            textId={textId}
+            highlightedIndex={highlightedYigchungIndex}
             handleSegmentNavigate={handleSegmentNavigate}
             handleNavigate={() => setActiveView("main")}
             onClose={handleClosePanel}

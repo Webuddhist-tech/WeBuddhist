@@ -25,6 +25,7 @@ import {
   tocHeadingsBySegment,
   useTableOfContents,
 } from "@/hooks/useTableOfContents.ts";
+import { hasYigchungs, useYigchungs } from "@/hooks/useYigchungs.ts";
 import { useTranslate } from "@tolgee/react";
 import Seo from "@/routes/commons/seo/Seo.tsx";
 
@@ -126,6 +127,7 @@ const ContentsChapter = ({
   // offer the toggle. Same query key as the panel, so this costs no extra
   // request.
   const { data: tableOfContents } = useTableOfContents(textId);
+  const { data: yigchungsData } = useYigchungs(textId);
 
   const infiniteQuery = useInfiniteQuery(
     ["content", textId, contentId, versionId, size, currentSegmentId],
@@ -221,6 +223,7 @@ const ContentsChapter = ({
   // out of both, being a pinned excerpt with paging turned off.
   const canShowTableOfContents =
     !isFromSheet && hasTableOfContents(tableOfContents);
+  const canShowYigchungs = !isFromSheet && hasYigchungs(yigchungsData);
 
   // ------------------------ renderers ----------------------
   const renderChapter = () => {
@@ -244,6 +247,8 @@ const ContentsChapter = ({
       removeChapter,
       totalChapters,
       canShowTableOfContents,
+      canShowYigchungs,
+      yigchungCount: yigchungsData?.items?.length ?? 0,
       canShowSectionTitles: canShowTableOfContents,
       setViewMode,
       setLayoutMode,
