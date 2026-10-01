@@ -1,8 +1,12 @@
 import { useTranslate } from "@tolgee/react";
-import { useLiveViewerCount } from "../hooks/useLiveViewerCount.ts";
+import type { LiveViewerCount as LiveViewerCountState } from "../hooks/useLiveViewerCount.ts";
 
 type LiveViewerCountProps = {
-  eventId: string;
+  /**
+   * The event's live socket. The page holds it, not this component, because
+   * the recitation text follows the same socket.
+   */
+  live: LiveViewerCountState;
   /** Off while the event is not running - an idle socket tells nobody anything. */
   enabled?: boolean;
 };
@@ -14,9 +18,9 @@ type LiveViewerCountProps = {
  * non-member reader is told what stands between them and the number rather than
  * being shown a silent blank.
  */
-const LiveViewerCount = ({ eventId, enabled = true }: LiveViewerCountProps) => {
+const LiveViewerCount = ({ live, enabled = true }: LiveViewerCountProps) => {
   const { t } = useTranslate();
-  const { count, status, detail } = useLiveViewerCount(eventId, enabled);
+  const { count, status, detail } = live;
 
   if (!enabled) return null;
 

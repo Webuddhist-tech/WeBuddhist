@@ -12,7 +12,9 @@ import { fetchEventById } from "./api/eventsApi.ts";
 import EventDescriptionMarkdown from "./components/EventDescriptionMarkdown.tsx";
 import EventVideo from "./components/EventVideo.tsx";
 import LivePill from "./components/LivePill.tsx";
+import LiveRecitationView from "./components/LiveRecitationView.tsx";
 import LiveViewerCount from "./components/LiveViewerCount.tsx";
+import { useLiveViewerCount } from "./hooks/useLiveViewerCount.ts";
 import {
   eventDescription,
   eventImageUrl,
@@ -64,6 +66,11 @@ const LiveEventDetail = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // One socket for the page: the count in the header and the text below both
+  // follow it. It only opens while the event is actually running.
+  const isLive = event ? eventPhase(event, now) === "live" : false;
+  const live = useLiveViewerCount(event?.id, isLive);
+
   const backLink = (
     <Link
       to="/live"
@@ -99,7 +106,6 @@ const LiveEventDetail = () => {
   const title = eventTitle(event, apiLanguage) || t("live_events.untitled");
   const description = eventDescription(event, apiLanguage);
   const phase = eventPhase(event, now);
-  const isLive = phase === "live";
   const where = locationLabel(event);
   const imageUrl = eventImageUrl(event);
   const hasVideo = (event.youtube?.length ?? 0) > 0;
@@ -151,10 +157,9 @@ const LiveEventDetail = () => {
           {title}
         </h1>
 
-        {/* The live count sits with the title, where a stream page puts it. It
-            only opens a socket while the event is actually running. */}
+        {/* The live count sits with the title, where a stream page puts it. */}
         <div className="mt-5">
-          <LiveViewerCount eventId={event.id} enabled={isLive} />
+          <LiveViewerCount live={live} enabled={isLive} />
         </div>
       </header>
 
@@ -171,6 +176,8 @@ const LiveEventDetail = () => {
               />
             )
           )}
+
+          {isLive && <LiveRecitationView live={live} language={apiLanguage} />}
 
           {description && (
             <section

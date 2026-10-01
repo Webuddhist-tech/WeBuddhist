@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { LiveViewerCount as LiveViewerCountState } from "../hooks/useLiveViewerCount.ts";
 
 vi.mock("@tolgee/react", () => ({
   useTranslate: () => ({
@@ -9,53 +10,41 @@ vi.mock("@tolgee/react", () => ({
   }),
 }));
 
-const useLiveViewerCountMock = vi.fn();
-vi.mock("../hooks/useLiveViewerCount.ts", () => ({
-  useLiveViewerCount: (eventId: string, enabled: boolean) =>
-    useLiveViewerCountMock(eventId, enabled),
-}));
-
 import LiveViewerCount from "./LiveViewerCount.tsx";
 
 describe("LiveViewerCount", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  const liveState = (
+    state: Partial<LiveViewerCountState> & Pick<LiveViewerCountState, "status">,
+  ): LiveViewerCountState => ({
+    count: null,
+    detail: null,
+    code: null,
+    position: null,
+    sessionEnded: false,
+    ...state,
   });
 
-  const mockState = (state: {
-    count?: number | null;
-    status: string;
-    detail?: string | null;
-    code?: string | null;
-  }) =>
-    useLiveViewerCountMock.mockReturnValue({
-      count: null,
-      detail: null,
-      code: null,
-      ...state,
-    });
-
   it("shows the count and says this page is in it", () => {
-    mockState({ count: 12, status: "connected" });
+    const live = liveState({ count: 12, status: "connected" });
 
-    render(<LiveViewerCount eventId="event-1" />);
+    render(<LiveViewerCount live={live} />);
 
     expect(screen.getByText(/live_events.watching_other/)).toBeInTheDocument();
     expect(screen.getByText("live_events.including_you")).toBeInTheDocument();
   });
 
   it("uses the singular wording for one person", () => {
-    mockState({ count: 1, status: "connected" });
+    const live = liveState({ count: 1, status: "connected" });
 
-    render(<LiveViewerCount eventId="event-1" />);
+    render(<LiveViewerCount live={live} />);
 
     expect(screen.getByText("live_events.watching_one")).toBeInTheDocument();
   });
 
   it("asks a signed-out reader to sign in", () => {
-    mockState({ status: "signed-out" });
+    const live = liveState({ status: "signed-out" });
 
-    render(<LiveViewerCount eventId="event-1" />);
+    render(<LiveViewerCount live={live} />);
 
     expect(screen.getByText("live_events.sign_in_to_see")).toBeInTheDocument();
   });
@@ -64,21 +53,21 @@ describe("LiveViewerCount", () => {
     // Following a recitation is limited to members of the event's group, and
     // that is something the reader can act on - so it is not flattened into a
     // generic failure.
-    mockState({
+    const live = liveState({
       status: "refused",
       detail:
         "Only joined or following members of this event's group can follow its recitation",
     });
 
-    render(<LiveViewerCount eventId="event-1" />);
+    render(<LiveViewerCount live={live} />);
 
     expect(screen.getByText(/joined or following members/)).toBeInTheDocument();
   });
 
   it("falls back to its own wording when the server gave no reason", () => {
-    mockState({ status: "refused", detail: null });
+    const live = liveState({ status: "refused", detail: null });
 
-    render(<LiveViewerCount eventId="event-1" />);
+    render(<LiveViewerCount live={live} />);
 
     expect(
       screen.getByText("live_events.count_unavailable"),
@@ -86,10 +75,10 @@ describe("LiveViewerCount", () => {
   });
 
   it("renders nothing at all when disabled", () => {
-    mockState({ status: "connecting" });
+    const live = liveState({ status: "connecting" });
 
     const { container } = render(
-      <LiveViewerCount eventId="event-1" enabled={false} />,
+      <LiveViewerCount live={live} enabled={false} />,
     );
 
     expect(container).toBeEmptyDOMElement();

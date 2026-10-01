@@ -863,5 +863,16 @@
   "live_events.sign_in_to_see": "Sign in to see who is following",
   "live_events.connecting": "Connecting to the live count…",
   "live_events.reconnecting": "Reconnecting…",
-  "live_events.count_unavailable": "The live count is unavailable"
+  "live_events.count_unavailable": "The live count is unavailable",
+  "live_events.recitation_heading": "Follow the recitation",
+  "live_events.recitation_waiting": "The text will appear here as soon as the recitation begins.",
+  "live_events.recitation_loading": "Loading the text…",
+  "live_events.recitation_load_failed": "We could not load the text being recited.",
+  "live_events.recitation_out_of_sync": "Out of sync: the current line is not in this text. Holding your place.",
+  "live_events.recitation_ended": "The recitation has ended.",
+  "live_events.recitation_resync": "Back to the live line",
+  "live_events.recitation_retry": "Try again",
+  "live_events.recitation_round": "Round {round}",
+  "live_events.recitation_sign_in": "Sign in and join this event's group to follow the text as it is recited.",
+  "live_events.recitation_unavailable": "Following the recitation is unavailable right now."
 }
