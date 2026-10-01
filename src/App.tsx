@@ -75,6 +75,10 @@ const LiveEvents = lazy(() => import("./routes/live-events/LiveEvents.tsx"));
 const LiveEventDetail = lazy(
   () => import("./routes/live-events/LiveEventDetail.tsx"),
 );
+const LiveRecitationPage = lazy(
+  () => import("./routes/live-events/LiveRecitationPage.tsx"),
+);
+const GroupPage = lazy(() => import("./routes/groups/GroupPage.tsx"));
 
 type Auth0UserType = {
   getAccessTokenSilently: (options?: {
@@ -288,6 +292,13 @@ function App() {
           </Route>
         </Route>
 
+        {/* A stage of its own: the live text fills the screen, with no site
+            chrome around it. */}
+        <Route
+          path="/live/:eventId/recitation"
+          element={<LiveRecitationPage />}
+        />
+
         {/* Full-height readers, where a footer would sit under the fold anyway. */}
         <Route element={<NoFooterLayout />}>
           <Route path="/sheets/:id" element={<Sheets />} />
@@ -300,6 +311,8 @@ function App() {
           <Route path="/plans" element={<Planviewer />} />
           <Route path="/live" element={<LiveEvents />} />
           <Route path="/live/:eventId" element={<LiveEventDetail />} />
+          {/* /group/@{slug}, or /group/{id} from a page that only has the id. */}
+          <Route path="/group/:handle" element={<GroupPage />} />
           <Route path="/collections" element={<Collections />} />
           <Route
             path="/profile"

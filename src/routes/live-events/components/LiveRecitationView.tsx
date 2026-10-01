@@ -4,11 +4,9 @@ import { useTranslate } from "@tolgee/react";
 import { getLanguageClass } from "../../../utils/helperFunctions.tsx";
 import { fetchRecitationText } from "../api/eventsApi.ts";
 import type { LiveViewerCount } from "../hooks/useLiveViewerCount.ts";
-import type {
-  LiveRecitationPosition,
-  LiveRecitationText,
-} from "../types.ts";
+import type { LiveRecitationPosition, LiveRecitationText } from "../types.ts";
 import { recitationLines } from "../utils/recitationText.ts";
+import RecitationVerse from "./RecitationVerse.tsx";
 
 type LiveRecitationViewProps = {
   /** The event's live socket, shared with the viewer count. */
@@ -30,6 +28,9 @@ const READING_KEYS = new Map([
   ["End", 1],
   [" ", 1],
 ]);
+
+/** How far down the screen the live line is held, as a share of its height. */
+const TELEPROMPTER_LEAD = 0.3;
 
 const prefersReducedMotion = () =>
   typeof window.matchMedia === "function" &&
@@ -60,6 +61,9 @@ const canScroll = (scroller: HTMLElement, direction: number) => {
  *
  * A reader who scrolls away to read ahead is left there, with a way back to
  * the live line, rather than pulled back on the next move.
+ *
+ * Drawn for the dark stage of the live recitation page, after the operator's
+ * own screen, and fills the height that page gives it.
  */
 const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
   const { t } = useTranslate();
@@ -135,8 +139,16 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
     if (line === null || !scroller) return;
     const row = scroller.querySelector<HTMLElement>(`[data-line="${line}"]`);
     if (!row || typeof scroller.scrollTo !== "function") return;
+    // The live line sits in the upper third, with what comes next in view
+    // below it, as on the operator's screen. A verse too tall for that is
+    // centred instead, and one taller than the screen starts at its top.
+    const room = scroller.clientHeight;
+    const lead = Math.max(
+      0,
+      Math.min(room * TELEPROMPTER_LEAD, (room - row.offsetHeight) / 2),
+    );
     scroller.scrollTo({
-      top: row.offsetTop - (scroller.clientHeight - row.offsetHeight) / 2,
+      top: row.offsetTop - lead,
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
   }, []);
@@ -192,11 +204,13 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
         ? t("live_events.recitation_sign_in")
         : detail || t("live_events.recitation_unavailable");
     return (
-      <section className="rounded-3xl bg-slate-50 p-6 text-sm text-slate-600 ring-1 ring-slate-900/5 sm:p-8">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <section className="flex min-h-[16rem] flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-[#8e8e93]">
           {t("live_events.recitation_heading")}
         </h2>
-        <p className="mt-3">{message}</p>
+        <p className="mt-3 max-w-md text-base leading-7 text-[#f2f2f7]">
+          {message}
+        </p>
       </section>
     );
   }
@@ -223,49 +237,58 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
     return null;
   })();
 
+  const progress =
+    currentLine !== null
+      ? [
+          t("live_events.recitation_progress", {
+            current: currentLine + 1,
+            total: lines.length,
+          }),
+          lines[currentLine]?.reference,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
+
   return (
     <section
       aria-labelledby="live-recitation-heading"
-      className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-900/10"
+      className="flex min-h-0 flex-1 flex-col"
     >
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-100 px-5 py-4 sm:px-6">
-        <div className="min-w-0 flex-1">
+      <header className="shrink-0 border-b border-[#2c2c2e] px-5 pb-4 pt-5 sm:px-8">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h2
             id="live-recitation-heading"
-            className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+            className="text-xs font-semibold uppercase tracking-[0.1em] text-[#8e8e93]"
           >
             {t("live_events.recitation_heading")}
           </h2>
-          {text?.title && (
-            <p
-              className={`mt-1 truncate text-base font-medium text-[#102544] ${getLanguageClass(text.language)}`}
-            >
-              {text.title}
-            </p>
+
+          {position?.round_number != null && (
+            <span className="rounded-full bg-[#e5231c]/20 px-2.5 py-0.5 text-xs font-semibold text-[#ff8a85] ring-1 ring-[#e5231c]/40">
+              {t("live_events.recitation_round", {
+                round: position.round_number,
+              })}
+            </span>
           )}
         </div>
 
-        {position?.round_number != null && (
-          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-            {t("live_events.recitation_round", {
-              round: position.round_number,
-            })}
-          </span>
-        )}
-
-        {currentLine !== null && !following && (
-          <button
-            type="button"
-            onClick={handleResync}
-            className="rounded-full bg-[#102544] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1b3a67]"
+        {text?.title && (
+          <p
+            className={`mt-2 text-xl leading-relaxed text-[#f2f2f7] sm:text-2xl ${getLanguageClass(text.language)}`}
           >
-            {t("live_events.recitation_resync")}
-          </button>
+            {text.title}
+          </p>
+        )}
+        {progress && (
+          <p className="mt-1 text-[13px] tabular-nums text-[#8e8e93]">
+            {progress}
+          </p>
         )}
       </header>
 
       {notice && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs text-amber-800 sm:px-6">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#2c2c2e] bg-[#3a2f1a] px-5 py-2.5 text-[13px] text-[#f2c879] sm:px-8">
           <p className="min-w-0 flex-1" role="status">
             {notice}
           </p>
@@ -273,7 +296,7 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
             <button
               type="button"
               onClick={handleRetry}
-              className="font-semibold underline underline-offset-2 transition hover:text-amber-900"
+              className="font-semibold underline underline-offset-2 transition hover:text-white"
             >
               {t("live_events.recitation_retry")}
             </button>
@@ -281,64 +304,61 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
         </div>
       )}
 
-      <div
-        ref={scrollerRef}
-        className="relative max-h-[60vh] min-h-[12rem] overflow-y-auto overscroll-contain px-2 py-3 sm:px-3"
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        aria-label={t("live_events.recitation_heading")}
-      >
-        {body ? (
-          <p className="px-4 py-12 text-center text-sm text-slate-500">
-            {body}
-          </p>
-        ) : (
-          <ol className="space-y-1">
-            {lines.map((line, index) => {
-              const isCurrent = index === currentLine;
-              return (
-                <li
-                  // Lines have no id of their own that survives a reload, and
-                  // the list is replaced whole, never reordered.
-                  key={index}
-                  data-line={index}
-                  aria-current={isCurrent ? "true" : undefined}
-                  className={`flex gap-3 rounded-2xl border-l-4 px-3 py-2.5 transition-colors duration-300 ${
-                    isCurrent
-                      ? "border-amber-400 bg-amber-50"
-                      : "border-transparent"
-                  }`}
-                >
-                  <span
-                    className="w-7 shrink-0 pt-1 text-right text-[11px] tabular-nums text-slate-400"
-                    aria-hidden
-                  >
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`whitespace-pre-line text-[17px] leading-8 ${
-                        isCurrent ? "text-[#102544]" : "text-slate-700"
-                      } ${getLanguageClass(text?.language)}`}
-                    >
-                      {line.recited}
-                    </p>
-                    {line.translation && (
-                      <p
-                        className={`mt-1 whitespace-pre-line text-sm leading-6 text-slate-500 ${getLanguageClass(language)}`}
-                      >
-                        {line.translation}
-                      </p>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+      {/* The way back floats over the text rather than sitting in the header,
+          so the text does not jump as it comes and goes. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {currentLine !== null && !following && (
+          <button
+            type="button"
+            onClick={handleResync}
+            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full bg-[#e5231c] px-5 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-lg shadow-black/50 transition hover:bg-[#ff3a33]"
+          >
+            {t("live_events.recitation_resync")}
+          </button>
         )}
+        <div
+          ref={scrollerRef}
+          className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain px-2 pt-6 outline-none [scrollbar-color:#2c2c2e_transparent] sm:px-6"
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          aria-label={t("live_events.recitation_heading")}
+        >
+          {body ? (
+            <p className="px-4 py-16 text-center text-sm text-[#8e8e93]">
+              {body}
+            </p>
+          ) : (
+            // The room below the last verse lets it, too, scroll up to where
+            // the live line is held.
+            <ol className="mx-auto max-w-3xl space-y-2 pb-[45vh]">
+              {lines.map((line, index) => {
+                const isCurrent = index === currentLine;
+                return (
+                  <li
+                    // Lines have no id of their own that survives a reload, and
+                    // the list is replaced whole, never reordered.
+                    key={index}
+                    data-line={index}
+                    aria-current={isCurrent ? "true" : undefined}
+                    className={`rounded-xl px-3 py-3 transition-colors duration-300 sm:px-4 ${
+                      isCurrent ? "bg-[#e5231c]/25" : ""
+                    }`}
+                  >
+                    <RecitationVerse
+                      line={line}
+                      recitedLanguage={text?.language ?? language}
+                      readerLanguage={language}
+                      isCurrent={isCurrent}
+                    />
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
       </div>
     </section>
   );

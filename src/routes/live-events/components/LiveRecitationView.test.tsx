@@ -118,6 +118,42 @@ describe("LiveRecitationView", () => {
     expect(Element.prototype.scrollTo).toHaveBeenCalled();
   });
 
+  it("lays a verse out by the library's lines, with its yigchung set small", async () => {
+    fetchRecitationTextMock.mockResolvedValue({
+      ...liturgy("tara", ["one", "two"]),
+      annotations: new Map([
+        [
+          "tara-bo-1",
+          {
+            lines: [
+              [{ text: "first line", yigchung: false }],
+              [
+                { text: "second line", yigchung: false },
+                { text: "three times", yigchung: true },
+              ],
+            ],
+            reference: "1-2",
+            type: "verse",
+          },
+        ],
+      ]),
+    });
+
+    renderView(live({ position: at("tara", "tara-bo-1") }));
+
+    await waitFor(() => expect(currentLine()).toContain("first line"));
+    expect(screen.getByText("second line").closest("p")).not.toBe(
+      screen.getByText("first line").closest("p"),
+    );
+    expect(screen.getByText("three times")).toHaveClass("yigchung");
+    expect(screen.getByText("second line")).not.toHaveClass("yigchung");
+    expect(
+      screen.getByText(
+        'live_events.recitation_progress:{"current":2,"total":2} · 1-2',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("follows a position given in another language's edition", async () => {
     fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["one", "two"]));
 

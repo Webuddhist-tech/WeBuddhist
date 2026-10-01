@@ -1,3 +1,5 @@
+import type { AnnotatedSegment } from "@/services/library/segmentLines.ts";
+
 /**
  * The slice of the backend's `EventDTO` this feature reads. The DTO carries a
  * good deal more (reminders, accumulators, recurrence); anything not rendered
@@ -43,6 +45,15 @@ export type LocationDTO = {
 
 export type EventFormat = "online" | "offline" | "hybrid";
 
+/** Presigned links to the event's artwork, one per size. They expire. */
+export type EventImageDTO = {
+  thumbnail?: string | null;
+  medium?: string | null;
+  original?: string | null;
+};
+
+export type EventImageSize = keyof EventImageDTO;
+
 export type EventDTO = {
   id: string;
   group_id: string;
@@ -59,8 +70,18 @@ export type EventDTO = {
   youtube?: EventYoutubeDTO[];
   links?: EventLinkDTO[];
   location?: LocationDTO | null;
+  /**
+   * The artwork's storage key ("images/plan_images/…"), not a link - the
+   * links a browser can load are on `image`, one per size.
+   */
   image_url?: string | null;
-  image?: { url?: string | null } | null;
+  image?: EventImageDTO | null;
+  /** The series the event belongs to, whose artwork stands in for its own. */
+  series?: {
+    id: string;
+    name?: string | null;
+    image_url?: string | null;
+  } | null;
   group_name?: string | null;
   group_avatar_url?: string | null;
   participant_count?: number;
@@ -101,5 +122,12 @@ export type RecitationTextDTO = {
   segments: RecitationRowDTO[];
 };
 
-/** A loaded liturgy, with the language its recited line is in. */
-export type LiveRecitationText = RecitationTextDTO & { language: string };
+/**
+ * A loaded liturgy, with the language its recited line is in and - where the
+ * library has them - its segments broken into lines and marked for yigchung,
+ * keyed by segment id.
+ */
+export type LiveRecitationText = RecitationTextDTO & {
+  language: string;
+  annotations?: ReadonlyMap<string, AnnotatedSegment>;
+};

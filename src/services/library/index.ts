@@ -25,6 +25,12 @@ export { getCollections } from "./collections.ts";
 export { getTableOfContents } from "./tableOfContents.ts";
 export type { TableOfContentsResponse, TocSection } from "./tableOfContents.ts";
 export { getYigchungs } from "./yigchungs.ts";
+export { getAnnotatedSegments } from "./segmentLines.ts";
+export type {
+  AnnotatedLine,
+  AnnotatedSegment,
+  LineRun,
+} from "./segmentLines.ts";
 export type { YigchungItem, YigchungsResponse } from "./yigchungs.ts";
 export { multilingualSearch } from "./search.ts";
 export type {

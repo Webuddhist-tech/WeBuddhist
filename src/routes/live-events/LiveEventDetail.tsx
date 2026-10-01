@@ -12,8 +12,8 @@ import { fetchEventById } from "./api/eventsApi.ts";
 import EventDescriptionMarkdown from "./components/EventDescriptionMarkdown.tsx";
 import EventVideo from "./components/EventVideo.tsx";
 import LivePill from "./components/LivePill.tsx";
-import LiveRecitationView from "./components/LiveRecitationView.tsx";
 import LiveViewerCount from "./components/LiveViewerCount.tsx";
+import { groupPathById } from "../groups/utils/groupHandle.ts";
 import { useLiveViewerCount } from "./hooks/useLiveViewerCount.ts";
 import {
   eventDescription,
@@ -60,14 +60,17 @@ const LiveEventDetail = () => {
   // the render that would move this event from "upcoming" to "live" never
   // happens on the response alone - the clock has to be its own input.
   const [now, setNow] = useState(() => new Date());
+  // Image links are presigned and expire; one that fails is dropped, not
+  // shown broken.
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), REFRESH_MS);
     return () => clearInterval(timer);
   }, []);
 
-  // One socket for the page: the count in the header and the text below both
-  // follow it. It only opens while the event is actually running.
+  // The live count follows the event's socket. It only opens while the event
+  // is actually running; the text itself is followed on its own page.
   const isLive = event ? eventPhase(event, now) === "live" : false;
   const live = useLiveViewerCount(event?.id, isLive);
 
@@ -107,7 +110,7 @@ const LiveEventDetail = () => {
   const description = eventDescription(event, apiLanguage);
   const phase = eventPhase(event, now);
   const where = locationLabel(event);
-  const imageUrl = eventImageUrl(event);
+  const imageUrl = eventImageUrl(event, "original");
   const hasVideo = (event.youtube?.length ?? 0) > 0;
   const titleFontClass = getLanguageClass(
     eventTitleLanguage(event, apiLanguage),
@@ -138,7 +141,10 @@ const LiveEventDetail = () => {
             </span>
           )}
           {event.group_name && (
-            <span className="flex items-center gap-2 text-sm text-slate-500">
+            <Link
+              to={groupPathById(event.group_id)}
+              className="flex items-center gap-2 text-sm text-slate-500 transition hover:text-[#102544] hover:underline hover:underline-offset-4"
+            >
               {event.group_avatar_url && (
                 <img
                   src={event.group_avatar_url}
@@ -147,7 +153,7 @@ const LiveEventDetail = () => {
                 />
               )}
               {event.group_name}
-            </span>
+            </Link>
           )}
         </div>
 
@@ -168,16 +174,53 @@ const LiveEventDetail = () => {
           {hasVideo ? (
             <EventVideo event={event} language={apiLanguage} isLive={isLive} />
           ) : (
-            imageUrl && (
+            imageUrl &&
+            imageUrl !== failedImageUrl && (
               <img
                 src={imageUrl}
                 alt=""
+                onError={() => setFailedImageUrl(imageUrl)}
                 className="w-full rounded-3xl object-cover"
               />
             )
           )}
 
-          {isLive && <LiveRecitationView live={live} language={apiLanguage} />}
+          {isLive && (
+            <section
+              aria-labelledby="live-recitation-link-heading"
+              className="overflow-hidden rounded-3xl bg-black text-[#f2f2f7] ring-1 ring-slate-900/10"
+            >
+              <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id="live-recitation-link-heading"
+                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#8e8e93]"
+                  >
+                    <span className="relative flex h-2 w-2" aria-hidden>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#e5231c] opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[#e5231c]" />
+                    </span>
+                    {t("live_events.recitation_heading")}
+                  </h2>
+                  <p className="mt-2 text-lg font-semibold leading-snug">
+                    {t("live_events.recitation_cta_title")}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[#8e8e93]">
+                    {t("live_events.recitation_cta_body")}
+                  </p>
+                </div>
+                {/* Same tab: the page it opens holds its own socket, and this
+                    one's closes as it goes, so the reader is counted once. */}
+                <Link
+                  to={`/live/${event.id}/recitation`}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#e5231c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff3a33]"
+                >
+                  {t("live_events.recitation_open")}
+                  <span aria-hidden>&rarr;</span>
+                </Link>
+              </div>
+            </section>
+          )}
 
           {description && (
             <section
