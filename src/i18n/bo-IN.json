@@ -819,6 +819,7 @@
   "live_events.recitation_out_of_sync": "མཉམ་འགྲིག་མ་བྱུང་། ད་ལྟའི་ཚིག་ཕྲེང་གཞུང་འདིའི་ནང་མི་འདུག ཁྱེད་ཀྱི་གནས་ས་བཞག་ཡོད།",
   "live_events.recitation_ended": "འདོན་འཛིན་མཇུག་རྫོགས་སོ།",
   "live_events.recitation_resync": "ཐད་གཏོང་ཚིག་ཕྲེང་ལ་ལོག",
+  "live_events.recitation_retry": "ཡང་བསྐྱར་ཚོད་ལྟ།",
   "live_events.recitation_round": "སྐོར་ {round}",
   "live_events.recitation_sign_in": "འདོན་བཞིན་པའི་གཞུང་རྗེས་འབྲང་བྱེད་པར་ནང་འཛུལ་གནང་སྟེ་དུས་ཆེན་འདིའི་ཚོགས་པར་ཞུགས་རོགས།",
   "live_events.recitation_unavailable": "ད་ལྟ་འདོན་འཛིན་རྗེས་འབྲང་བྱེད་མི་ཐུབ།"

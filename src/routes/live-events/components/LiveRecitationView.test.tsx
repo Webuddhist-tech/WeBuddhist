@@ -62,7 +62,7 @@ const at = (
 
 const renderView = (state: LiveViewerCount) => {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   const view = (next: LiveViewerCount) => (
     <QueryClientProvider client={client}>
@@ -78,6 +78,16 @@ const renderView = (state: LiveViewerCount) => {
 
 const currentLine = () =>
   document.querySelector('[aria-current="true"]')?.textContent ?? null;
+
+const scroller = () => screen.getByRole("list").parentElement as HTMLElement;
+
+// jsdom lays nothing out, so the scroller is given a size and a place in it.
+const scrollTo = (top: number) =>
+  Object.defineProperties(scroller(), {
+    scrollTop: { configurable: true, value: top },
+    clientHeight: { configurable: true, value: 200 },
+    scrollHeight: { configurable: true, value: 600 },
+  });
 
 describe("LiveRecitationView", () => {
   beforeEach(() => {
@@ -148,6 +158,69 @@ describe("LiveRecitationView", () => {
     expect(fetchRecitationTextMock).toHaveBeenCalledTimes(1);
   });
 
+  it("drops the old text when the next fails, and tries again on the next move", async () => {
+    fetchRecitationTextMock.mockImplementation(async (textId: string) => {
+      if (textId === "tara") return liturgy("tara", ["tara one", "tara two"]);
+      throw new Error("unavailable");
+    });
+
+    const { update } = renderView(live({ position: at("tara", "tara-bo-1") }));
+    await waitFor(() => expect(currentLine()).toContain("tara two"));
+
+    update(live({ position: at("heart", "heart-bo-0") }));
+
+    expect(
+      await screen.findByText("live_events.recitation_load_failed"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("tara two")).not.toBeInTheDocument();
+    expect(currentLine()).toBeNull();
+    // The failure alone does not ask again: tara once, heart and its retry.
+    expect(fetchRecitationTextMock).toHaveBeenCalledTimes(3);
+
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("heart", ["heart one", "heart two"]),
+    );
+    update(live({ position: at("heart", "heart-bo-1") }));
+
+    await waitFor(() => expect(currentLine()).toContain("heart two"));
+    expect(fetchRecitationTextMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("lets the reader try a failed text again without bringing back the old one", async () => {
+    fetchRecitationTextMock.mockImplementation(async (textId: string) => {
+      if (textId === "tara") return liturgy("tara", ["tara one", "tara two"]);
+      throw new Error("unavailable");
+    });
+
+    const { update } = renderView(live({ position: at("tara", "tara-bo-1") }));
+    await waitFor(() => expect(currentLine()).toContain("tara two"));
+    update(live({ position: at("heart", "heart-bo-0") }));
+
+    const retry = await screen.findByRole("button", {
+      name: "live_events.recitation_retry",
+    });
+    let arrive: (text: LiveRecitationText) => void = () => {};
+    fetchRecitationTextMock.mockImplementation(
+      () =>
+        new Promise<LiveRecitationText>((resolve) => {
+          arrive = resolve;
+        }),
+    );
+    fireEvent.click(retry);
+
+    expect(
+      await screen.findByText("live_events.recitation_loading"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("tara two")).not.toBeInTheDocument();
+
+    arrive(liturgy("heart", ["heart one", "heart two"]));
+
+    await waitFor(() => expect(currentLine()).toContain("heart one"));
+    expect(
+      screen.queryByRole("button", { name: "live_events.recitation_retry" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("stops following when the reader scrolls away, and offers the way back", async () => {
     fetchRecitationTextMock.mockResolvedValue(
       liturgy("tara", ["one", "two", "three"]),
@@ -156,7 +229,8 @@ describe("LiveRecitationView", () => {
     const { update } = renderView(live({ position: at("tara", "tara-bo-0") }));
     await waitFor(() => expect(currentLine()).toContain("one"));
 
-    fireEvent.wheel(screen.getByRole("list").parentElement as HTMLElement);
+    scrollTo(0);
+    fireEvent.wheel(scroller(), { deltaY: 100 });
     vi.mocked(Element.prototype.scrollTo).mockClear();
 
     update(live({ position: at("tara", "tara-bo-1") }));
@@ -171,6 +245,50 @@ describe("LiveRecitationView", () => {
     expect(
       screen.queryByRole("button", { name: "live_events.recitation_resync" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps following when the reader pushes against either end of the text", async () => {
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["one", "two", "three"]),
+    );
+
+    const { update } = renderView(live({ position: at("tara", "tara-bo-0") }));
+    await waitFor(() => expect(currentLine()).toContain("one"));
+
+    scrollTo(400);
+    fireEvent.wheel(scroller(), { deltaY: 100 });
+    fireEvent.keyDown(scroller(), { key: "End" });
+    scrollTo(0);
+    fireEvent.wheel(scroller(), { deltaY: -100 });
+    fireEvent.keyDown(scroller(), { key: " ", shiftKey: true });
+    fireEvent.touchStart(scroller(), { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(scroller(), { touches: [{ clientY: 180 }] });
+    vi.mocked(Element.prototype.scrollTo).mockClear();
+
+    update(live({ position: at("tara", "tara-bo-1") }));
+
+    await waitFor(() => expect(currentLine()).toContain("two"));
+    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "live_events.recitation_resync" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("stops following when the reader drags the text along", async () => {
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["one", "two", "three"]),
+    );
+
+    renderView(live({ position: at("tara", "tara-bo-0") }));
+    await waitFor(() => expect(currentLine()).toContain("one"));
+
+    scrollTo(0);
+    fireEvent.touchStart(scroller(), { touches: [{ clientY: 180 }] });
+    fireEvent.touchMove(scroller(), { touches: [{ clientY: 100 }] });
+
+    expect(
+      screen.getByRole("button", { name: "live_events.recitation_resync" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the round during a repeated passage", async () => {

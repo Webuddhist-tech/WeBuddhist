@@ -4,7 +4,10 @@ import { useTranslate } from "@tolgee/react";
 import { getLanguageClass } from "../../../utils/helperFunctions.tsx";
 import { fetchRecitationText } from "../api/eventsApi.ts";
 import type { LiveViewerCount } from "../hooks/useLiveViewerCount.ts";
-import type { LiveRecitationText } from "../types.ts";
+import type {
+  LiveRecitationPosition,
+  LiveRecitationText,
+} from "../types.ts";
 import { recitationLines } from "../utils/recitationText.ts";
 
 type LiveRecitationViewProps = {
@@ -14,20 +17,34 @@ type LiveRecitationViewProps = {
   language: string;
 };
 
-/** Keys a reader uses to move through the text on their own. */
-const READING_KEYS = new Set([
-  "ArrowUp",
-  "ArrowDown",
-  "PageUp",
-  "PageDown",
-  "Home",
-  "End",
-  " ",
+/**
+ * Keys a reader uses to move through the text on their own, and which way
+ * each moves it: up is negative.
+ */
+const READING_KEYS = new Map([
+  ["ArrowUp", -1],
+  ["ArrowDown", 1],
+  ["PageUp", -1],
+  ["PageDown", 1],
+  ["Home", -1],
+  ["End", 1],
+  [" ", 1],
 ]);
 
 const prefersReducedMotion = () =>
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Whether the text has room to move the way the reader is pushing it. */
+const canScroll = (scroller: HTMLElement, direction: number) => {
+  if (direction < 0) return scroller.scrollTop > 0;
+  if (direction > 0)
+    return (
+      Math.ceil(scroller.scrollTop) + scroller.clientHeight <
+      scroller.scrollHeight
+    );
+  return false;
+};
 
 /**
  * The liturgy being recited, kept scrolled to the line the operator has the
@@ -37,7 +54,9 @@ const prefersReducedMotion = () =>
  * `text_id` and the line found by its `segment_id`, so when the operator moves
  * on to the next liturgy in the event, the page loads that one and carries on.
  * The text on screen stays until its successor arrives, and a position for it
- * that lands mid-load still finds its line.
+ * that lands mid-load still finds its line. A successor that fails to load
+ * takes the old text off screen and is tried again on the operator's next
+ * move, or when the reader asks.
  *
  * A reader who scrolls away to read ahead is left there, with a way back to
  * the live line, rather than pulled back on the next move.
@@ -48,9 +67,12 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
 
   const [textId, setTextId] = useState<string | null>(null);
   const {
-    data: text,
+    data,
     isFetching,
     isError,
+    isPreviousData,
+    errorUpdateCount,
+    refetch,
   } = useQuery<LiveRecitationText>(
     ["live-recitation-text", textId, language],
     () => fetchRecitationText(textId as string, language),
@@ -63,6 +85,12 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
     },
   );
 
+  // The old text stays while its successor loads, but not once the successor
+  // has failed - not even while it is tried again. The room has moved past
+  // it, and its live line would be the wrong one.
+  const text = isPreviousData && errorUpdateCount > 0 ? undefined : data;
+  const loadFailed = isError && !isFetching;
+
   const { lines, lineBySegmentId } = useMemo(
     () => recitationLines(text, language),
     [text, language],
@@ -74,10 +102,17 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
 
   // A segment the loaded text does not have means the room is on another
   // liturgy - or, if it is this one, that the content has moved on since.
-  // Asking for the position's text covers both: the second is a no-op.
+  // Asking for the position's text covers both: the second is a no-op. Each
+  // move asks once, so a text that failed to load is tried again on the next
+  // move rather than left failed for the rest of the event.
+  const askedBy = useRef<LiveRecitationPosition | null>(null);
   useEffect(() => {
-    if (position && matched === undefined) setTextId(position.text_id);
-  }, [position, matched]);
+    if (!position || matched !== undefined || askedBy.current === position)
+      return;
+    askedBy.current = position;
+    if (position.text_id === textId && loadFailed) refetch();
+    else setTextId(position.text_id);
+  }, [position, matched, textId, loadFailed, refetch]);
 
   // The last line found, held against the text it was found in, so an
   // unknown segment leaves the reader where they were rather than nowhere.
@@ -112,11 +147,43 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
     if (following) scrollToLine(currentLine);
   }, [currentLine, following, position, scrollToLine]);
 
-  const stopFollowing = () => setFollowing(false);
+  // Following stops only once the reader actually moves the text. A push
+  // against either end of it moves nothing, and leaves the live line in charge.
+  const handleReaderScroll = (direction: number) => {
+    const scroller = scrollerRef.current;
+    if (scroller && canScroll(scroller, direction)) setFollowing(false);
+  };
 
-  const resync = () => {
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) =>
+    handleReaderScroll(Math.sign(event.deltaY));
+
+  const touchY = useRef<number | null>(null);
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchY.current = event.touches[0]?.clientY ?? null;
+  };
+
+  // A finger drawn up the screen moves the text down.
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const y = event.touches[0]?.clientY;
+    if (y === undefined) return;
+    if (touchY.current !== null) handleReaderScroll(touchY.current - y);
+    touchY.current = y;
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const direction = READING_KEYS.get(event.key);
+    if (direction === undefined) return;
+    handleReaderScroll(event.key === " " && event.shiftKey ? -1 : direction);
+  };
+
+  const handleResync = () => {
     setFollowing(true);
     scrollToLine(currentLine);
+  };
+
+  const handleRetry = () => {
+    refetch();
   };
 
   if (status === "signed-out" || status === "refused") {
@@ -143,7 +210,7 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
 
   const notice = (() => {
     if (sessionEnded) return t("live_events.recitation_ended");
-    if (isError && !isFetching) return t("live_events.recitation_load_failed");
+    if (loadFailed) return t("live_events.recitation_load_failed");
     if (outOfSync) return t("live_events.recitation_out_of_sync");
     return null;
   })();
@@ -189,7 +256,7 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
         {currentLine !== null && !following && (
           <button
             type="button"
-            onClick={resync}
+            onClick={handleResync}
             className="rounded-full bg-[#102544] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1b3a67]"
           >
             {t("live_events.recitation_resync")}
@@ -198,22 +265,29 @@ const LiveRecitationView = ({ live, language }: LiveRecitationViewProps) => {
       </header>
 
       {notice && (
-        <p
-          className="border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs text-amber-800 sm:px-6"
-          role="status"
-        >
-          {notice}
-        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs text-amber-800 sm:px-6">
+          <p className="min-w-0 flex-1" role="status">
+            {notice}
+          </p>
+          {loadFailed && !sessionEnded && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="font-semibold underline underline-offset-2 transition hover:text-amber-900"
+            >
+              {t("live_events.recitation_retry")}
+            </button>
+          )}
+        </div>
       )}
 
       <div
         ref={scrollerRef}
         className="relative max-h-[60vh] min-h-[12rem] overflow-y-auto overscroll-contain px-2 py-3 sm:px-3"
-        onWheel={stopFollowing}
-        onTouchMove={stopFollowing}
-        onKeyDown={(event) => {
-          if (READING_KEYS.has(event.key)) stopFollowing();
-        }}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onKeyDown={handleKeyDown}
         tabIndex={0}
         aria-label={t("live_events.recitation_heading")}
       >
