@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -96,7 +96,9 @@ describe("LiveRecitationPage", () => {
   });
 
   it("follows the recitation on the event's socket while it is live", () => {
-    mockQuery({ data: event() });
+    mockQuery({
+      data: event({ group_recitation_collection_id: "collection-1" }),
+    });
 
     renderPage();
 
@@ -104,10 +106,14 @@ describe("LiveRecitationPage", () => {
       screen.getByRole("heading", { name: "Tara Puja" }),
     ).toBeInTheDocument();
     expect(useLiveViewerCountMock).toHaveBeenLastCalledWith("event-1", true);
-    expect(liveRecitationViewMock).toHaveBeenLastCalledWith({
-      live: expect.objectContaining({ count: 12, status: "connected" }),
-      language: "en",
-    });
+    expect(liveRecitationViewMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        live: expect.objectContaining({ count: 12, status: "connected" }),
+        language: "en",
+        collectionId: "collection-1",
+        theme: "dark",
+      }),
+    );
     expect(
       screen.getByRole("link", { name: /live_events.back_to_event/ }),
     ).toHaveAttribute("href", "/live/event-1");
@@ -185,6 +191,33 @@ describe("LiveRecitationPage", () => {
 
     expect(screen.getByText("live_events.recitation_over")).toBeInTheDocument();
     expect(screen.queryByTestId("live-recitation")).not.toBeInTheDocument();
+  });
+
+  it("sets the page on paper when the reader picks light, and remembers it", () => {
+    mockQuery({ data: event() });
+    const { unmount } = renderPage();
+    expect(screen.getByRole("img", { name: "WeBuddhist" })).toHaveAttribute(
+      "src",
+      "/img/dark_mode_logo.svg",
+    );
+
+    const { onThemeChange } = liveRecitationViewMock.mock.lastCall?.[0] as {
+      onThemeChange: (theme: string) => void;
+    };
+    act(() => onThemeChange("light"));
+
+    expect(screen.getByRole("main")).toHaveStyle({ colorScheme: "light" });
+    expect(screen.getByRole("img", { name: "WeBuddhist" })).toHaveAttribute(
+      "src",
+      "/img/light_mode_logo.svg",
+    );
+    unmount();
+
+    renderPage();
+    expect(liveRecitationViewMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ theme: "light" }),
+    );
+    localStorage.clear();
   });
 
   it("says so when the event cannot be loaded", () => {

@@ -23,11 +23,19 @@ import {
   formatEventWindow,
   preferredVideo,
 } from "./utils/eventUtils.ts";
+import {
+  loadRecitationTheme,
+  recitationThemeStyle,
+  saveRecitationTheme,
+} from "./utils/recitationTheme.ts";
+import type { RecitationTheme } from "./utils/recitationTheme.ts";
 
 /** Keeps the phase honest while the page sits open across a start time. */
 const REFRESH_MS = 60_000;
 
-const STAGE = "flex h-[100dvh] flex-col bg-black text-[#f2f2f7]";
+/** Colours come from the theme, set as variables on the page root. */
+const STAGE =
+  "flex h-[100dvh] flex-col bg-[var(--rt-stage)] text-[var(--rt-ink)] transition-colors duration-500";
 
 /**
  * The live recitation, given the whole screen: the text the room is chanting,
@@ -50,6 +58,14 @@ const LiveRecitationPage = () => {
     tolgee.getLanguage() || localStorage.getItem(LANGUAGE) || "en";
   const apiLanguage = mapLanguageCode(storedLanguage);
   const isMobile = useIsMobile();
+
+  // Dark stage or paper, as this reader last chose on this device.
+  const [theme, setTheme] = useState<RecitationTheme>(loadRecitationTheme);
+  const changeTheme = (next: RecitationTheme) => {
+    setTheme(next);
+    saveRecitationTheme(next);
+  };
+  const themeStyle = recitationThemeStyle(theme);
 
   // Shares the detail page's cache entry, so arriving from it shows the event
   // at once.
@@ -81,7 +97,7 @@ const LiveRecitationPage = () => {
   const backToEvent = (
     <Link
       to={`/live/${eventId}`}
-      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#8e8e93] transition hover:text-white"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--rt-soft)] transition hover:text-[var(--rt-ink)]"
     >
       <span aria-hidden>&larr;</span>
       {t("live_events.back_to_event")}
@@ -89,10 +105,14 @@ const LiveRecitationPage = () => {
   );
 
   const brand = (
-    <div className="flex items-center justify-between gap-4 border-b border-[#2c2c2e] pb-4">
+    <div className="flex items-center justify-between gap-4 border-b border-[var(--rt-line)] pb-4">
       <Link to="/" className="shrink-0">
         <img
-          src="/img/dark_mode_logo.svg"
+          src={
+            theme === "dark"
+              ? "/img/dark_mode_logo.svg"
+              : "/img/light_mode_logo.svg"
+          }
           alt={siteName}
           className="h-6 w-auto md:h-7"
         />
@@ -103,13 +123,13 @@ const LiveRecitationPage = () => {
 
   if (isLoading) {
     return (
-      <main className={STAGE}>
+      <main className={STAGE} style={themeStyle}>
         <div className="px-4 py-4 md:px-6">{brand}</div>
         <div className="mx-auto mt-10 w-full max-w-3xl space-y-4 px-6">
-          <div className="h-6 w-1/2 animate-pulse rounded bg-[#1c1c1e]" />
-          <div className="h-5 w-full animate-pulse rounded bg-[#1c1c1e]" />
-          <div className="h-5 w-5/6 animate-pulse rounded bg-[#1c1c1e]" />
-          <div className="h-5 w-4/6 animate-pulse rounded bg-[#1c1c1e]" />
+          <div className="h-6 w-1/2 animate-pulse rounded bg-[var(--rt-panel)]" />
+          <div className="h-5 w-full animate-pulse rounded bg-[var(--rt-panel)]" />
+          <div className="h-5 w-5/6 animate-pulse rounded bg-[var(--rt-panel)]" />
+          <div className="h-5 w-4/6 animate-pulse rounded bg-[var(--rt-panel)]" />
         </div>
       </main>
     );
@@ -117,9 +137,9 @@ const LiveRecitationPage = () => {
 
   if (error || !event) {
     return (
-      <main className={STAGE}>
+      <main className={STAGE} style={themeStyle}>
         <div className="px-4 py-4 md:px-6">{brand}</div>
-        <p className="mx-auto mt-16 max-w-md px-6 text-center text-sm text-[#e08585]">
+        <p className="mx-auto mt-16 max-w-md px-6 text-center text-sm text-[var(--rt-soft)]">
           {t("live_events.detail_failed")}
         </p>
       </main>
@@ -132,6 +152,7 @@ const LiveRecitationPage = () => {
 
   return (
     <main
+      style={themeStyle}
       className={`${STAGE} md:grid md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] lg:grid-cols-[24rem_minmax(0,1fr)]`}
     >
       <Seo
@@ -140,20 +161,20 @@ const LiveRecitationPage = () => {
         canonical=""
       />
 
-      <aside className="shrink-0 border-b border-[#2c2c2e] px-4 pb-4 pt-4 md:overflow-y-auto md:border-b-0 md:border-r md:px-5 md:pt-5">
+      <aside className="shrink-0 border-b border-[var(--rt-line)] px-4 pb-4 pt-4 md:overflow-y-auto md:border-b-0 md:border-r md:px-5 md:pt-5">
         {brand}
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {isLive && <LivePill />}
           {phase === "past" && (
-            <span className="rounded-full bg-[#2c2c2e] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#8e8e93]">
+            <span className="rounded-full bg-[var(--rt-raised)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--rt-soft)]">
               {t("live_events.ended")}
             </span>
           )}
           {event.group_name && (
             <Link
               to={groupPathById(event.group_id)}
-              className="min-w-0 truncate text-xs font-medium uppercase tracking-[0.11em] text-[#8e8e93] transition hover:text-white"
+              className="min-w-0 truncate text-xs font-medium uppercase tracking-[0.11em] text-[var(--rt-soft)] transition hover:text-[var(--rt-ink)]"
             >
               {event.group_name}
             </Link>
@@ -168,11 +189,11 @@ const LiveRecitationPage = () => {
 
         {isLive && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <LiveViewerCount live={live} tone="dark" />
+            <LiveViewerCount live={live} tone={theme} />
             {live.status === "signed-out" && (
               <Link
                 to="/login"
-                className="rounded-full bg-[#e5231c] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[#ff3a33]"
+                className="rounded-full bg-[var(--rt-accent)] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[var(--rt-accent-hover)]"
               >
                 {t("live_events.sign_in")}
               </Link>
@@ -185,7 +206,7 @@ const LiveRecitationPage = () => {
             type="button"
             onClick={() => setVideoOpen((open) => !open)}
             aria-expanded={videoOpen}
-            className="mt-3 rounded-full bg-[#2c2c2e] px-4 py-1.5 text-sm font-semibold text-[#f2f2f7] transition hover:bg-[#3a3a3c]"
+            className="mt-3 rounded-full bg-[var(--rt-raised)] px-4 py-1.5 text-sm font-semibold text-[var(--rt-ink)] transition hover:opacity-80"
           >
             {videoOpen
               ? t("live_events.hide_stream")
@@ -194,7 +215,7 @@ const LiveRecitationPage = () => {
         )}
 
         {showVideo && (
-          <div className="mt-4 [&_figure]:rounded-xl [&_figure]:shadow-none [&_figure]:ring-1 [&_figure]:ring-white/10">
+          <div className="mt-4 [&_figure]:rounded-xl [&_figure]:shadow-none [&_figure]:ring-1 [&_figure]:ring-[var(--rt-line)]">
             <EventVideo event={event} language={apiLanguage} isLive />
           </div>
         )}
@@ -202,10 +223,16 @@ const LiveRecitationPage = () => {
 
       <section className="flex min-h-0 flex-1 flex-col">
         {isLive ? (
-          <LiveRecitationView live={live} language={apiLanguage} />
+          <LiveRecitationView
+            live={live}
+            language={apiLanguage}
+            collectionId={event.group_recitation_collection_id}
+            theme={theme}
+            onThemeChange={changeTheme}
+          />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#8e8e93]">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--rt-soft)]">
               {t("live_events.recitation_heading")}
             </p>
             <p className="mt-3 max-w-md text-base leading-7">
@@ -214,7 +241,7 @@ const LiveRecitationPage = () => {
                 : t("live_events.recitation_not_live")}
             </p>
             {phase === "upcoming" && (
-              <p className="mt-1 text-sm text-[#8e8e93]">
+              <p className="mt-1 text-sm text-[var(--rt-soft)]">
                 {formatEventWindow(event, storedLanguage)}
               </p>
             )}

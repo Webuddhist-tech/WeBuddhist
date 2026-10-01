@@ -4,6 +4,7 @@ import { getAnnotatedSegments } from "@/services/library/segmentLines.ts";
 import type { AnnotatedSegment } from "@/services/library/segmentLines.ts";
 import type {
   EventDTO,
+  EventLiturgy,
   LiveRecitationText,
   RecitationTextDTO,
 } from "../types.ts";
@@ -125,4 +126,26 @@ export const fetchRecitationText = async (
     }
   }
   throw lastError;
+};
+
+type RecitationCollectionDTO = {
+  items?: { text_id: string; title?: string | null; display_order: number }[];
+};
+
+/**
+ * The liturgies of an event's order of service, in the order they are
+ * recited - the list the live controller drives the room through.
+ */
+export const fetchEventLiturgies = async (
+  collectionId: string,
+): Promise<EventLiturgy[]> => {
+  const { data } = await axiosInstance.get<RecitationCollectionDTO>(
+    `/api/v1/author/groups/recitation-collections/${encodeURIComponent(collectionId)}`,
+  );
+  return [...(data?.items ?? [])]
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((item) => ({
+      textId: item.text_id,
+      title: item.title?.trim() || item.text_id,
+    }));
 };

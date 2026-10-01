@@ -17,9 +17,25 @@ vi.mock("@tolgee/react", () => ({
 vi.mock("react-query", async () => vi.importActual("react-query"));
 
 const fetchRecitationTextMock = vi.fn();
+const fetchEventLiturgiesMock = vi.fn();
 vi.mock("../api/eventsApi.ts", () => ({
   fetchRecitationText: (textId: string, language: string) =>
     fetchRecitationTextMock(textId, language),
+  fetchEventLiturgies: (collectionId: string) =>
+    fetchEventLiturgiesMock(collectionId),
+}));
+
+const outlineMock = vi.fn();
+vi.mock("@/services/library/tableOfContents.ts", () => ({
+  getTableOfContentsOutline: (textId: string, language?: string) =>
+    outlineMock(textId, language),
+}));
+
+// The glide is its own unit, tested on its own; here it is only asked for.
+const smoothScrollMock = vi.fn();
+vi.mock("../utils/smoothScroll.ts", () => ({
+  smoothScrollTo: (element: HTMLElement, top: number) =>
+    smoothScrollMock(element, top),
 }));
 
 import LiveRecitationView from "./LiveRecitationView.tsx";
@@ -60,13 +76,24 @@ const at = (
   ...extra,
 });
 
-const renderView = (state: LiveViewerCount) => {
+const onThemeChange = vi.fn();
+
+const renderView = (
+  state: LiveViewerCount,
+  { collectionId = null }: { collectionId?: string | null } = {},
+) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   const view = (next: LiveViewerCount) => (
     <QueryClientProvider client={client}>
-      <LiveRecitationView live={next} language="en" />
+      <LiveRecitationView
+        live={next}
+        language="en"
+        collectionId={collectionId}
+        theme="dark"
+        onThemeChange={onThemeChange}
+      />
     </QueryClientProvider>
   );
   const result = render(view(state));
@@ -92,7 +119,9 @@ const scrollTo = (top: number) =>
 describe("LiveRecitationView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Element.prototype.scrollTo = vi.fn();
+    smoothScrollMock.mockReturnValue(() => {});
+    outlineMock.mockResolvedValue([]);
+    fetchEventLiturgiesMock.mockResolvedValue([]);
   });
 
   it("waits quietly until the operator sets a line", () => {
@@ -115,7 +144,7 @@ describe("LiveRecitationView", () => {
     expect(fetchRecitationTextMock).toHaveBeenCalledWith("tara", "en");
     expect(screen.getByText("Tara")).toBeInTheDocument();
     expect(screen.getByText("two (en)")).toBeInTheDocument();
-    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    expect(smoothScrollMock).toHaveBeenCalled();
   });
 
   it("lays a verse out by the library's lines, with its yigchung set small", async () => {
@@ -267,17 +296,17 @@ describe("LiveRecitationView", () => {
 
     scrollTo(0);
     fireEvent.wheel(scroller(), { deltaY: 100 });
-    vi.mocked(Element.prototype.scrollTo).mockClear();
+    smoothScrollMock.mockClear();
 
     update(live({ position: at("tara", "tara-bo-1") }));
     await waitFor(() => expect(currentLine()).toContain("two"));
-    expect(Element.prototype.scrollTo).not.toHaveBeenCalled();
+    expect(smoothScrollMock).not.toHaveBeenCalled();
 
     fireEvent.click(
       screen.getByRole("button", { name: "live_events.recitation_resync" }),
     );
 
-    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    expect(smoothScrollMock).toHaveBeenCalled();
     expect(
       screen.queryByRole("button", { name: "live_events.recitation_resync" }),
     ).not.toBeInTheDocument();
@@ -299,12 +328,12 @@ describe("LiveRecitationView", () => {
     fireEvent.keyDown(scroller(), { key: " ", shiftKey: true });
     fireEvent.touchStart(scroller(), { touches: [{ clientY: 100 }] });
     fireEvent.touchMove(scroller(), { touches: [{ clientY: 180 }] });
-    vi.mocked(Element.prototype.scrollTo).mockClear();
+    smoothScrollMock.mockClear();
 
     update(live({ position: at("tara", "tara-bo-1") }));
 
     await waitFor(() => expect(currentLine()).toContain("two"));
-    expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    expect(smoothScrollMock).toHaveBeenCalled();
     expect(
       screen.queryByRole("button", { name: "live_events.recitation_resync" }),
     ).not.toBeInTheDocument();
@@ -359,5 +388,126 @@ describe("LiveRecitationView", () => {
     renderView(live({ status: "refused", detail: "Only members can follow" }));
 
     expect(screen.getByText("Only members can follow")).toBeInTheDocument();
+  });
+
+  it("glides the text on to the live line", async () => {
+    fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["one", "two"]));
+
+    renderView(live({ position: at("tara", "tara-bo-1") }));
+
+    await waitFor(() => expect(currentLine()).toContain("two"));
+    expect(smoothScrollMock).toHaveBeenCalledWith(
+      scroller(),
+      expect.any(Number),
+    );
+  });
+
+  it("lists the sections, with short titles, and goes to one when chosen", async () => {
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["one", "two", "three"]),
+    );
+    outlineMock.mockResolvedValue([
+      {
+        id: "s1",
+        title: "༄༅། །མཚན་དོན་བཞུགས་སོ། །",
+        depth: 0,
+        segmentId: "tara-bo-0",
+      },
+      { id: "s2", title: "བསྟོད་པ་དངོས།", depth: 1, segmentId: "tara-bo-2" },
+      { id: "s3", title: "Not in this text", depth: 1, segmentId: null },
+    ]);
+
+    renderView(live({ position: at("tara", "tara-bo-0") }));
+    await waitFor(() => expect(currentLine()).toContain("one"));
+    expect(outlineMock).toHaveBeenCalledWith("tara", "bo");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_contents" }),
+    );
+
+    const current = await screen.findByRole("button", { name: "མཚན་དོན" });
+    expect(current).toHaveAttribute("aria-current", "true");
+    expect(
+      screen.getByRole("button", { name: "Not in this text" }),
+    ).toBeDisabled();
+
+    smoothScrollMock.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "བསྟོད་པ་དངོས" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "བསྟོད་པ་དངོས" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(smoothScrollMock).toHaveBeenCalled();
+    // Reading elsewhere: the live line lets go, and offers the way back.
+    expect(
+      screen.getByRole("button", { name: "live_events.recitation_resync" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lists the event's liturgies and marks the one the room is on", async () => {
+    fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["one"]));
+    fetchEventLiturgiesMock.mockResolvedValue([
+      { textId: "refuge", title: "༄༅། །སྐྱབས་འགྲོ།" },
+      { textId: "tara", title: "Praises to the Twenty-One Tārās" },
+    ]);
+
+    renderView(live({ position: at("tara", "tara-bo-0") }), {
+      collectionId: "collection-1",
+    });
+    await waitFor(() => expect(currentLine()).toContain("one"));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_contents" }),
+    );
+
+    expect(
+      await screen.findByText("Praises to the Twenty-One Tārās"),
+    ).toHaveAttribute("aria-current", "true");
+    expect(screen.getByText("སྐྱབས་འགྲོ")).not.toHaveAttribute("aria-current");
+    expect(fetchEventLiturgiesMock).toHaveBeenCalledWith("collection-1");
+  });
+
+  it("switches between the dark stage and paper from the settings", () => {
+    renderView(live());
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    expect(
+      screen.getByRole("radio", { name: "live_events.recitation_theme_dark" }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: "live_events.recitation_theme_light" }),
+    );
+
+    expect(onThemeChange).toHaveBeenCalledWith("light");
+  });
+
+  it("underlines the live line at the pace the room kept over the line before", async () => {
+    let now = 0;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["abcd", "efghijkl"]),
+    );
+
+    const { update } = renderView(live({ position: at("tara", "tara-bo-0") }));
+    await waitFor(() => expect(currentLine()).toContain("abcd"));
+    // Nothing to go by yet: the first line is not underlined.
+    expect(document.querySelector("[data-pace]")).toBeNull();
+
+    // Four characters in two seconds: half a second each.
+    now = 2000;
+    update(live({ position: at("tara", "tara-bo-1") }));
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-pace]")).not.toBeNull(),
+    );
+    const underline = document.querySelector<HTMLElement>("[data-pace]");
+    expect(underline?.textContent).toBe("efghijkl");
+    expect(underline?.style.animation).toContain("4000ms");
+    clock.mockRestore();
   });
 });

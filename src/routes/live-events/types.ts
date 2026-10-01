@@ -82,6 +82,8 @@ export type EventDTO = {
     name?: string | null;
     image_url?: string | null;
   } | null;
+  /** The liturgies the event recites, in order, when the organizer set them. */
+  group_recitation_collection_id?: string | null;
   group_name?: string | null;
   group_avatar_url?: string | null;
   participant_count?: number;
@@ -130,4 +132,11 @@ export type RecitationTextDTO = {
 export type LiveRecitationText = RecitationTextDTO & {
   language: string;
   annotations?: ReadonlyMap<string, AnnotatedSegment>;
+};
+
+/** One liturgy of an event's order of service. */
+export type EventLiturgy = {
+  /** The id the operator drives it by: what a position's `text_id` carries. */
+  textId: string;
+  title: string;
 };

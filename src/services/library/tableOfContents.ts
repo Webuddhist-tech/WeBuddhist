@@ -104,3 +104,102 @@ export const getTableOfContents = async (
       : null,
   };
 };
+
+/** One heading of an edition's outline, flattened for a list. */
+export type OutlineEntry = {
+  id: string;
+  title: string;
+  /** How deep the heading nests: 0 for the outermost. */
+  depth: number;
+  /** The segment the heading is recited from, when one could be placed. */
+  segmentId: string | null;
+};
+
+/**
+ * The segment a heading is recited from: the one its span begins inside,
+ * however early that segment started - a verse whose segment carries the tail
+ * of the line above still starts there - or else the first that begins within
+ * the span. An empty span marks a position, as the library writes a heading
+ * with no text of its own, so it takes the first segment at or after it.
+ */
+const segmentStartingSpan = (
+  spans: LibrarySegmentSpan[],
+  span: { start: number; end: number } | null | undefined,
+): string | null => {
+  if (!span) return null;
+  const match = spans.find((candidate) => {
+    const lines = candidate.lines ?? [];
+    if (lines.length === 0) return false;
+    const start = Math.min(...lines.map((line) => line.start));
+    const end = Math.max(...lines.map((line) => line.end));
+    if (start <= span.start && end > span.start) return true;
+    return span.start === span.end
+      ? start >= span.start
+      : start >= span.start && start < span.end;
+  });
+  return match?.id ?? null;
+};
+
+/** A heading's own segment, or the first any heading under it found. */
+const outlineAnchor = (
+  section: LibraryTocSection,
+  spans: LibrarySegmentSpan[],
+): string | null =>
+  segmentStartingSpan(spans, section.span) ??
+  (section.subsections ?? []).reduce<string | null>(
+    (found, subsection) => found ?? outlineAnchor(subsection, spans),
+    null,
+  );
+
+const flattenOutline = (
+  sections: LibraryTocSection[],
+  spans: LibrarySegmentSpan[],
+  language: string | null | undefined,
+  depth: number,
+  into: OutlineEntry[],
+): OutlineEntry[] => {
+  sections.forEach((section) => {
+    const title = extractTitle(section.title, language).trim();
+    if (title) {
+      into.push({
+        id: section.id,
+        title,
+        depth,
+        segmentId: outlineAnchor(section, spans),
+      });
+    }
+    flattenOutline(
+      section.subsections ?? [],
+      spans,
+      language,
+      title ? depth + 1 : depth,
+      into,
+    );
+  });
+  return into;
+};
+
+/**
+ * An edition's outline as one list, outermost heading first - the order the
+ * headings both nest and are recited in - each with the segment it starts at.
+ * The live controller's section list, for a page that follows one.
+ *
+ * Most of the library has no outline yet; such an edition has no entries, and
+ * costs no segment scan.
+ */
+export const getTableOfContentsOutline = async (
+  textOrEditionId: string,
+  language?: string | null,
+): Promise<OutlineEntry[]> => {
+  const context = await resolveEditionContext(textOrEditionId);
+  const tocs = await libraryGet<LibraryToc[]>(
+    `/v2/editions/${context.editionId}/table-of-contents`,
+    undefined,
+    "table of contents",
+  ).catch(() => [] as LibraryToc[]);
+  const sections = (tocs ?? []).flatMap((toc) => toc.sections ?? []);
+  if (sections.length === 0) return [];
+
+  const spans = await getAllSegmentSpans(context.editionId);
+  return flattenOutline(sections, spans, language, 0, []);
+};

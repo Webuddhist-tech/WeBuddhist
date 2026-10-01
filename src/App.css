@@ -12,6 +12,16 @@
   }
 }
 
+/* The live recitation's pace underline, grown across a run as it is chanted. */
+@keyframes recitation-pace {
+  from {
+    background-size: 0% 2px;
+  }
+  to {
+    background-size: 100% 2px;
+  }
+}
+
 #root {
   --content-font-family: "EBGaramond-Regular", sans-serif;
   --overalltext-font-family: "overalltext-font", "Inter";
