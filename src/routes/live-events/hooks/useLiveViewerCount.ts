@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../config/AuthContext.tsx";
 import { ACCESS_TOKEN } from "../../../utils/constants.ts";
+import type { LiveRecitationPosition } from "../types.ts";
 
 export type LiveViewerStatus =
   | "connecting"
@@ -22,6 +23,13 @@ export interface LiveViewerCount {
   detail: string | null;
   /** The server's machine-readable reason, e.g. `UNAUTHORIZED`. */
   code: string | null;
+  /**
+   * The line the operator has the room on, or null before one is set. Arrives
+   * on connect when a puja is already under way, so a late joiner lands on it.
+   */
+  position: LiveRecitationPosition | null;
+  /** The operator ended the recitation; cleared by the next position. */
+  sessionEnded: boolean;
 }
 
 const PING_INTERVAL_MS = 30_000;
@@ -56,12 +64,29 @@ const readString = (frame: unknown, key: string): string | null => {
   return typeof value === "string" && value ? value : null;
 };
 
+const readPosition = (frame: unknown): LiveRecitationPosition | null => {
+  const textId = readString(frame, "text_id");
+  const segmentId = readString(frame, "segment_id");
+  if (!textId || !segmentId) return null;
+  return {
+    text_id: textId,
+    segment_id: segmentId,
+    index: readNumber(frame, "index"),
+    round_number: readNumber(frame, "round_number"),
+    revision: readNumber(frame, "revision"),
+  };
+};
+
 /**
- * Joins an event's live recitation socket and keeps the room size it reports.
+ * Joins an event's live recitation socket and keeps the room size it reports,
+ * along with the line the operator has the room on.
  *
  * The server sends `count` on `session_info` when this page joins, and again as
  * `presence` whenever anyone joins or leaves. This page is one of the people in
  * that number for as long as it stays open, which is why the UI says so.
+ *
+ * One socket serves both: a second one for the text would count this reader
+ * into the room twice.
  *
  * Pass `enabled: false` to stay off the socket - the count is only worth a
  * connection once the reader is actually looking at the event.
@@ -85,9 +110,15 @@ export const useLiveViewerCount = (
   const [status, setStatus] = useState<LiveViewerStatus>("connecting");
   const [detail, setDetail] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
+  const [position, setPosition] = useState<LiveRecitationPosition | null>(null);
+  const [sessionEnded, setSessionEnded] = useState(false);
 
   useEffect(() => {
     if (!enabled || !eventId) return;
+
+    // Another event's position must not be shown against this one's text.
+    setPosition(null);
+    setSessionEnded(false);
 
     let stopped = false;
     let giveUp = false;
@@ -95,6 +126,9 @@ export const useLiveViewerCount = (
     let pingTimer: ReturnType<typeof setInterval> | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let delay = 1000;
+    // Frames on one socket are ordered by revision. A new socket starts over:
+    // a session ended and begun again may number its positions afresh.
+    let lastRevision: number | null = null;
 
     const stopPing = () => {
       if (pingTimer) {
@@ -123,6 +157,7 @@ export const useLiveViewerCount = (
           ? "reconnecting"
           : "connecting",
       );
+      lastRevision = null;
       const next = new WebSocket(liveRecitationSocketUrl(eventId, token));
       socket = next;
 
@@ -151,6 +186,26 @@ export const useLiveViewerCount = (
           setStatus("connected");
           setDetail(null);
           setCode(null);
+          return;
+        }
+        if (frameType === "position") {
+          const moved = readPosition(frame);
+          if (!moved) return;
+          if (
+            moved.revision != null &&
+            lastRevision !== null &&
+            moved.revision <= lastRevision
+          )
+            return;
+          if (moved.revision != null) lastRevision = moved.revision;
+          setPosition(moved);
+          setSessionEnded(false);
+          return;
+        }
+        if (frameType === "session_ended") {
+          lastRevision = null;
+          setPosition(null);
+          setSessionEnded(true);
           return;
         }
         if (frameType === "error") {
@@ -186,5 +241,5 @@ export const useLiveViewerCount = (
     };
   }, [eventId, enabled, isLoggedIn, isTokenReady]);
 
-  return { count, status, detail, code };
+  return { count, status, detail, code, position, sessionEnded };
 };

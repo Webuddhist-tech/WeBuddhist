@@ -219,6 +219,101 @@ describe("useLiveViewerCount", () => {
     }
   });
 
+  it("keeps the line the operator has the room on", () => {
+    const { result } = renderHook(() => useLiveViewerCount("event-1"));
+
+    expect(result.current.position).toBeNull();
+
+    act(() => {
+      FakeSocket.latest?.onmessage?.({ data: sessionInfo(2) });
+      FakeSocket.latest?.onmessage?.({
+        data: JSON.stringify({
+          type: "position",
+          text_id: "text-1",
+          segment_id: "seg-3",
+          index: 2,
+          round_number: 3,
+          revision: 10,
+        }),
+      });
+    });
+
+    expect(result.current.position).toEqual({
+      text_id: "text-1",
+      segment_id: "seg-3",
+      index: 2,
+      round_number: 3,
+      revision: 10,
+    });
+    expect(result.current.count).toBe(2);
+  });
+
+  it("drops a position older than the one it already has", () => {
+    const { result } = renderHook(() => useLiveViewerCount("event-1"));
+    const position = (segment: string, revision: number) =>
+      JSON.stringify({
+        type: "position",
+        text_id: "text-1",
+        segment_id: segment,
+        revision,
+      });
+
+    act(() => {
+      FakeSocket.latest?.onmessage?.({ data: position("seg-5", 5) });
+      FakeSocket.latest?.onmessage?.({ data: position("seg-4", 4) });
+    });
+
+    expect(result.current.position?.segment_id).toBe("seg-5");
+  });
+
+  it("ignores a position with no segment to find", () => {
+    const { result } = renderHook(() => useLiveViewerCount("event-1"));
+
+    act(() => {
+      FakeSocket.latest?.onmessage?.({
+        data: JSON.stringify({ type: "position", text_id: "text-1" }),
+      });
+    });
+
+    expect(result.current.position).toBeNull();
+  });
+
+  it("clears the position when the operator ends the session", () => {
+    const { result } = renderHook(() => useLiveViewerCount("event-1"));
+
+    act(() => {
+      FakeSocket.latest?.onmessage?.({
+        data: JSON.stringify({
+          type: "position",
+          text_id: "text-1",
+          segment_id: "seg-1",
+          revision: 7,
+        }),
+      });
+      FakeSocket.latest?.onmessage?.({
+        data: JSON.stringify({ type: "session_ended", event_id: "event-1" }),
+      });
+    });
+
+    expect(result.current.position).toBeNull();
+    expect(result.current.sessionEnded).toBe(true);
+
+    // A session begun again may number its positions afresh.
+    act(() => {
+      FakeSocket.latest?.onmessage?.({
+        data: JSON.stringify({
+          type: "position",
+          text_id: "text-1",
+          segment_id: "seg-1",
+          revision: 1,
+        }),
+      });
+    });
+
+    expect(result.current.position?.revision).toBe(1);
+    expect(result.current.sessionEnded).toBe(false);
+  });
+
   it("ignores a malformed frame instead of throwing", () => {
     const { result } = renderHook(() => useLiveViewerCount("event-1"));
 

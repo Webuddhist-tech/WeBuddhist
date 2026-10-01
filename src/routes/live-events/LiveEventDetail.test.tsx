@@ -22,6 +22,15 @@ vi.mock("./hooks/useLiveViewerCount.ts", () => ({
     useLiveViewerCountMock(eventId, enabled),
 }));
 
+// The recitation view loads its own text; it has tests of its own.
+const liveRecitationViewMock = vi.fn();
+vi.mock("./components/LiveRecitationView.tsx", () => ({
+  default: (props: unknown) => {
+    liveRecitationViewMock(props);
+    return <div data-testid="live-recitation" />;
+  },
+}));
+
 import LiveEventDetail from "./LiveEventDetail.tsx";
 
 const event = (overrides: Partial<EventDTO> = {}): EventDTO => ({
@@ -228,6 +237,30 @@ describe("LiveEventDetail", () => {
     renderPage();
 
     expect(screen.getByText("live_events.ended")).toBeInTheDocument();
+  });
+
+  it("follows the recitation on the same socket as the count, while live", () => {
+    mockQuery({ data: event() });
+    renderPage();
+
+    expect(screen.getByTestId("live-recitation")).toBeInTheDocument();
+    expect(liveRecitationViewMock).toHaveBeenLastCalledWith({
+      live: expect.objectContaining({ count: 12, status: "connected" }),
+      language: "en",
+    });
+  });
+
+  it("shows no recitation for an event that is not running", () => {
+    mockQuery({
+      data: event({
+        start_date: "2026-04-10T10:00:00Z",
+        end_date: "2026-04-10T12:00:00Z",
+      }),
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId("live-recitation")).not.toBeInTheDocument();
   });
 
   it("says so when the event cannot be loaded", () => {
