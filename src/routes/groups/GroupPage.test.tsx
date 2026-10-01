@@ -240,6 +240,21 @@ describe("GroupPage", () => {
     expect(api.fetchGroupDetail).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the id address for a private group, whose slug would not load again", async () => {
+    api.fetchGroupDetail.mockResolvedValue(group({ is_public: false }));
+
+    renderAt(`/group/${GROUP_ID}`);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Dzongsar Khyentse Chokyi Lodro Institute",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("address")).toHaveTextContent(
+      `/group/${GROUP_ID}`,
+    );
+  });
+
   it("folds a long history, and opens it on request", async () => {
     api.fetchGroupDetail.mockResolvedValue(
       group({

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { groupPath, groupPathById, parseGroupHandle } from "./groupHandle.ts";
+import {
+  groupAddress,
+  groupPath,
+  groupPathById,
+  hasSlugAddress,
+  parseGroupHandle,
+} from "./groupHandle.ts";
 
 const ID = "589bd8ab-d3db-4d42-a61a-9a34841daf49";
 
@@ -32,5 +38,24 @@ describe("group paths", () => {
 
   it("falls back to the id when that is all a page has", () => {
     expect(groupPathById(ID)).toBe(`/group/${ID}`);
+  });
+});
+
+describe("groupAddress", () => {
+  const group = {
+    id: ID,
+    slug: "dzongsar",
+    is_public: true,
+    status: "PUBLISHED",
+  };
+
+  it("names a published public group by its slug", () => {
+    expect(hasSlugAddress(group)).toBe(true);
+    expect(groupAddress(group)).toBe("/group/@dzongsar");
+  });
+
+  it("keeps the id for a group the public listing leaves out", () => {
+    expect(groupAddress({ ...group, is_public: false })).toBe(`/group/${ID}`);
+    expect(groupAddress({ ...group, status: "DRAFT" })).toBe(`/group/${ID}`);
   });
 });

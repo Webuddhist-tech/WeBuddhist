@@ -921,6 +921,7 @@
   "group_page.goal": "Goal {count}",
   "group_page.recitations": "{count} recitations",
   "group_page.photo": "Photo {index} of {total}",
+  "group_page.show_all_media": "Show all {count} photos and videos",
   "group_page.likes": "{count} likes",
   "group_page.comments": "{count} comments",
   "group_page.show_more": "Show more",

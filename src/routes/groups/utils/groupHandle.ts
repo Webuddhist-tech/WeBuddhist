@@ -27,3 +27,23 @@ export const groupPath = (slug: string): string =>
 /** For a page that knows the group only by id; see the note above. */
 export const groupPathById = (groupId: string): string =>
   `/group/${encodeURIComponent(groupId)}`;
+
+/**
+ * Whether the group's `@slug` address can be opened afresh. A slug is looked
+ * up in the public listing, which carries only published public groups; any
+ * other group is found by its id alone, so that is the address it keeps.
+ */
+export const hasSlugAddress = (group: {
+  is_public: boolean;
+  status?: string | null;
+}): boolean =>
+  group.is_public && (group.status == null || group.status === "PUBLISHED");
+
+/** The address a group can always be opened at again. */
+export const groupAddress = (group: {
+  id: string;
+  slug: string;
+  is_public: boolean;
+  status?: string | null;
+}): string =>
+  hasSlugAddress(group) ? groupPath(group.slug) : groupPathById(group.id);

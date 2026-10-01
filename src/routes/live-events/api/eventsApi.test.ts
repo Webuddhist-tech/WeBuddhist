@@ -78,4 +78,19 @@ describe("fetchRecitationText", () => {
     expect(text.title).toBe("Tara");
     expect(text.annotations?.size).toBe(0);
   });
+
+  it("keeps the recited lines when only the translation stalls", async () => {
+    vi.useFakeTimers();
+    getAnnotatedSegmentsMock.mockImplementation((ids: string[]) =>
+      ids[0] === "bo-1"
+        ? Promise.resolve(new Map([["bo-1", segment("ཕྱག་འཚལ།")]]))
+        : new Promise(() => {}),
+    );
+
+    const loading = fetchRecitationText("tara", "en");
+    await vi.advanceTimersByTimeAsync(6000);
+    const text = await loading;
+
+    expect([...(text.annotations?.keys() ?? [])]).toEqual(["bo-1"]);
+  });
 });

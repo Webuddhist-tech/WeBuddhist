@@ -61,21 +61,21 @@ export const fetchRecitationAnnotations = async (
 ): Promise<Map<string, AnnotatedSegment>> => {
   const annotations = new Map<string, AnnotatedSegment>();
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<null>((resolve) => {
+  const deadline = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), ANNOTATION_TIMEOUT_MS);
   });
 
-  const editions = await Promise.race([
-    Promise.allSettled(
-      annotationSegmentIds(text, readerLanguage).map(getAnnotatedSegments),
+  // Each edition races the one deadline on its own, so a translation the
+  // library is slow over costs only its own lines, never the recited text's.
+  const editions = await Promise.all(
+    annotationSegmentIds(text, readerLanguage).map((ids) =>
+      Promise.race([getAnnotatedSegments(ids).catch(() => null), deadline]),
     ),
-    timeout,
-  ]);
+  );
   clearTimeout(timer);
 
-  for (const edition of editions ?? []) {
-    if (edition.status !== "fulfilled") continue;
-    edition.value.forEach((segment, id) => annotations.set(id, segment));
+  for (const edition of editions) {
+    edition?.forEach((segment, id) => annotations.set(id, segment));
   }
   return annotations;
 };

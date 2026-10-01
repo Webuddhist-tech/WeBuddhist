@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useInfiniteQuery } from "react-query";
 import { useTranslate } from "@tolgee/react";
 import { FaRegComment, FaRegHeart } from "react-icons/fa6";
@@ -8,7 +9,7 @@ import type { GroupPostDTO, GroupPostMediaDTO } from "../types.ts";
 
 const PAGE_SIZE = 10;
 
-/** Photos shown before the rest collapse into a "+N" tile. */
+/** Photos shown before the rest fold behind a "+N" tile that opens them. */
 const VISIBLE_MEDIA = 4;
 
 type GroupPostsProps = {
@@ -26,9 +27,10 @@ const MediaGrid = ({ media }: { media: GroupPostMediaDTO[] }) => {
       const url = safeExternalUrl(item.url);
       return url ? [{ ...item, url }] : [];
     });
+  const [expanded, setExpanded] = useState(false);
   if (items.length === 0) return null;
 
-  const shown = items.slice(0, VISIBLE_MEDIA);
+  const shown = expanded ? items : items.slice(0, VISIBLE_MEDIA);
   const hidden = items.length - shown.length;
 
   return (
@@ -36,11 +38,43 @@ const MediaGrid = ({ media }: { media: GroupPostMediaDTO[] }) => {
       className={`grid gap-1 overflow-hidden rounded-2xl ${shown.length > 1 ? "grid-cols-2" : ""}`}
     >
       {shown.map((item, index) => {
-        const isLast = index === shown.length - 1;
         const label = t("group_page.photo", {
           index: index + 1,
           total: items.length,
         });
+        // The last tile of a folded grid opens the rest, whatever it shows.
+        if (index === shown.length - 1 && hidden > 0) {
+          const preview =
+            item.media_type === "VIDEO"
+              ? safeExternalUrl(item.thumbnail_url)
+              : item.url;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setExpanded(true)}
+              aria-label={t("group_page.show_all_media", {
+                count: items.length,
+              })}
+              className="relative block aspect-square bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
+            >
+              {preview && (
+                <img
+                  src={preview}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              )}
+              <span
+                aria-hidden
+                className="absolute inset-0 flex items-center justify-center bg-slate-900/55 text-2xl font-semibold text-white"
+              >
+                +{hidden}
+              </span>
+            </button>
+          );
+        }
         if (item.media_type === "VIDEO") {
           return (
             <video
@@ -67,11 +101,6 @@ const MediaGrid = ({ media }: { media: GroupPostMediaDTO[] }) => {
               loading="lazy"
               className="h-full w-full object-cover"
             />
-            {isLast && hidden > 0 && (
-              <span className="absolute inset-0 flex items-center justify-center bg-slate-900/55 text-2xl font-semibold text-white">
-                +{hidden}
-              </span>
-            )}
           </a>
         );
       })}

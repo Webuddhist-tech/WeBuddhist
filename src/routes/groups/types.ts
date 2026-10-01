@@ -23,6 +23,8 @@ export type GroupDetailDTO = PublicAuthorGroupDetailDTO & {
   social_links?: GroupSocialLinkDTO[];
   /** PAGE groups are a teacher or a text; COMMUNITY groups gather people. */
   group_type: "COMMUNITY" | "PAGE" | string;
+  /** DRAFT until Studio publishes it; only published groups are listed. */
+  status?: string;
 };
 
 export type GroupSeriesDTO = {

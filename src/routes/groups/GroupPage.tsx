@@ -36,7 +36,11 @@ import {
 import GroupPosts from "./components/GroupPosts.tsx";
 import GroupPractices from "./components/GroupPractices.tsx";
 import GroupSocialLinks from "./components/GroupSocialLinks.tsx";
-import { groupPath, parseGroupHandle } from "./utils/groupHandle.ts";
+import {
+  groupAddress,
+  hasSlugAddress,
+  parseGroupHandle,
+} from "./utils/groupHandle.ts";
 import type { GroupHandle } from "./utils/groupHandle.ts";
 
 /** Past this length the About section opens folded, a few paragraphs in. */
@@ -141,11 +145,14 @@ const GroupPage = () => {
     { enabled: Boolean(groupId), refetchOnWindowFocus: false, retry: 1 },
   );
 
-  // Settle on the `@slug` address. The slug's lookup is primed with the id
-  // already in hand, so the move costs no request - and works for a private
-  // group, which the public listing a slug is looked up in leaves out.
+  // Settle on the `@slug` address - for a group it can be opened at again.
+  // A slug is looked up in the public listing, so a private or unpublished
+  // group keeps the id address it was reached by: its slug would load only
+  // until the page is reloaded or shared. The slug's lookup is primed with
+  // the id already in hand, so the move itself costs no request.
   useEffect(() => {
     if (!group?.slug || !groupId || !handle) return;
+    if (!hasSlugAddress(group)) return;
     if (
       "slug" in handle &&
       handle.slug.toLowerCase() === group.slug.toLowerCase()
@@ -155,8 +162,8 @@ const GroupPage = () => {
       ["group-id", handleKey({ slug: group.slug })],
       groupId,
     );
-    navigate(groupPath(group.slug), { replace: true });
-  }, [group?.slug, groupId, handle, navigate, queryClient]);
+    navigate(groupAddress(group), { replace: true });
+  }, [group, groupId, handle, navigate, queryClient]);
 
   const { data: practicesData } = useQuery(
     ["group-practices", groupId, apiLanguage],
@@ -239,7 +246,7 @@ const GroupPage = () => {
       <Seo
         title={`${title} | ${siteName}`}
         description={metadata?.description?.trim() || title}
-        canonical={`${window.location.origin}${groupPath(group.slug)}`}
+        canonical={`${window.location.origin}${groupAddress(group)}`}
       />
 
       <header>

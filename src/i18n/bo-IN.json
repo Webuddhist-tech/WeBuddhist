@@ -869,6 +869,7 @@
   "group_page.goal": "དམིགས་ཚད་ {count}",
   "group_page.recitations": "འདོན་ཆ་ {count}",
   "group_page.photo": "པར་ {total} ནང་ནས་ {index}",
+  "group_page.show_all_media": "པར་དང་བརྙན་ཐུང་ {count} ཚང་མ་སྟོན།",
   "group_page.likes": "དགའ་པོ་ {count}",
   "group_page.comments": "བསམ་འཆར་ {count}",
   "group_page.show_more": "མང་བ་སྟོན།",
