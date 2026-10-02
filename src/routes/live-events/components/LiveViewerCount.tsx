@@ -29,11 +29,8 @@ const TONES = {
 };
 
 /**
- * How many people are following this event's recitation right now.
- *
- * Following is limited to members of the event's group, so a signed-out or
- * non-member reader is told what stands between them and the number rather than
- * being shown a silent blank.
+ * How many people are following this event's recitation right now, signed in
+ * or not. A socket the server turns away says why rather than leaving a blank.
  */
 const LiveViewerCount = ({
   live,
@@ -68,9 +65,8 @@ const LiveViewerCount = ({
   }
 
   const message = (() => {
-    if (status === "signed-out") return t("live_events.sign_in_to_see");
-    // The server says why it refused - most often that following is for group
-    // members - and that is more useful than any wording invented here.
+    // The server says why it refused, and that is more useful than any
+    // wording invented here.
     if (status === "refused")
       return detail || t("live_events.count_unavailable");
     if (status === "reconnecting") return t("live_events.reconnecting");

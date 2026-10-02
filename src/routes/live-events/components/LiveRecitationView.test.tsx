@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "react-query";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LiveViewerCount } from "../hooks/useLiveViewerCount.ts";
 import type { LiveRecitationPosition, LiveRecitationText } from "../types.ts";
@@ -86,15 +87,19 @@ const renderView = (
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   const view = (next: LiveViewerCount) => (
-    <QueryClientProvider client={client}>
-      <LiveRecitationView
-        live={next}
-        language="en"
-        collectionId={collectionId}
-        theme="dark"
-        onThemeChange={onThemeChange}
-      />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <LiveRecitationView
+          live={next}
+          language="en"
+          collectionId={collectionId}
+          theme="dark"
+          onThemeChange={onThemeChange}
+          title="Tara Puja"
+          backTo="/live/event-1"
+        />
+      </QueryClientProvider>
+    </MemoryRouter>
   );
   const result = render(view(state));
   return {
@@ -176,11 +181,10 @@ describe("LiveRecitationView", () => {
     );
     expect(screen.getByText("three times")).toHaveClass("yigchung");
     expect(screen.getByText("second line")).not.toHaveClass("yigchung");
-    expect(
-      screen.getByText(
-        'live_events.recitation_progress:{"current":2,"total":2} · 1-2',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuetext",
+      'live_events.recitation_progress:{"current":2,"total":2} · 1-2',
+    );
   });
 
   it("follows a position given in another language's edition", async () => {
@@ -376,12 +380,35 @@ describe("LiveRecitationView", () => {
     ).toBeInTheDocument();
   });
 
-  it("asks a signed-out reader to sign in", () => {
-    renderView(live({ status: "signed-out", count: null }));
+  it("names the event in the top bar, then the liturgy under way", async () => {
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["one", "two"], "Praises to Tara"),
+    );
+
+    const { update } = renderView(live());
 
     expect(
-      screen.getByText("live_events.recitation_sign_in"),
+      screen.getByRole("heading", { name: "Tara Puja" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "live_events.back_to_event" }),
+    ).toHaveAttribute("href", "/live/event-1");
+
+    update(live({ position: at("tara", "tara-bo-0") }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Praises to Tara" }),
+    ).toBeInTheDocument();
+    // The event steps down to the line under it.
+    expect(screen.getByText("Tara Puja")).toBeInTheDocument();
+  });
+
+  it("shows how many are following, live", () => {
+    renderView(live({ count: 3 }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      'live_events.watching_other:{"count":3}',
+    );
   });
 
   it("passes on the server's reason when following is refused", () => {

@@ -41,27 +41,14 @@ describe("LiveViewerCount", () => {
     expect(screen.getByText("live_events.watching_one")).toBeInTheDocument();
   });
 
-  it("asks a signed-out reader to sign in", () => {
-    const live = liveState({ status: "signed-out" });
-
-    render(<LiveViewerCount live={live} />);
-
-    expect(screen.getByText("live_events.sign_in_to_see")).toBeInTheDocument();
-  });
-
   it("passes on the server's reason when following is refused", () => {
-    // Following a recitation is limited to members of the event's group, and
-    // that is something the reader can act on - so it is not flattened into a
-    // generic failure.
-    const live = liveState({
-      status: "refused",
-      detail:
-        "Only joined or following members of this event's group can follow its recitation",
-    });
+    // The server knows why - an event gone, or not yet published - so that is
+    // not flattened into a generic failure.
+    const live = liveState({ status: "refused", detail: "Event not found" });
 
     render(<LiveViewerCount live={live} />);
 
-    expect(screen.getByText(/joined or following members/)).toBeInTheDocument();
+    expect(screen.getByText("Event not found")).toBeInTheDocument();
   });
 
   it("falls back to its own wording when the server gave no reason", () => {

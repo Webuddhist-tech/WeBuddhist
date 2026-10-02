@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslate } from "@tolgee/react";
-import {
-  IoMoonOutline,
-  IoSettingsOutline,
-  IoSunnyOutline,
-} from "react-icons/io5";
+import { IoMoonOutline, IoSunnyOutline } from "react-icons/io5";
 import type { RecitationTheme } from "../utils/recitationTheme.ts";
 
 type RecitationSettingsProps = {
@@ -12,8 +8,9 @@ type RecitationSettingsProps = {
   onThemeChange: (theme: RecitationTheme) => void;
 };
 
+/** The top bar's round buttons. */
 export const ICON_BUTTON =
-  "flex size-9 items-center justify-center rounded-full text-[var(--rt-soft)] transition hover:bg-[var(--rt-raised)] hover:text-[var(--rt-ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-accent)]";
+  "flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--rt-line)] text-[var(--rt-ink)] transition hover:bg-[var(--rt-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-accent)] max-[380px]:size-9";
 
 const OPTIONS: {
   theme: RecitationTheme;
@@ -33,7 +30,7 @@ const OPTIONS: {
 ];
 
 /**
- * The page's settings, behind the gear beside the contents menu: for now,
+ * The page's settings, behind the "Aa" at the end of the top bar: for now,
  * whether the text is set on a dark stage or on paper.
  */
 const RecitationSettings = ({
@@ -69,9 +66,9 @@ const RecitationSettings = ({
         aria-haspopup="dialog"
         aria-label={t("live_events.recitation_settings")}
         title={t("live_events.recitation_settings")}
-        className={ICON_BUTTON}
+        className={`${ICON_BUTTON} font-serif text-[15px] font-semibold`}
       >
-        <IoSettingsOutline className="size-5" aria-hidden />
+        <span aria-hidden>Aa</span>
       </button>
 
       {open && (

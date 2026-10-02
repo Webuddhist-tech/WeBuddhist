@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,12 +28,18 @@ vi.mock("@/hooks/use-mobile.ts", () => ({
   useIsMobile: () => isMobileMock(),
 }));
 
-// The recitation view loads its own text; it has tests of its own.
+// The recitation view loads its own text; it has tests of its own. The page's
+// buttons and the stream it hands the view are drawn, so they can be used.
 const liveRecitationViewMock = vi.fn();
 vi.mock("./components/LiveRecitationView.tsx", () => ({
-  default: (props: unknown) => {
+  default: (props: { actions?: ReactNode; aside?: ReactNode }) => {
     liveRecitationViewMock(props);
-    return <div data-testid="live-recitation" />;
+    return (
+      <div data-testid="live-recitation">
+        {props.actions}
+        {props.aside}
+      </div>
+    );
   },
 }));
 
@@ -102,9 +109,6 @@ describe("LiveRecitationPage", () => {
 
     renderPage();
 
-    expect(
-      screen.getByRole("heading", { name: "Tara Puja" }),
-    ).toBeInTheDocument();
     expect(useLiveViewerCountMock).toHaveBeenLastCalledWith("event-1", true);
     expect(liveRecitationViewMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -112,19 +116,26 @@ describe("LiveRecitationPage", () => {
         language: "en",
         collectionId: "collection-1",
         theme: "dark",
+        title: "Tara Puja",
+        backTo: "/live/event-1",
       }),
     );
-    expect(
-      screen.getByRole("link", { name: /live_events.back_to_event/ }),
-    ).toHaveAttribute("href", "/live/event-1");
   });
 
-  it("shows the stream beside the text on a wide screen", () => {
+  it("shows the stream beside the text on a wide screen, until put away", () => {
     mockQuery({ data: event() });
 
     renderPage();
 
     expect(screen.getByTitle("live_events.watch_stream")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.hide_stream" }),
+    );
+
+    expect(
+      screen.queryByTitle("live_events.watch_stream"),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the stream a tap away on a phone", () => {
@@ -147,21 +158,6 @@ describe("LiveRecitationPage", () => {
     ).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("offers a signed-out reader the way in", () => {
-    useLiveViewerCountMock.mockReturnValue({
-      ...connected,
-      count: null,
-      status: "signed-out",
-    });
-    mockQuery({ data: event() });
-
-    renderPage();
-
-    expect(
-      screen.getByRole("link", { name: "live_events.sign_in" }),
-    ).toHaveAttribute("href", "/login");
-  });
-
   it("stays off the socket until the event begins", () => {
     mockQuery({
       data: event({
@@ -177,6 +173,15 @@ describe("LiveRecitationPage", () => {
     expect(
       screen.getByText("live_events.recitation_not_live"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Tara Puja" }),
+    ).toBeInTheDocument();
+    // The mark in the bar leads back to the event, as does the line below.
+    for (const link of screen.getAllByRole("link", {
+      name: /live_events.back_to_event/,
+    })) {
+      expect(link).toHaveAttribute("href", "/live/event-1");
+    }
   });
 
   it("says when the event is over", () => {
@@ -196,10 +201,7 @@ describe("LiveRecitationPage", () => {
   it("sets the page on paper when the reader picks light, and remembers it", () => {
     mockQuery({ data: event() });
     const { unmount } = renderPage();
-    expect(screen.getByRole("img", { name: "WeBuddhist" })).toHaveAttribute(
-      "src",
-      "/img/dark_mode_logo.svg",
-    );
+    expect(screen.getByRole("main")).toHaveStyle({ colorScheme: "dark" });
 
     const { onThemeChange } = liveRecitationViewMock.mock.lastCall?.[0] as {
       onThemeChange: (theme: string) => void;
@@ -207,10 +209,6 @@ describe("LiveRecitationPage", () => {
     act(() => onThemeChange("light"));
 
     expect(screen.getByRole("main")).toHaveStyle({ colorScheme: "light" });
-    expect(screen.getByRole("img", { name: "WeBuddhist" })).toHaveAttribute(
-      "src",
-      "/img/light_mode_logo.svg",
-    );
     unmount();
 
     renderPage();
