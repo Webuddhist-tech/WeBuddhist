@@ -4,7 +4,7 @@ import {
   chantedLength,
   lineChantedLength,
   paceOf,
-  verseRunTimings,
+  verseLineTimings,
 } from "./recitationPace.ts";
 
 const plain = (text: string) => [{ text, yigchung: false }];
@@ -79,9 +79,9 @@ describe("pace", () => {
   });
 });
 
-describe("verseRunTimings", () => {
-  it("sweeps the chanted runs in order, at the pace, skipping yigchung", () => {
-    const timings = verseRunTimings(
+describe("verseLineTimings", () => {
+  it("moves down the lines in order, at the pace, skipping yigchung", () => {
+    const timings = verseLineTimings(
       [
         plain("abcd"),
         [
@@ -89,16 +89,16 @@ describe("verseRunTimings", () => {
           { text: "silent", yigchung: true },
           { text: "ghij", yigchung: false },
         ],
+        [{ text: "three times", yigchung: true }],
+        plain("kl"),
       ],
       100,
     );
     expect(timings).toEqual([
-      [{ delayMs: 0, durationMs: 400 }],
-      [
-        { delayMs: 400, durationMs: 200 },
-        null,
-        { delayMs: 600, durationMs: 400 },
-      ],
+      { delayMs: 0, durationMs: 400 },
+      { delayMs: 400, durationMs: 600 },
+      null,
+      { delayMs: 1000, durationMs: 200 },
     ]);
   });
 });

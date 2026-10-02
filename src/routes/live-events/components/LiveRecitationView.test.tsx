@@ -486,28 +486,40 @@ describe("LiveRecitationView", () => {
     expect(onThemeChange).toHaveBeenCalledWith("light");
   });
 
-  it("underlines the live line at the pace the room kept over the line before", async () => {
+  it("glows down the live line at the pace the room kept over the line before", async () => {
     let now = 0;
     const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
     fetchRecitationTextMock.mockResolvedValue(
-      liturgy("tara", ["abcd", "efghijkl"]),
+      liturgy("tara", ["abcd", "efgh<br>ijkl"]),
     );
 
     const { update } = renderView(live({ position: at("tara", "tara-bo-0") }));
     await waitFor(() => expect(currentLine()).toContain("abcd"));
-    // Nothing to go by yet: the first line is not underlined.
-    expect(document.querySelector("[data-pace]")).toBeNull();
+    // Nothing to go by yet: the whole live line glows, with nothing timed.
+    expect(document.querySelector("[data-glow]")).toBeNull();
 
     // Four characters in two seconds: half a second each.
     now = 2000;
     update(live({ position: at("tara", "tara-bo-1") }));
 
     await waitFor(() =>
-      expect(document.querySelector("[data-pace]")).not.toBeNull(),
+      expect(document.querySelectorAll("[data-glow]")).toHaveLength(2),
     );
-    const underline = document.querySelector<HTMLElement>("[data-pace]");
-    expect(underline?.textContent).toBe("efghijkl");
-    expect(underline?.style.animation).toContain("4000ms");
+    const [first, last] = document.querySelectorAll<HTMLElement>("[data-glow]");
+    // The first line glows from the move, and dims two seconds on...
+    expect(first.textContent).toBe("efgh");
+    expect(first.style.animation).toContain(
+      "recitation-glow-in 400ms ease-out 0ms",
+    );
+    expect(first.style.animation).toContain(
+      "recitation-glow-out 400ms ease-in 2000ms",
+    );
+    // ...as the last lights up, and holds until the next move.
+    expect(last.textContent).toBe("ijkl");
+    expect(last.style.animation).toContain(
+      "recitation-glow-in 400ms ease-out 2000ms",
+    );
+    expect(last.style.animation).not.toContain("recitation-glow-out");
     clock.mockRestore();
   });
 });

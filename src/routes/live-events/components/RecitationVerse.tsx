@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { AnnotatedLine } from "@/services/library/segmentLines.ts";
 import { getLanguageClass } from "../../../utils/helperFunctions.tsx";
 import type { RecitationLine } from "../utils/recitationText.ts";
-import type { RunTiming } from "../utils/recitationPace.ts";
+import type { LineTiming } from "../utils/recitationPace.ts";
 
 type RecitationVerseProps = {
   line: RecitationLine;
@@ -12,72 +12,62 @@ type RecitationVerseProps = {
   readerLanguage: string;
   isCurrent: boolean;
   /**
-   * For the live line, once the room's pace is known: when the underline
-   * reaches each run of the recited lines, and how long it takes over it.
+   * For the live line, once the room's pace is known: when the glow reaches
+   * each of its recited lines, and how long it stays.
    */
-  paceTimings?: (RunTiming | null)[][] | null;
-  /** Changes with every move, so the underline starts over on each. */
+  paceTimings?: (LineTiming | null)[] | null;
+  /** Changes with every move, so the glow starts over on each. */
   paceKey?: number;
 };
 
 /** Colour changes as the live line moves on: slow, so the eye follows. */
 const FADE = "transition-colors duration-1000 ease-in-out";
 
+/** How long a line takes to light as the room reaches it, and to dim. */
+const GLOW_FADE_MS = 400;
+
+/** The glow on the whole live verse, before the room's pace is known. */
+const STEADY_GLOW = "[text-shadow:0_0_0.6em_var(--rt-glow)]";
+
+/** A line of the live verse the room is not on: waiting, or done with. */
+const RESTING = "opacity-[0.45]";
+
 /**
- * The underline drawn under a run as the room chants it: a background the
- * width of the run, grown from nothing at the run's own pace. An inline
- * background is laid out as one strip across the lines it wraps over, so a
- * run that wraps is underlined in reading order, line after line.
+ * The glow on a line of the live verse as the room chants it: lit as the room
+ * reaches the line, dimmed as it leaves for the next. Both fades are set off
+ * by the move, the second listed last so that, once due, it wins. The last
+ * line chanted has no second, and holds its glow until the next move rather
+ * than leave a room slower than its pace with nothing lit.
  */
-const paceStyle = (timing: RunTiming): CSSProperties => ({
-  backgroundImage: "linear-gradient(var(--rt-pace), var(--rt-pace))",
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "0 100%",
-  backgroundSize: "0% 2px",
-  paddingBottom: "0.12em",
-  animation: `recitation-pace ${timing.durationMs}ms linear ${timing.delayMs}ms both`,
-});
+const glowStyle = (timing: LineTiming, isLast: boolean): CSSProperties => {
+  const lighting = `recitation-glow-in ${GLOW_FADE_MS}ms ease-out ${timing.delayMs}ms both`;
+  if (isLast) return { animation: lighting };
+  const leaving = timing.delayMs + timing.durationMs;
+  return {
+    animation: `${lighting}, recitation-glow-out ${GLOW_FADE_MS}ms ease-in ${leaving}ms forwards`,
+  };
+};
 
 /**
  * Small script - an instruction, a gloss, a repeat count - is printed smaller
  * in a pecha and left unchanted. It keeps that here: smaller, and quieter than
  * the line around it, even on the live line.
  */
-const Runs = ({
-  line,
-  timings,
-  paceKey,
-}: {
-  line: AnnotatedLine;
-  timings?: (RunTiming | null)[];
-  paceKey?: number;
-}) => (
+const Runs = ({ line }: { line: AnnotatedLine }) => (
   <>
-    {line.map((run, index) => {
-      if (run.yigchung) {
-        return (
-          <span
-            // Runs are rebuilt with their line and never reordered.
-            key={index}
-            className="yigchung text-[0.78em] opacity-60"
-          >
-            {run.text}
-          </span>
-        );
-      }
-      const timing = timings?.[index];
-      return timing ? (
+    {line.map((run, index) =>
+      run.yigchung ? (
         <span
-          key={`${paceKey}-${index}`}
-          data-pace=""
-          style={paceStyle(timing)}
+          // Runs are rebuilt with their line and never reordered.
+          key={index}
+          className="yigchung text-[0.78em] opacity-60"
         >
           {run.text}
         </span>
       ) : (
         <span key={index}>{run.text}</span>
-      );
-    })}
+      ),
+    )}
   </>
 );
 
@@ -86,6 +76,9 @@ const Runs = ({
  * out as it is printed: a line per line of the edition, with the reader's
  * translation under each line when the two break the same way, and under the
  * whole verse when they do not.
+ *
+ * On the live line the recited text glows: all of it until the room's pace is
+ * known, and after that the line the room is on, the rest resting dimmer.
  */
 const RecitationVerse = ({
   line,
@@ -98,6 +91,9 @@ const RecitationVerse = ({
   const { recited, translation } = line;
   const isTibetan = recitedLanguage === "bo";
   const timings = isCurrent ? paceTimings : null;
+  const lastTimed = timings
+    ? timings.reduce((last, timing, index) => (timing ? index : last), -1)
+    : -1;
 
   const recitedClass = `${
     isTibetan
@@ -112,11 +108,37 @@ const RecitationVerse = ({
   const interleaved =
     translation !== null && translation.length === recited.length;
 
-  const recitedLine = (row: AnnotatedLine, index: number) => (
-    <p className={recitedClass}>
-      <Runs line={row} timings={timings?.[index]} paceKey={paceKey} />
-    </p>
-  );
+  const recitedLine = (row: AnnotatedLine, index: number) => {
+    if (!isCurrent) {
+      return (
+        <p className={recitedClass}>
+          <Runs line={row} />
+        </p>
+      );
+    }
+    if (!timings) {
+      return (
+        <p className={`${recitedClass} ${STEADY_GLOW}`}>
+          <Runs line={row} />
+        </p>
+      );
+    }
+    const timing = timings[index];
+    return timing ? (
+      <p
+        key={paceKey}
+        data-glow=""
+        className={recitedClass}
+        style={glowStyle(timing, index === lastTimed)}
+      >
+        <Runs line={row} />
+      </p>
+    ) : (
+      <p className={`${recitedClass} ${RESTING}`}>
+        <Runs line={row} />
+      </p>
+    );
+  };
 
   return (
     <div className="text-balance break-words">

@@ -78,29 +78,27 @@ export const addPaceSample = (samples: number[], step: PaceStep): number[] => {
 export const paceOf = (samples: number[]): number | null =>
   samples.length > 0 ? median(samples) : null;
 
-export type RunTiming = { delayMs: number; durationMs: number };
+export type LineTiming = { delayMs: number; durationMs: number };
 
 /**
- * When each chanted run of a verse is reached and how long it takes, at the
- * given pace, in reading order: the underline sweeps each in turn. Yigchung
- * runs, read silently, have no timing and take no time.
+ * When each line of a verse is reached and how long the room takes over it,
+ * at the given pace, in reading order: the glow moves down the lines in turn.
+ * A line with nothing chanted - all yigchung, read silently - has no timing
+ * and takes no time.
  */
-export const verseRunTimings = (
+export const verseLineTimings = (
   lines: AnnotatedLine[],
   msPerCharacter: number,
-): (RunTiming | null)[][] => {
+): (LineTiming | null)[] => {
   let reached = 0;
-  return lines.map((line) =>
-    line.map((run) => {
-      if (run.yigchung) return null;
-      const characters = chantedLength(run.text);
-      if (characters === 0) return null;
-      const timing = {
-        delayMs: Math.round(reached * msPerCharacter),
-        durationMs: Math.round(characters * msPerCharacter),
-      };
-      reached += characters;
-      return timing;
-    }),
-  );
+  return lines.map((line) => {
+    const characters = lineChantedLength(line);
+    if (characters === 0) return null;
+    const timing = {
+      delayMs: Math.round(reached * msPerCharacter),
+      durationMs: Math.round(characters * msPerCharacter),
+    };
+    reached += characters;
+    return timing;
+  });
 };

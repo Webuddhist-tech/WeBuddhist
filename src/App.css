@@ -12,13 +12,42 @@
   }
 }
 
-/* The live recitation's pace underline, grown across a run as it is chanted. */
-@keyframes recitation-pace {
+/* The live recitation's glow, lit on a line of the live verse as the room
+   reaches it and dimmed again as the room leaves it for the next. */
+@keyframes recitation-glow-in {
   from {
-    background-size: 0% 2px;
+    opacity: 0.45;
+    text-shadow: 0 0 0.6em transparent;
   }
   to {
-    background-size: 100% 2px;
+    opacity: 1;
+    text-shadow: 0 0 0.6em var(--rt-glow);
+  }
+}
+
+@keyframes recitation-glow-out {
+  from {
+    opacity: 1;
+    text-shadow: 0 0 0.6em var(--rt-glow);
+  }
+  to {
+    opacity: 0.45;
+    text-shadow: 0 0 0.6em transparent;
+  }
+}
+
+/* A ring of light around the live verse as the room arrives on it, fading
+   as the room settles in. */
+@keyframes recitation-arrive {
+  from {
+    box-shadow:
+      0 0 0 1.5px var(--rt-accent),
+      0 0 28px var(--rt-glow);
+  }
+  to {
+    box-shadow:
+      0 0 0 1.5px transparent,
+      0 0 28px transparent;
   }
 }
 

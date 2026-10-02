@@ -15,7 +15,7 @@ import {
   addPaceSample,
   paceOf,
   verseChantedLength,
-  verseRunTimings,
+  verseLineTimings,
 } from "../utils/recitationPace.ts";
 import { recitationLines } from "../utils/recitationText.ts";
 import type { RecitationTheme } from "../utils/recitationTheme.ts";
@@ -81,8 +81,9 @@ const canScroll = (scroller: HTMLElement, direction: number) => {
  * A reader who scrolls away to read ahead is left there, with a way back to
  * the live line, rather than pulled back on the next move.
  *
- * Each move glides the text on slowly, and the live line is underlined as the
- * room chants it, at the pace the room has kept over the lines before.
+ * Each move glides the text on slowly and lights the live line with a ring
+ * that fades as the room settles in. Its text glows line by line as the room
+ * chants it, at the pace the room has kept over the lines before.
  *
  * Fills the height the live recitation page gives it, in that page's colours.
  */
@@ -160,8 +161,8 @@ const LiveRecitationView = ({
 
   // The room's pace, learned from how long it took over each line it has
   // finished, against how much of the line is chanted. Each move is timed
-  // from when it reaches this page; `moves` counts them, so the underline on
-  // the live line starts over with each, even a return to the same line.
+  // from when it reaches this page; `moves` counts them, so the glow on the
+  // live line starts over with each, even a return to the same line.
   const paceSamples = useRef<number[]>([]);
   const lastMove = useRef<{
     position: LiveRecitationPosition;
@@ -197,7 +198,7 @@ const LiveRecitationView = ({
   const paceTimings = useMemo(
     () =>
       msPerCharacter !== null && currentLine !== null && lines[currentLine]
-        ? verseRunTimings(lines[currentLine].recited, msPerCharacter)
+        ? verseLineTimings(lines[currentLine].recited, msPerCharacter)
         : null,
     [msPerCharacter, currentLine, lines],
   );
@@ -507,10 +508,25 @@ const LiveRecitationView = ({
                     key={index}
                     data-line={index}
                     aria-current={isCurrent ? "true" : undefined}
-                    className={`rounded-xl px-3 py-3 transition-colors duration-1000 ease-in-out sm:px-4 ${
+                    className={`relative rounded-xl px-3 py-3 transition-colors duration-1000 ease-in-out sm:px-4 ${
                       isCurrent ? "bg-[var(--rt-live)]" : "bg-transparent"
                     }`}
                   >
+                    {/* The live line's edge, fading in and out with it. */}
+                    <span
+                      aria-hidden
+                      className={`pointer-events-none absolute bottom-3.5 left-0 top-3.5 w-[3px] rounded-full bg-gradient-to-b from-[var(--rt-accent)] to-[var(--rt-accent)]/20 transition-opacity duration-500 ${
+                        isCurrent ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    {/* Remade on every move, so the ring lights up on each. */}
+                    {isCurrent && (
+                      <span
+                        key={moves}
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 rounded-xl animate-[recitation-arrive_1.6s_ease-out]"
+                      />
+                    )}
                     <RecitationVerse
                       line={line}
                       recitedLanguage={text?.language ?? language}
