@@ -10,6 +10,12 @@ import {
   APP_STORE_URL,
 } from "../../utils/constants";
 
+vi.mock("@tolgee/react", () => ({
+  useTranslate: () => ({
+    t: (_key: string, fallback?: string) => fallback,
+  }),
+}));
+
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -81,7 +87,7 @@ describe("AppOpenBanner Component", () => {
       expect(
         screen.getByText(/The mind is everything. What you think you become./),
       ).toBeInTheDocument();
-      expect(screen.getByAltText("App Open Banner")).toHaveAttribute(
+      expect(screen.getByAltText("QR code to download WeBuddhist")).toHaveAttribute(
         "src",
         "/img/QR-download.png",
       );

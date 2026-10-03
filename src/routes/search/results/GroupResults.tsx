@@ -43,7 +43,11 @@ const GroupResults = ({
   return (
     <div className="space-y-3">
       {items.map((group) => {
-        const title = getGroupTitleForLanguage(group.metadata, planLanguage);
+        const title = getGroupTitleForLanguage(
+          group.metadata,
+          planLanguage,
+          t("group_page.untitled"),
+        );
         const subtitle = getGroupDescriptionForLanguage(
           group.metadata,
           planLanguage,

@@ -6,11 +6,11 @@ import { Auth0ProviderWithNavigate } from "./config/Auth0ProviderWithNavigate.ts
 import { QueryClient, QueryClientProvider } from "react-query";
 import { PechaAuthProvider } from "./config/AuthContext.tsx";
 import {
-  BackendFetch,
   DevTools,
   FormatSimple,
   Tolgee,
   TolgeeProvider,
+  type TolgeePlugin,
 } from "@tolgee/react";
 import localeEn from "./i18n/en.json";
 import localeBoIn from "./i18n/bo-IN.json";
@@ -33,17 +33,42 @@ if (!localStorage.getItem(LANGUAGE)) {
   localStorage.setItem(LANGUAGE, defaultLanguage);
 }
 
+const TOLGEE_CDN =
+  "https://cdn.tolg.ee/50cc3287503c99e8f336aad9ee80f6f1/reactjs_json";
+const LOCAL_TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: localeEn,
+  "bo-IN": localeBoIn,
+};
+
+/**
+ * Translations from the Tolgee CDN, with any key it does not have yet taken
+ * from the bundled JSON. Tolgee stays the source of truth for every key it
+ * knows, but a key added alongside the code shows up straight away instead
+ * of falling back to its English default until someone adds it in Tolgee.
+ * If the CDN cannot be reached, `staticData` below takes over.
+ */
+const CdnWithLocalKeys = (): TolgeePlugin => (tolgee, tools) => {
+  tools.addBackend({
+    async getRecord({ language, namespace }) {
+      if (namespace) return undefined;
+      try {
+        const response = await fetch(`${TOLGEE_CDN}/${language}.json`);
+        if (!response.ok) return undefined;
+        const remote = await response.json();
+        return { ...LOCAL_TRANSLATIONS[language], ...remote };
+      } catch {
+        return undefined;
+      }
+    },
+  });
+  return tolgee;
+};
+
 const tolgee = Tolgee()
   .use(DevTools())
   .use(FormatSimple())
   // replace with .use(FormatIcu()) for rendering plurals, formatted numbers, etc.
-  .use(
-    BackendFetch({
-      prefix:
-        "https://cdn.tolg.ee/50cc3287503c99e8f336aad9ee80f6f1/reactjs_json",
-      fallbackOnFail: true,
-    }),
-  )
+  .use(CdnWithLocalKeys())
   .init({
     language: localStorage.getItem(LANGUAGE) || defaultLanguage,
     fallbackLanguage: "en",

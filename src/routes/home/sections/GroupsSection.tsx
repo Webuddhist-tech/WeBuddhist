@@ -51,8 +51,8 @@ const GroupsSection = ({ apiLanguage, planLanguage }: GroupsSectionProps) => {
   return (
     <HomeSection
       icon={IoPeopleOutline}
-      label={t("mantras.joinable_groups", "Practice spaces")}
-      title={t("home.groups_title", "Practise alongside others")}
+      label={t("home.practice_spaces", "Practice spaces")}
+      title={t("home.groups_title", "Practice alongside others")}
     >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {isLoading
@@ -66,6 +66,7 @@ const GroupsSection = ({ apiLanguage, planLanguage }: GroupsSectionProps) => {
               const title = getGroupTitleForLanguage(
                 group.metadata,
                 planLanguage,
+                t("group_page.untitled"),
               );
               return (
                 <Link

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslate } from "@tolgee/react";
 import { IoChevronBack, IoChevronDown, IoGlobeOutline } from "react-icons/io5";
 import {
   Sidebar,
@@ -41,6 +42,7 @@ const ROW_CLASS =
  * tooltips); on a phone it is a drawer the top bar's menu button opens.
  */
 const AppSidebar = () => {
+  const { t } = useTranslate();
   const { primary, secondary, isActive } = useNavItems();
   const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
@@ -80,8 +82,8 @@ const AppSidebar = () => {
           <button
             type="button"
             onClick={toggleSidebar}
-            aria-label="Expand sidebar"
-            title="Expand sidebar"
+            aria-label={t("header.expand_sidebar", "Expand sidebar")}
+            title={t("header.expand_sidebar", "Expand sidebar")}
             className="flex size-8 items-center justify-center rounded-lg hover:bg-search-background"
           >
             <img src="/img/logo.png" alt="Webuddhist" className="size-6" />
@@ -99,8 +101,8 @@ const AppSidebar = () => {
               <button
                 type="button"
                 onClick={toggleSidebar}
-                aria-label="Collapse sidebar"
-                title="Collapse sidebar"
+                aria-label={t("header.collapse_sidebar", "Collapse sidebar")}
+                title={t("header.collapse_sidebar", "Collapse sidebar")}
                 className="flex size-7 items-center justify-center rounded-md border border-custom-border text-faded-grey transition-colors hover:bg-search-background hover:text-primary"
               >
                 <IoChevronBack className="size-3.5" />
@@ -131,6 +133,7 @@ const AppSidebar = () => {
 
 /** The bottom-left language picker; on the icon rail it is just the globe. */
 const LanguageMenu = ({ isCollapsed }: { isCollapsed: boolean }) => {
+  const { t } = useTranslate();
   const { languages, current, select } = useSiteLanguage();
 
   return (
@@ -140,7 +143,7 @@ const LanguageMenu = ({ isCollapsed }: { isCollapsed: boolean }) => {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               tooltip={current.label}
-              aria-label="Change language"
+              aria-label={t("header.change_language", "Change language")}
               className={cn(ROW_CLASS, "text-sm")}
             >
               <IoGlobeOutline />

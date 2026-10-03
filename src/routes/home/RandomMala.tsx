@@ -63,7 +63,7 @@ const RandomMala = ({ apiLanguage, language, onOpenApp }: RandomMalaProps) => {
   if (!preset) {
     // Nothing to show - fall back to the section's own word so the panel is
     // never an empty box.
-    return <PanelWord>{t("mantras.preset_mantras", "Mala")}</PanelWord>;
+    return <PanelWord>{t("home.mala_title", "Mala")}</PanelWord>;
   }
 
   const title = getPresetDisplayTitle(preset, language);

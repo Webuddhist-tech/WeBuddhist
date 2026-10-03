@@ -164,7 +164,7 @@ const PhoneBar = () => {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Change language"
+              aria-label={t("header.change_language", "Change language")}
               className={ICON_BUTTON}
             >
               <IoGlobeOutline className="size-[22px]" />

@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslate } from "@tolgee/react";
 
 export default function AppOpenBanner() {
+  const { t } = useTranslate();
   const [visible, setVisible] = useState(false);
   const [isAppleDevice, setIsAppleDevice] = useState(false);
   const [searchParams] = useSearchParams();
@@ -54,19 +56,24 @@ export default function AppOpenBanner() {
     <Dialog open={visible} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md bg-white/60 backdrop-blur-lg shadow-lg border border-white/30">
         <DialogHeader>
-          <DialogTitle>Get our Mobile App</DialogTitle>
+          <DialogTitle>
+            {t("app_banner.title", "Get our Mobile App")}
+          </DialogTitle>
           <DialogDescription>
             <span
               className="block text-gray-700 text-center italic mb-2"
-              aria-label="inspirational quote"
+              aria-label={t("app_banner.quote_label", "inspirational quote")}
             >
-              ”The mind is everything. What you think you become.” — Buddha
+              {t(
+                "app_banner.quote",
+                "”The mind is everything. What you think you become.” — Buddha",
+              )}
             </span>
           </DialogDescription>
         </DialogHeader>
         <img
           src="/img/QR-download.png"
-          alt="App Open Banner"
+          alt={t("plans.download_app_qr_alt", "QR code to download WeBuddhist")}
           className="w-full h-auto rounded-3xl"
           width={100}
           height={100}
@@ -75,14 +82,14 @@ export default function AppOpenBanner() {
           href={isAppleDevice ? APP_STORE_URL : PLAY_STORE_URL}
           className="flex w-full items-center justify-center rounded-md bg-amber-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
           tabIndex={0}
-          aria-label="Open mobile app store link"
+          aria-label={t("app_banner.store_link", "Open mobile app store link")}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               (e.currentTarget as HTMLAnchorElement).click();
             }
           }}
         >
-          Download now
+          {t("app_banner.download_now", "Download now")}
         </a>
       </DialogContent>
     </Dialog>

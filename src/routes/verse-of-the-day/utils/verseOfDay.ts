@@ -32,9 +32,17 @@ export function daysEndingOn(isoDate: string, count: number): string[] {
   });
 }
 
-/** "October 3, 2026", in the reader's own locale. */
-export function formatVerseDate(isoDate: string): string {
-  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(undefined, {
+/**
+ * "October 3, 2026", in the site language (an API code: en, bo or zh).
+ * Browsers ship no Tibetan date names, so Tibetan is spelled out here as
+ * year, month and day: "2026 ཟླ་10 ཚེས་3".
+ */
+export function formatVerseDate(isoDate: string, language = "en"): string {
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (language === "bo") {
+    return `${date.getFullYear()} ཟླ་${date.getMonth() + 1} ཚེས་${date.getDate()}`;
+  }
+  return date.toLocaleDateString(language === "zh" ? "zh-CN" : undefined, {
     year: "numeric",
     month: "long",
     day: "numeric",

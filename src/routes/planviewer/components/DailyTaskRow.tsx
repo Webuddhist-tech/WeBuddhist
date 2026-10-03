@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslate } from "@tolgee/react";
 import { IoChevronForward, IoPause, IoPlay } from "react-icons/io5";
 import type { SubTaskDTO, TaskDTO } from "../types.ts";
 import { useDailyAudioPlay } from "../context/DailyAudioContext.tsx";
@@ -70,6 +71,7 @@ function TaskRowPlayButton({
   audioUrl: string;
   onBeforePlay: () => void;
 }) {
+  const { t } = useTranslate();
   const { audioRef, playing, handlePlayClick, onPlay, onPause, onEnded } =
     useDailyAudioPlay(audioId, audioUrl);
 
@@ -83,7 +85,11 @@ function TaskRowPlayButton({
           handlePlayClick();
         }}
         className="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-900 text-white outline outline-1 outline-white transition hover:bg-stone-800"
-        aria-label={playing ? "Pause audio" : "Play audio and expand section"}
+        aria-label={
+          playing
+            ? t("plans.pause_audio", "Pause audio")
+            : t("plans.play_audio_expand", "Play audio and expand section")
+        }
       >
         {playing ? (
           <IoPause className="text-base" aria-hidden="true" />

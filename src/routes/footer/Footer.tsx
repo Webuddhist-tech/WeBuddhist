@@ -13,6 +13,8 @@ import { Link, useLocation } from "react-router-dom";
 type LinkItem = {
   href: string;
   labelKey: string;
+  /** Translation key; links without one are names that stay as they are. */
+  i18nKey?: string;
 };
 
 type FooterColumn = {
@@ -38,6 +40,7 @@ export const columns: FooterColumn[] = [
       {
         href: "https://github.com/OpenPecha",
         labelKey: "Fork us on GitHub",
+        i18nKey: "footer.fork_github",
       },
       {
         href: "https://discord.com/invite/7GFpPFSTeA",
@@ -48,9 +51,21 @@ export const columns: FooterColumn[] = [
   {
     title: "footer.about",
     links: [
-      { href: "https://dharmaduta.in/about", labelKey: "About Us" },
-      { href: "https://dharmaduta.in/team", labelKey: "Team" },
-      { href: "https://dharmaduta.in/projects", labelKey: "Products" },
+      {
+        href: "https://dharmaduta.in/about",
+        labelKey: "About Us",
+        i18nKey: "footer.about_us",
+      },
+      {
+        href: "https://dharmaduta.in/team",
+        labelKey: "Team",
+        i18nKey: "footer.team",
+      },
+      {
+        href: "https://dharmaduta.in/projects",
+        labelKey: "Products",
+        i18nKey: "footer.products",
+      },
     ],
   },
 ];

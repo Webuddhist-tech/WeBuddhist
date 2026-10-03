@@ -29,14 +29,17 @@ const AppBottomNav = () => {
                 to={item.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-1 px-1 transition-colors",
+                  "flex h-full flex-col items-center justify-center px-1 transition-colors",
                   active ? "text-primary" : "text-faded-grey",
                 )}
               >
                 <Icon className="size-[22px]" />
+                {/* A tall line box: truncate clips to it, and Tibetan stacks
+                    vowels and subjoined letters well above and below the
+                    line, so a tight one cuts them off. */}
                 <span
                   className={cn(
-                    "w-full truncate text-center text-[11px] leading-none",
+                    "w-full truncate text-center text-[11px] leading-[2]",
                     active && "font-semibold",
                   )}
                 >

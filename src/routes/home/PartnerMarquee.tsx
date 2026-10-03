@@ -71,7 +71,11 @@ const PartnerMarquee = ({ apiLanguage, language }: PartnerMarqueeProps) => {
   const titlesById = groups.map((group) => ({
     id: group.id,
     avatarUrl: group.avatar_url,
-    title: getGroupTitleForLanguage(group.metadata, language),
+    title: getGroupTitleForLanguage(
+      group.metadata,
+      language,
+      t("group_page.untitled"),
+    ),
   }));
 
   const renderAvatar = (

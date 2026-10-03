@@ -9,7 +9,7 @@ import { normalizeMetadata, normalizeLang } from "./metadataUtils.ts";
 export function getGroupTitleForLanguage(
   metadata: GroupMetadataDTO[] | GroupMetadataDTO | null | undefined,
   language: PlanLanguageCode,
-  fallback = "Untitled group",
+  fallback = "Untitled practice space",
 ): string {
   const rows = normalizeMetadata(metadata);
   if (!rows.length) return fallback;

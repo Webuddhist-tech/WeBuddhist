@@ -143,7 +143,7 @@ const SearchResultsPage = () => {
     },
     {
       key: "groups",
-      label: t("mantras.joinable_groups", "Practice spaces"),
+      label: t("home.practice_spaces", "Practice spaces"),
       icon: IoPeopleOutline,
       count: groups.isLoading ? null : (groups.total ?? 0),
       isLoading: groups.isLoading,

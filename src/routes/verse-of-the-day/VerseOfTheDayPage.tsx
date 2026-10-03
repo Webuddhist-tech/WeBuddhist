@@ -121,7 +121,7 @@ const VerseOfTheDayPage = () => {
               {title}
             </h1>
             <p className="mt-1 text-sm text-faded-grey">
-              {formatVerseDate(featuredDate)}
+              {formatVerseDate(featuredDate, apiLanguage)}
             </p>
           </div>
           {featured && (
@@ -207,7 +207,7 @@ const VerseOfTheDayPage = () => {
                   className="group block py-5"
                 >
                   <p className="text-xs font-medium text-faded-grey">
-                    {formatVerseDate(date)}
+                    {formatVerseDate(date, apiLanguage)}
                   </p>
                   <p
                     className={cn(

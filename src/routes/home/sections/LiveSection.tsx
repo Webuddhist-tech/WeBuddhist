@@ -45,7 +45,7 @@ const LiveSection = ({ apiLanguage, locale }: LiveSectionProps) => {
     <HomeSection
       icon={IoRadioOutline}
       label={t("header.live", "Live")}
-      title={t("home.live_title", "Practise together, as it happens")}
+      title={t("home.live_title", "Practice together, as it happens")}
       seeAllTo="/live"
     >
       {isLoading ? (

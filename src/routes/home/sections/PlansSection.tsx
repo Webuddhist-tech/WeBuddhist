@@ -51,6 +51,7 @@ const PlansSection = ({ apiLanguage, planLanguage }: PlansSectionProps) => {
             const title = getSeriesTitleForLanguage(
               item.metadata,
               planLanguage,
+              t("plans.untitled_series", "Untitled series"),
             );
             return (
               <Link
