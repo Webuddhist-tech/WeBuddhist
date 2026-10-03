@@ -252,6 +252,17 @@ div::-webkit-scrollbar {
   }
 }
 
+/*
+  No rubber-band at either end of the page in the sidebar shell. Chrome's
+  overscroll bounce (and Android's stretch) moves the whole page, so the
+  sticky top bar visibly jumps at the top and bottom while the fixed tab bar
+  stays put. Scoped to the shell so the readers keep their own behaviour.
+  The cost is Android's pull-to-refresh on these pages.
+*/
+html:has([data-app-shell]) {
+  overscroll-behavior-y: none;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

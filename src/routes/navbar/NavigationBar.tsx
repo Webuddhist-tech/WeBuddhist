@@ -7,12 +7,7 @@ import {
 import { FaGlobe, FaSearch } from "react-icons/fa";
 import { useAuth } from "../../config/AuthContext.tsx";
 import { useAuth0 } from "@auth0/auth0-react";
-import {
-  ACCESS_TOKEN,
-  LANGUAGE,
-  LOGGED_IN_VIA,
-  REFRESH_TOKEN,
-} from "../../utils/constants.ts";
+import { LANGUAGE } from "../../utils/constants.ts";
 import { useTolgee, useTranslate } from "@tolgee/react";
 import { setFontVariables } from "../../config/commonConfigs.ts";
 import { useQueryClient } from "react-query";
@@ -32,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import NavSmallerScreen from "./NavSmallerScreen.tsx";
+import { useLogout } from "./useLogout.ts";
 
 export const invalidateQueries = async (queryClient: any) => {
   const queriesToInvalidate = [
@@ -85,16 +81,12 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslate();
-  const {
-    isLoggedIn,
-    logout: pechaLogout,
-    isAuthLoading,
-  } = useAuth() as {
+  const { isLoggedIn, isAuthLoading } = useAuth() as {
     isLoggedIn: boolean;
-    logout: () => void;
     isAuthLoading: boolean;
   };
-  const { isAuthenticated, logout, isLoading: isAuth0Loading } = useAuth0();
+  const { isAuthenticated, isLoading: isAuth0Loading } = useAuth0();
+  const handleLogout = useLogout();
   const tolgee = useTolgee(["language"]);
   const queryClient = useQueryClient();
   const { collectionColor } = useCollectionColor();
@@ -177,18 +169,6 @@ const Navigation = () => {
     }
   };
 
-  const handleLogout = (e: any) => {
-    e.preventDefault();
-    localStorage.removeItem(LOGGED_IN_VIA);
-    sessionStorage.removeItem(ACCESS_TOKEN);
-    localStorage.removeItem(REFRESH_TOKEN);
-    isLoggedIn && pechaLogout();
-    isAuthenticated && logout();
-
-    if (isLoggedIn && !isAuthenticated) {
-      navigate("/login");
-    }
-  };
   const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (searchTerm.trim()) {

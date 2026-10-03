@@ -5,6 +5,7 @@ export {
   getTextsByCollection,
   getTextById,
   searchTitles,
+  findTextsByTitle,
   getTextVersions,
   getTextVersionsByEdition,
   getTextVersionsByLanguage,

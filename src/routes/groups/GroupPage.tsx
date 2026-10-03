@@ -278,11 +278,13 @@ const GroupPage = () => {
           <div className="min-w-0 flex-1 sm:pb-1">
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
               <span>@{group.slug}</span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                {group.group_type === "PAGE"
-                  ? t("group_page.type_page")
-                  : t("group_page.type_community")}
-              </span>
+              {/* Only a page is labelled; "community" is the default and
+                  says nothing a visitor needs. */}
+              {group.group_type === "PAGE" && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  {t("group_page.type_page")}
+                </span>
+              )}
               {!group.is_public && (
                 <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-800">
                   {t("group_page.private")}
@@ -309,14 +311,6 @@ const GroupPage = () => {
               <dd>
                 {t("group_page.members_count", {
                   count: count(group.joiner_count ?? 0),
-                })}
-              </dd>
-            </div>
-            <div className="flex gap-1.5">
-              <dt className="sr-only">{t("group_page.followers")}</dt>
-              <dd>
-                {t("group_page.followers_count", {
-                  count: count(group.follower_count ?? 0),
                 })}
               </dd>
             </div>

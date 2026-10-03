@@ -65,7 +65,7 @@ const JoinableGroupsListView = ({
   return (
     <>
       <Seo
-        title={`${t("mantras.joinable_groups", "Groups to Join")} | ${siteName}`}
+        title={`${t("mantras.joinable_groups", "Practice spaces to join")} | ${siteName}`}
         description={siteDescription}
         canonical={`${window.location.origin}/`}
       />
@@ -82,7 +82,7 @@ const JoinableGroupsListView = ({
 
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {t("mantras.joinable_groups", "Groups to Join")}
+            {t("mantras.joinable_groups", "Practice spaces to join")}
           </h1>
           <p className="text-sm text-slate-500">
             {t(
@@ -97,7 +97,7 @@ const JoinableGroupsListView = ({
             <p className="text-slate-600">
               {t(
                 "mantras.no_joinable_groups",
-                "No groups available to join yet.",
+                "No practice spaces available to join yet.",
               )}
             </p>
           </div>

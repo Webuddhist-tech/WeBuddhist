@@ -137,14 +137,14 @@ const GroupDetailView = ({
       {accumulators.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-gray-900">
-            {t("mantras.group_practices", "Group Practices")}
+            {t("mantras.group_practices", "Practices")}
           </h2>
           <div className="grid gap-3">
             {accumulators.map((accumulator) => {
               const imageUrl = resolveImageUrl(accumulator.image);
               const practiceTitle =
                 accumulator.title?.trim() ||
-                t("mantras.untitled_practice", "Group practice");
+                t("mantras.untitled_practice", "Untitled practice");
 
               return (
                 <button
@@ -200,7 +200,7 @@ const GroupDetailView = ({
           sentinelRef={sentinelRef}
           emptyMessage={t(
             "mantras.no_members_yet",
-            "No members have joined this group yet.",
+            "No members have joined this practice space yet.",
           )}
         />
       </section>

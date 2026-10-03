@@ -21,7 +21,7 @@ type FooterColumn = {
   useTranslation?: boolean;
 };
 
-const columns: FooterColumn[] = [
+export const columns: FooterColumn[] = [
   {
     title: "footer.tools",
     links: [

@@ -9,6 +9,11 @@ import {
   getSearchErrorMessage,
 } from "../../../utils/helperFunctions.tsx";
 import { multilingualSearch } from "@/services/library";
+import {
+  NoResults,
+  PREVIEW_COUNT,
+  ResultSkeleton,
+} from "../results/ResultParts.tsx";
 
 type SegmentMatch = {
   segment_id: string;
@@ -46,9 +51,15 @@ export const fetchSources = async (
   });
 };
 
-const Sources = (query: any) => {
+type SourcesProps = {
+  query: string;
+  /** Collapsed: a few texts, two verses each, no paging. */
+  preview?: boolean;
+};
+
+/** Verses inside texts that match the search, grouped by text. */
+const Sources = ({ query: stringq, preview = false }: SourcesProps) => {
   const { t } = useTranslate();
-  const stringq = query?.query;
   const navigate = useNavigate();
 
   const [pagination, setPagination] = useState({ currentPage: 1, limit: 10 });
@@ -71,23 +82,24 @@ const Sources = (query: any) => {
   const searchText = sourceData?.query || stringq;
 
   if (isLoading)
-    return <div className="overalltext">{t("common.loading")}</div>;
+    return (
+      <div>
+        <span className="sr-only">{t("common.loading")}</span>
+        <ResultSkeleton />
+      </div>
+    );
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center">
-        <p className="text-base text-gray-600">
+        <p className="text-base text-faded-grey">
           {getSearchErrorMessage(error, t)}
         </p>
       </div>
     );
   }
   if (!sourceData?.sources || sourceData.sources.length === 0) {
-    return (
-      <div className="overalltext">
-        {t("search.zero_result", "No results to display.")}
-      </div>
-    );
+    return <NoResults />;
   }
   // Paging is by segment match, not by source: the API slices the ranked list of
   // matches and only then groups them under their texts. Dividing the grouped
@@ -98,32 +110,40 @@ const Sources = (query: any) => {
   const handlePageChange = (pageNumber: number) => {
     setPagination((prev) => ({ ...prev, currentPage: pageNumber }));
   };
+  const sources = preview
+    ? sourceData.sources.slice(0, PREVIEW_COUNT)
+    : sourceData.sources;
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium text-gray-700">
-        <p>
+    <div className="space-y-3">
+      {!preview && (
+        <p className="text-sm text-faded-grey">
           {t("sheet.search.total")} : {sourceData.total}
         </p>
-      </div>
+      )}
 
-      {sourceData.sources.map((source: SourceItem) => (
+      {sources.map((source: SourceItem) => (
         <div
           key={source.text.text_id}
-          className={`mb-4 space-y-2 ${getLanguageClass(source.text.language)}`}
+          className={`space-y-2 rounded-xl border border-custom-border p-4 sm:p-5 ${getLanguageClass(source.text.language)}`}
         >
-          <h4 className="text-lg font-semibold text-gray-900">
+          <h4 className="text-lg font-semibold text-primary">
             {source.text.title}
           </h4>
-          <span className="block text-sm text-gray-500">
-            {source.text.published_date}
-          </span>
+          {source.text.published_date && (
+            <span className="block text-sm text-faded-grey">
+              {source.text.published_date}
+            </span>
+          )}
 
           <div className="flex flex-col space-y-3.5">
-            {source.segment_matches.map((segment: SegmentMatch) => (
+            {(preview
+              ? source.segment_matches.slice(0, 2)
+              : source.segment_matches
+            ).map((segment: SegmentMatch) => (
               <button
                 type="button"
                 key={segment.segment_id}
-                className="relative border-0 bg-transparent pl-4 text-justify cursor-pointer before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-full before:bg-[hsl(9,82%,36%)] before:content-[''] hover:bg-gray-50 [&_.highlighted-text]:bg-yellow-300 [&_.highlighted-text]:px-0.5"
+                className="relative rounded border-0 bg-transparent pl-4 text-left cursor-pointer before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-full before:bg-rose-600 before:content-[''] hover:bg-search-background [&_.highlighted-text]:bg-yellow-200 [&_.highlighted-text]:px-0.5"
                 onClick={() => {
                   if (segment.segment_id && source.text?.text_id) {
                     navigate(
@@ -133,7 +153,7 @@ const Sources = (query: any) => {
                 }}
               >
                 <p
-                  className="m-0 text-base leading-relaxed text-gray-600"
+                  className="m-0 text-base leading-relaxed text-primary/80"
                   dangerouslySetInnerHTML={{
                     __html: highlightSearchMatch(
                       segment.content,
@@ -148,12 +168,14 @@ const Sources = (query: any) => {
         </div>
       ))}
 
-      <PaginationComponent
-        pagination={pagination}
-        totalPages={totalPages}
-        handlePageChange={handlePageChange}
-        setPagination={setPagination}
-      />
+      {!preview && (
+        <PaginationComponent
+          pagination={pagination}
+          totalPages={totalPages}
+          handlePageChange={handlePageChange}
+          setPagination={setPagination}
+        />
+      )}
     </div>
   );
 };

@@ -16,6 +16,7 @@ import {
   fetchTexts,
 } from "./api.ts";
 import {
+  findTextsByTitle,
   getTextCommentaries,
   getTextLanguages,
   getTextVersions,
@@ -317,5 +318,77 @@ describe("searchTitles", () => {
 
     // t2 has no edition, so it cannot be opened and is dropped.
     expect(result).toEqual([{ id: "e1", title: "One" }]);
+  });
+});
+
+describe("findTextsByTitle", () => {
+  test("asks the library's title filter across every language", async () => {
+    mocked(fetchTexts).mockResolvedValue({
+      items: [],
+      has_more: false,
+      offset: 5,
+      limit: 5,
+    });
+
+    await findTextsByTitle({ query: " tara ", limit: 5, offset: 5 });
+
+    expect(fetchTexts).toHaveBeenCalledWith({
+      category_id: null,
+      language: null,
+      title: "tara",
+      limit: 5,
+      offset: 5,
+    });
+  });
+
+  test("keeps the text's own title and the alternative one that matched", async () => {
+    mocked(fetchTexts).mockResolvedValue({
+      items: [
+        { ...text({ id: "t1", title: { en: "Praise to Tārā" } }) },
+        {
+          ...text({
+            id: "t2",
+            language: "bo",
+            title: { bo: "སྒྲོལ་བསྟོད།" },
+          }),
+          alt_titles: [{ en: "Notes on the Praise to Tārā" }],
+        },
+      ],
+      has_more: true,
+      offset: 0,
+      limit: 2,
+    });
+
+    const result = await findTextsByTitle({
+      query: "tara",
+      limit: 2,
+      offset: 0,
+    });
+
+    expect(result).toEqual({
+      hasMore: true,
+      items: [
+        // Matched on its own title (ignoring the accents), so nothing extra.
+        {
+          id: "t1",
+          title: "Praise to Tārā",
+          language: "en",
+          matchedTitle: null,
+        },
+        {
+          id: "t2",
+          title: "སྒྲོལ་བསྟོད།",
+          language: "bo",
+          matchedTitle: "Notes on the Praise to Tārā",
+        },
+      ],
+    });
+  });
+
+  test("does not call the library for an empty query", async () => {
+    const result = await findTextsByTitle({ query: "  ", limit: 5, offset: 0 });
+
+    expect(result).toEqual({ items: [], hasMore: false });
+    expect(fetchTexts).not.toHaveBeenCalled();
   });
 });

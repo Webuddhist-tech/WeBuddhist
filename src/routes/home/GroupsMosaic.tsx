@@ -63,7 +63,7 @@ const GroupsMosaic = ({ apiLanguage, language }: GroupsMosaicProps) => {
   }
 
   if (groups.length === 0) {
-    return <PanelWord>{t("mantras.joinable_groups", "Groups")}</PanelWord>;
+    return <PanelWord>{t("mantras.joinable_groups", "Practice spaces")}</PanelWord>;
   }
 
   // Deal the groups out across staggered rows.

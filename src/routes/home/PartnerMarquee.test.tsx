@@ -130,7 +130,7 @@ describe("PartnerMarquee", () => {
     renderMarquee();
 
     expect(
-      await screen.findByRole("region", { name: /Groups practising with us/i }),
+      await screen.findByRole("region", { name: /Practice spaces on WeBuddhist/i }),
     ).toBeInTheDocument();
   });
 
@@ -140,7 +140,7 @@ describe("PartnerMarquee", () => {
     renderMarquee();
 
     const band = await screen.findByRole("region", {
-      name: /Groups practising with us/i,
+      name: /Practice spaces on WeBuddhist/i,
     });
     expect(band).toHaveClass("shrink-0");
     expect(band).toHaveClass("min-h-36");

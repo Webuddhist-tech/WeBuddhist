@@ -194,6 +194,13 @@ describe("GroupPage", () => {
     expect(
       screen.getByText('group_page.members_count:{"count":"1,110"}'),
     ).toBeInTheDocument();
+    // Neither the follower count nor a "community" label is shown.
+    expect(
+      screen.queryByText(/group_page\.followers_count/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("group_page.type_community"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Shedra")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Roots in Old Tibet" }),
