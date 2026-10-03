@@ -17,6 +17,7 @@ import CompareText from "./components/compare-text/CompareText.tsx";
 import TableOfContentsView from "./components/table-of-contents/TableOfContentsView.tsx";
 import YigchungView from "./components/yigchung/YigchungView.tsx";
 import SegmentChatView from "./components/segment-chat/SegmentChatView.tsx";
+import { useChatTranslate } from "./components/segment-chat/useChatTranslate.ts";
 import { getSegmentInfo } from "@/services/library";
 
 type PanelContextValue = {
@@ -66,6 +67,7 @@ const Resources = ({
   const showPanel = isResourcesPanelOpen;
   const [activeView, setActiveView] = useState("main");
   const { t } = useTranslate();
+  const chatT = useChatTranslate();
   const storedLanguage = localStorage.getItem("language");
 
   useEffect(() => {
@@ -211,7 +213,7 @@ const Resources = ({
           className="w-full flex justify-start gap-1.5"
         >
           <LuSparkles className="text-lg" />
-          {t("segment_chat.open", "Ask AI about this segment")}
+          {chatT("segment_chat.open")}
         </Button>
         {canShowTableOfContents && (
           <Button
