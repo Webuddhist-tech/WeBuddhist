@@ -59,6 +59,15 @@ vi.mock("./components/root-texts/RootText.tsx", () => ({
   ),
 }));
 
+vi.mock("./components/segment-chat/SegmentChatView.tsx", () => ({
+  default: ({ segmentId, handleNavigate }) => (
+    <div data-testid="segment-chat-view">
+      Segment chat for {segmentId}
+      <button onClick={handleNavigate}>Back to resources</button>
+    </div>
+  ),
+}));
+
 vi.mock("./components/compare-text/CompareText.tsx", () => {
   return {
     default: ({ setIsCompareTextView, addChapter, currentChapter }) => (
@@ -185,6 +194,17 @@ describe("Resources Side Panel", () => {
     fireEvent.click(commentaryText);
 
     expect(screen.queryByText(/side_nav\.about_text/)).not.toBeInTheDocument();
+  });
+
+  test("opens the AI chat for the selected segment and goes back", () => {
+    setup();
+
+    fireEvent.click(screen.getByText(/segment_chat\.open/));
+    expect(screen.getByTestId("segment-chat-view")).toHaveTextContent("Segment chat for test123");
+
+    fireEvent.click(screen.getByText("Back to resources"));
+    expect(screen.queryByTestId("segment-chat-view")).not.toBeInTheDocument();
+    expect(screen.getByText(/segment_chat\.open/)).toBeInTheDocument();
   });
 
   test("shows share view when clicking on share menu item", () => {
