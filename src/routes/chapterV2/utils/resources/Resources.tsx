@@ -1,7 +1,7 @@
 import { useQuery } from "react-query";
 import { IoLanguage, IoNewspaperOutline } from "react-icons/io5";
 import { BiSearch, BiBookOpen } from "react-icons/bi";
-import { LuList, LuStickyNote } from "react-icons/lu";
+import { LuList, LuSparkles, LuStickyNote } from "react-icons/lu";
 import { useEffect, useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import ShareView from "./components/share-view/ShareView.tsx";
@@ -16,6 +16,7 @@ import ResourceHeader from "./components/common/ResourceHeader.tsx";
 import CompareText from "./components/compare-text/CompareText.tsx";
 import TableOfContentsView from "./components/table-of-contents/TableOfContentsView.tsx";
 import YigchungView from "./components/yigchung/YigchungView.tsx";
+import SegmentChatView from "./components/segment-chat/SegmentChatView.tsx";
 import { getSegmentInfo } from "@/services/library";
 
 type PanelContextValue = {
@@ -203,6 +204,15 @@ const Resources = ({
           />
           {t("connection_panel.search_in_this_text")}
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setActiveView("ai_chat")}
+          className="w-full flex justify-start gap-1.5"
+        >
+          <LuSparkles className="text-lg" />
+          {t("segment_chat.open", "Ask AI about this segment")}
+        </Button>
         {canShowTableOfContents && (
           <Button
             type="button"
@@ -312,6 +322,16 @@ const Resources = ({
             addChapter={addChapter}
             currentChapter={currentChapter}
             handleNavigate={() => setActiveView("main")}
+          />
+        );
+      case "ai_chat":
+        return (
+          <SegmentChatView
+            segmentId={segmentId}
+            addChapter={addChapter}
+            currentChapter={currentChapter}
+            handleNavigate={() => setActiveView("main")}
+            onClose={handleClosePanel}
           />
         );
       default:
