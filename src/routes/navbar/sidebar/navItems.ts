@@ -26,6 +26,8 @@ export type NavItem = {
   activeIcon: ComponentType<{ className?: string }>;
   /** Only light up on this exact path, not on everything beneath it. */
   exact?: boolean;
+  /** Other sections that belong to this one, like a text under the library. */
+  alsoActiveOn?: string[];
 };
 
 /**
@@ -59,6 +61,7 @@ export const useNavItems = () => {
       label: t("header.text"),
       icon: IoBookOutline,
       activeIcon: IoBook,
+      alsoActiveOn: ["/works", "/texts", "/chapter"],
     },
     {
       to: "/plans",
@@ -82,8 +85,10 @@ export const useNavItems = () => {
     },
   ];
 
-  const isActive = ({ to, exact }: NavItem) =>
-    exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+  const matches = (path: string) =>
+    pathname === path || pathname.startsWith(`${path}/`);
+  const isActive = ({ to, exact, alsoActiveOn = [] }: NavItem) =>
+    exact ? pathname === to : [to, ...alsoActiveOn].some(matches);
 
   return { primary, secondary, isActive };
 };

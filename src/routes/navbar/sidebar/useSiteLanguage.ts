@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { useTolgee } from "@tolgee/react";
 import { useQueryClient } from "react-query";
-import { changeLanguage } from "../NavigationBar.tsx";
+import { changeLanguage } from "../changeLanguage.ts";
 
 export const SITE_LANGUAGES = [
   { code: "en", label: "English" },
