@@ -25,6 +25,7 @@ vi.mock("@/services/worker/segmentChat", async () => {
 
 vi.mock("@tolgee/react", () => ({
   useTranslate: () => ({ t: (key: string) => key }),
+  useTolgee: () => ({ getLanguage: () => "en" }),
 }));
 
 const mockStream = streamSegmentChat as unknown as ReturnType<typeof vi.fn>;
@@ -118,16 +119,18 @@ describe("SegmentChatView", () => {
     ).toBeInTheDocument();
   });
 
-  test("streams an answer with clickable citations and opens a cited source", async () => {
-    mockStream.mockImplementation(async (_request, callbacks) => {
-      callbacks.onSources({
-        segment: { segment_id: "seg1", content: "verse", text: null },
-        sources: SOURCES,
-      });
-      callbacks.onDelta("Tara is praised ");
-      callbacks.onDelta("for compassion [2].");
-      callbacks.onDone({ cited_refs: [2] });
+  const answerCiting2 = async (_request: unknown, callbacks: any) => {
+    callbacks.onSources({
+      segment: { segment_id: "seg1", content: "verse", text: null },
+      sources: SOURCES,
     });
+    callbacks.onDelta("Tara is praised ");
+    callbacks.onDelta("for compassion [2].");
+    callbacks.onDone({ cited_refs: [2] });
+  };
+
+  test("streams an answer with sources collapsed until expanded", async () => {
+    mockStream.mockImplementation(answerCiting2);
     const { addChapter } = renderView();
 
     askQuestion("Who is praised?");
@@ -146,6 +149,20 @@ describe("SegmentChatView", () => {
     expect(
       screen.getByRole("button", { name: /segment_chat.citation/ }),
     ).toHaveTextContent("2");
+
+    // Collapsed by default: no source details on screen.
+    const toggle = screen.getByRole("button", {
+      name: /segment_chat.sources_count/,
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("A Commentary")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/segment_chat.other_sources/),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("A Commentary")).toBeInTheDocument();
     expect(screen.getByText(/segment_chat.other_sources/)).toBeInTheDocument();
 
@@ -154,6 +171,54 @@ describe("SegmentChatView", () => {
       { textId: "c1", segmentId: "s2" },
       { id: "chapter1" },
     );
+
+    fireEvent.click(toggle);
+    expect(screen.queryByText("A Commentary")).not.toBeInTheDocument();
+  });
+
+  test("clicking a citation number shows its source and opens it", async () => {
+    mockStream.mockImplementation(answerCiting2);
+    const { addChapter } = renderView();
+
+    askQuestion("Who is praised?");
+    const citation = await screen.findByRole("button", {
+      name: /segment_chat.citation/,
+    });
+    expect(screen.queryByText("A Commentary")).not.toBeInTheDocument();
+
+    fireEvent.click(citation);
+
+    expect(citation).toHaveAttribute("aria-expanded", "true");
+    // Radix renders the content plus an accessible copy; both carry the title.
+    expect(screen.getAllByText("A Commentary").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByText("text.translation.open_text")[0]);
+    expect(addChapter).toHaveBeenCalledWith(
+      { textId: "c1", segmentId: "s2" },
+      { id: "chapter1" },
+    );
+    expect(citation).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("an answer without citations offers the sources it read", async () => {
+    mockStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onSources({
+        segment: { segment_id: "seg1", content: "verse", text: null },
+        sources: SOURCES,
+      });
+      callbacks.onDelta("The sources don't cover this.");
+      callbacks.onDone({ cited_refs: [] });
+    });
+    renderView();
+
+    askQuestion("Unrelated?");
+
+    const toggle = await screen.findByRole("button", {
+      name: /segment_chat.sources_read/,
+    });
+    fireEvent.click(toggle);
+    expect(screen.getByText("English Translation")).toBeInTheDocument();
+    expect(screen.getByText("A Commentary")).toBeInTheDocument();
   });
 
   test("sends earlier turns as history with a follow-up question", async () => {
