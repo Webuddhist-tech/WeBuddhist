@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { LiveRecitationText } from "../types.ts";
-import { recitationLines, segmentPlainText } from "./recitationText.ts";
+import {
+  annotationSegmentIds,
+  recitationLines,
+  segmentPlainText,
+} from "./recitationText.ts";
 
 const text: LiveRecitationText = {
   text_id: "text-1",
@@ -20,6 +24,8 @@ const text: LiveRecitationText = {
     },
   ],
 };
+
+const plain = (value: string) => [{ text: value, yigchung: false }];
 
 describe("segmentPlainText", () => {
   it("keeps line breaks and drops every other tag", () => {
@@ -49,8 +55,9 @@ describe("recitationLines", () => {
     const { lines } = recitationLines(text, "en");
 
     expect(lines[0]).toEqual({
-      recited: "ཨོཾ་\nཇེ་བཙུན་མ།",
-      translation: "Om, to the noble lady",
+      recited: [plain("ཨོཾ་"), plain("ཇེ་བཙུན་མ།")],
+      translation: [plain("Om, to the noble lady")],
+      reference: null,
     });
     expect(lines[1].translation).toBeNull();
   });
@@ -61,10 +68,74 @@ describe("recitationLines", () => {
     expect(lines[0].translation).toBeNull();
   });
 
+  it("breaks a segment where the library's lines do, with its yigchung marked", () => {
+    const annotated: LiveRecitationText = {
+      ...text,
+      annotations: new Map([
+        [
+          "bo-1",
+          {
+            lines: [
+              plain("ཨོཾ།"),
+              [
+                { text: "ཇེ་བཙུན་མ།", yigchung: false },
+                { text: "ལན་གསུམ།", yigchung: true },
+              ],
+            ],
+            reference: "I-1",
+            type: "front_matter",
+          },
+        ],
+        [
+          "en-1",
+          {
+            lines: [plain("Om,"), plain("to the noble lady")],
+            reference: "I-1",
+            type: "front_matter",
+          },
+        ],
+      ]),
+    };
+
+    const { lines } = recitationLines(annotated, "en");
+
+    expect(lines[0].recited).toEqual([
+      plain("ཨོཾ།"),
+      [
+        { text: "ཇེ་བཙུན་མ།", yigchung: false },
+        { text: "ལན་གསུམ།", yigchung: true },
+      ],
+    ]);
+    expect(lines[0].translation).toEqual([
+      plain("Om,"),
+      plain("to the noble lady"),
+    ]);
+    expect(lines[0].reference).toBe("I-1");
+    // A segment the library could not place keeps the endpoint's own text.
+    expect(lines[1].recited).toEqual([plain("ཕྱག་འཚལ།")]);
+  });
+
   it("is empty before a text has loaded", () => {
     const { lines, lineBySegmentId } = recitationLines(undefined, "en");
 
     expect(lines).toEqual([]);
     expect(lineBySegmentId.size).toBe(0);
+  });
+});
+
+describe("annotationSegmentIds", () => {
+  it("asks for the recited edition and the reader's translation", () => {
+    expect(annotationSegmentIds(text, "en")).toEqual([
+      ["bo-1", "bo-2"],
+      ["en-1"],
+    ]);
+  });
+
+  it("asks for the recited edition alone when the reader reads it", () => {
+    expect(annotationSegmentIds(text, "bo")).toEqual([["bo-1", "bo-2"]]);
+  });
+
+  it("asks for nothing in a language no line is translated into", () => {
+    expect(annotationSegmentIds(text, "fr")).toEqual([["bo-1", "bo-2"]]);
   });
 });

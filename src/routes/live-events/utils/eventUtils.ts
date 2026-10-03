@@ -1,5 +1,6 @@
 import type {
   EventDTO,
+  EventImageSize,
   EventMetadataDTO,
   EventMetadataResponse,
 } from "../types.ts";
@@ -133,8 +134,30 @@ export const eventDescriptionExcerpt = (
 export const eventTitleLanguage = (event: EventDTO, language: string): string =>
   metadataForLanguage(event.metadata, language)?.language || language;
 
-export const eventImageUrl = (event: EventDTO): string | null =>
-  event.image_url?.trim() || event.image?.url?.trim() || null;
+const IMAGE_SIZES: EventImageSize[] = ["medium", "original", "thumbnail"];
+
+/**
+ * The event's artwork, as a link a browser can load.
+ *
+ * `image_url` is the artwork's storage key ("images/plan_images/…"), not a
+ * link: handed to an `<img>` it resolves against this site and loads the
+ * app's own page instead. The links are on `image`, one per size - the size
+ * asked for first, then the others. `image_url` is only taken if it ever
+ * arrives as a link, and the series' artwork stands in when the event has
+ * none of its own.
+ */
+export const eventImageUrl = (
+  event: EventDTO,
+  size: EventImageSize = "medium",
+): string | null => {
+  for (const candidate of [size, ...IMAGE_SIZES]) {
+    const url = safeExternalUrl(event.image?.[candidate]);
+    if (url) return url;
+  }
+  return (
+    safeExternalUrl(event.image_url) ?? safeExternalUrl(event.series?.image_url)
+  );
+};
 
 /**
  * The YouTube video id in any of the shapes an organizer might paste: a watch

@@ -55,7 +55,11 @@ const RandomPlanImage = ({ apiLanguage, language }: RandomPlanImageProps) => {
     return <PanelWord>{t("header.plans", "Plans")}</PanelWord>;
   }
 
-  const title = getSeriesTitleForLanguage(series.metadata, language);
+  const title = getSeriesTitleForLanguage(
+    series.metadata,
+    language,
+    t("plans.untitled_series", "Untitled series"),
+  );
 
   return (
     <figure>

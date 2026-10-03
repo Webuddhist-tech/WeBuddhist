@@ -62,6 +62,12 @@ describe("liveRecitationSocketUrl", () => {
       "/events/a%2Fb/recitation/live",
     );
   });
+
+  it("joins as a guest when there is no token", () => {
+    expect(liveRecitationSocketUrl("event-1", null, "https://x.test")).toBe(
+      "wss://x.test/api/v1/events/event-1/recitation/live",
+    );
+  });
 });
 
 describe("useLiveViewerCount", () => {
@@ -103,13 +109,39 @@ describe("useLiveViewerCount", () => {
     expect(result.current.count).toBeNull();
   });
 
-  it("reports signed-out rather than opening a socket without a token", () => {
+  it("follows as a guest when the reader is signed out", () => {
     sessionStorage.removeItem(ACCESS_TOKEN);
 
     const { result } = renderHook(() => useLiveViewerCount("event-1"));
 
-    expect(FakeSocket.latest).toBeNull();
-    expect(result.current.status).toBe("signed-out");
+    expect(FakeSocket.latest?.url).not.toContain("token=");
+
+    act(() => {
+      FakeSocket.latest?.onmessage?.({ data: sessionInfo(3) });
+    });
+
+    expect(result.current.status).toBe("connected");
+    expect(result.current.count).toBe(3);
+  });
+
+  it("drops a token the server will not take, and follows as a guest", () => {
+    const { result } = renderHook(() => useLiveViewerCount("event-1"));
+    expect(FakeSocket.latest?.url).toContain("token=app-token");
+
+    act(() => {
+      FakeSocket.latest?.onmessage?.({
+        data: JSON.stringify({
+          type: "error",
+          code: "UNAUTHORIZED",
+          message: "Invalid or expired token",
+        }),
+      });
+      FakeSocket.latest?.onclose?.({ code: 1008 });
+    });
+
+    expect(FakeSocket.opened).toBe(2);
+    expect(FakeSocket.latest?.url).not.toContain("token=");
+    expect(result.current.status).not.toBe("refused");
   });
 
   it("surfaces the server's reason for refusing, and does not retry it", () => {
@@ -119,15 +151,14 @@ describe("useLiveViewerCount", () => {
       FakeSocket.latest?.onmessage?.({
         data: JSON.stringify({
           type: "error",
-          code: "Only joined or following members of this event's group can follow its recitation",
-          message:
-            "Only joined or following members of this event's group can follow its recitation",
+          code: "Not found",
+          message: "Event not found",
         }),
       });
     });
 
     expect(result.current.status).toBe("refused");
-    expect(result.current.detail).toContain("joined or following members");
+    expect(result.current.detail).toBe("Event not found");
 
     // The refusal is final: the close that follows must not start a retry.
     act(() => {
@@ -197,10 +228,10 @@ describe("useLiveViewerCount", () => {
     }
   });
 
-  it("does not reconnect on a credential the reader has signed out of", () => {
+  it("reconnects as a guest on a credential the reader has signed out of", () => {
     vi.useFakeTimers();
     try {
-      const { result } = renderHook(() => useLiveViewerCount("event-1"));
+      renderHook(() => useLiveViewerCount("event-1"));
       expect(FakeSocket.opened).toBe(1);
 
       sessionStorage.removeItem(ACCESS_TOKEN);
@@ -212,8 +243,8 @@ describe("useLiveViewerCount", () => {
         vi.advanceTimersByTime(1000);
       });
 
-      expect(FakeSocket.opened).toBe(1);
-      expect(result.current.status).toBe("signed-out");
+      expect(FakeSocket.opened).toBe(2);
+      expect(FakeSocket.latest?.url).not.toContain("token=");
     } finally {
       vi.useRealTimers();
     }

@@ -7,18 +7,16 @@ export type LiveViewerStatus =
   | "connecting"
   | "connected"
   | "reconnecting"
-  | "refused"
-  | "signed-out";
+  | "refused";
 
 export interface LiveViewerCount {
   /** People joined to the event socket, including this page once it is in. */
   count: number | null;
   status: LiveViewerStatus;
   /**
-   * Why the socket turned this page away, in the server's own words. Following
-   * a recitation is limited to members of the event's group, and that refusal
-   * is something the reader can act on - so it is shown rather than flattened
-   * into a generic failure.
+   * Why the socket turned this page away, in the server's own words - an
+   * event that is gone, or not yet published - so it is shown rather than
+   * flattened into a generic failure.
    */
   detail: string | null;
   /** The server's machine-readable reason, e.g. `UNAUTHORIZED`. */
@@ -40,14 +38,18 @@ const MAX_RECONNECT_MS = 30_000;
  * the backend, so it is reached on our own host rather than through a second
  * base URL. That keeps it same-origin and means the dev proxy and nginx cover
  * it with the rules they already apply to the API.
+ *
+ * Without a token the reader joins as a guest: following a puja needs no
+ * account.
  */
 export const liveRecitationSocketUrl = (
   eventId: string,
-  token: string,
+  token: string | null,
   origin: string = window.location.origin,
 ): string => {
   const wsBase = origin.replace(/\/$/, "").replace(/^http/i, "ws");
-  return `${wsBase}/api/v1/events/${encodeURIComponent(eventId)}/recitation/live?token=${encodeURIComponent(token)}`;
+  const url = `${wsBase}/api/v1/events/${encodeURIComponent(eventId)}/recitation/live`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
 };
 
 const readNumber = (frame: unknown, key: string): number | null => {
@@ -91,9 +93,11 @@ const readPosition = (frame: unknown): LiveRecitationPosition | null => {
  * Pass `enabled: false` to stay off the socket - the count is only worth a
  * connection once the reader is actually looking at the event.
  *
- * The socket is tied to the reader's session: signing in on an open page opens
- * one, and signing out closes it rather than leaving it running on a credential
- * the reader has given up.
+ * Anyone may follow, signed in or not. A signed-in reader joins as themselves
+ * and anyone else as a guest; signing in or out on an open page reconnects as
+ * the other, rather than leave a socket running on a credential the reader has
+ * given up. A token the server will not take - one that expired before the app
+ * could refresh it - is dropped and the reader joins as a guest instead.
  */
 export const useLiveViewerCount = (
   eventId: string | undefined,
@@ -122,6 +126,10 @@ export const useLiveViewerCount = (
 
     let stopped = false;
     let giveUp = false;
+    // Set once the server turns down the reader's token: from then on this
+    // page joins as a guest, and the next close reconnects at once.
+    let asGuest = false;
+    let rejoinAsGuest = false;
     let socket: WebSocket | null = null;
     let pingTimer: ReturnType<typeof setInterval> | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -143,14 +151,7 @@ export const useLiveViewerCount = (
       // Read on every attempt rather than once: the app refreshes this token on
       // a timer, and a reconnect an hour into a puja must not present the one
       // that was current when the page opened.
-      const token = sessionStorage.getItem(ACCESS_TOKEN);
-      if (!token) {
-        setCount(null);
-        setStatus("signed-out");
-        setDetail(null);
-        setCode(null);
-        return;
-      }
+      const token = asGuest ? null : sessionStorage.getItem(ACCESS_TOKEN);
 
       setStatus((current) =>
         current === "connected" || current === "reconnecting"
@@ -209,6 +210,13 @@ export const useLiveViewerCount = (
           return;
         }
         if (frameType === "error") {
+          // A token the server will not take costs the reader nothing: they
+          // can follow as a guest, and do, as soon as this socket closes.
+          if (token && readString(frame, "code") === "UNAUTHORIZED") {
+            asGuest = true;
+            rejoinAsGuest = true;
+            return;
+          }
           // The server has stated its reason and will close; retrying would
           // only reproduce it.
           giveUp = true;
@@ -221,6 +229,11 @@ export const useLiveViewerCount = (
       next.onclose = (event) => {
         if (stopped || socket !== next) return;
         stopPing();
+        if (rejoinAsGuest) {
+          rejoinAsGuest = false;
+          connect();
+          return;
+        }
         if (giveUp || event.code === 1008) {
           setStatus("refused");
           return;

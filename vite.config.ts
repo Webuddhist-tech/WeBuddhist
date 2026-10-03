@@ -47,6 +47,14 @@ export default defineConfig(({ mode }) => {
         "X-Application": env.VITE_LIBRARY_APP_NAME?.trim() || "webuddhist",
       },
     },
+    // Worker API (segment AI chat). Strips /worker, so
+    // /worker/segment-chat/stream upstream becomes /segment-chat/stream.
+    "/worker": {
+      target: target("VITE_WORKER_URL", "http://127.0.0.1:8001"),
+      changeOrigin: true,
+      secure: true,
+      rewrite: (path: string) => path.replace(/^\/worker/, ""),
+    },
     "/chats": {
       target: target("VITE_CHAT_API_URL", "http://127.0.0.1:8001"),
       changeOrigin: true,

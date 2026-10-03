@@ -13,7 +13,10 @@ vi.mock("./textDetails.ts", () => ({
 import { libraryGet } from "./client.ts";
 import { fetchTextById } from "./api.ts";
 import { getAllSegmentSpans, resolveEditionContext } from "./textDetails.ts";
-import { getTableOfContents } from "./tableOfContents.ts";
+import {
+  getTableOfContents,
+  getTableOfContentsOutline,
+} from "./tableOfContents.ts";
 
 const mockedGet = libraryGet as ReturnType<typeof vi.fn>;
 const mockedText = fetchTextById as ReturnType<typeof vi.fn>;
@@ -105,5 +108,70 @@ describe("getTableOfContents", () => {
       language: "en",
       title: "A Text",
     });
+  });
+});
+
+describe("getTableOfContentsOutline", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedContext.mockResolvedValue({
+      editionId: "ed-1",
+      textId: "text-1",
+      segmentationId: "seg-1",
+    });
+    mockedSpans.mockResolvedValue(spans);
+  });
+
+  test("flattens the outline, outermost first, with how deep each heading sits", async () => {
+    mockedGet.mockResolvedValue([
+      {
+        id: "toc-1",
+        edition_id: "ed-1",
+        text_id: "text-1",
+        sections: [
+          {
+            id: "part",
+            title: { bo: "Part" },
+            span: { start: 0, end: 25 },
+            subsections: [
+              {
+                id: "untitled",
+                title: {},
+                span: { start: 0, end: 10 },
+                subsections: [
+                  {
+                    id: "verse",
+                    title: { bo: "Verse" },
+                    span: { start: 10, end: 25 },
+                    subsections: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    expect(await getTableOfContentsOutline("text-1", "bo")).toEqual([
+      { id: "part", title: "Part", depth: 0, segmentId: "s1" },
+      { id: "verse", title: "Verse", depth: 1, segmentId: "s2" },
+    ]);
+  });
+
+  test("anchors a heading to the segment it begins inside", async () => {
+    // The section starts at 12, inside s2 (10-15): that is where it is recited from.
+    mockedGet.mockResolvedValue(tocWithSpan({ start: 12, end: 30 }));
+
+    const [entry] = await getTableOfContentsOutline("text-1");
+
+    expect(entry.segmentId).toBe("s2");
+  });
+
+  test("scans no segments for an edition without an outline", async () => {
+    mockedGet.mockResolvedValue([]);
+
+    expect(await getTableOfContentsOutline("text-1")).toEqual([]);
+    expect(mockedSpans).not.toHaveBeenCalled();
   });
 });

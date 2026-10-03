@@ -112,13 +112,29 @@
         var androidStore =
           "https://play.google.com/store/apps/details?id=org.pecha.app";
 
+        // iPadOS asks for desktop sites and reports itself as a Mac.
+        if (!isIOS && /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) {
+          isIOS = true;
+        }
+
         // On iOS, Universal Links should have already opened the app.
         // This JS only fires when the app is NOT installed — send straight to store.
         if (isIOS) {
           window.location.replace(iosStore);
         } else if (isAndroid) {
-          // App Link should have opened the app. If we're here, it didn't.
-          window.location.replace(androidStore);
+          // The App Link did not open the app - either it is not installed,
+          // or the link was opened somewhere that never hands over (an in-app
+          // browser, a typed URL). The intent opens the app if it is there
+          // and falls back to Google Play if not. Kept in step with
+          // appStoreRedirectUrl in src/utils/deviceUtils.ts.
+          window.location.replace(
+            "intent://webuddhist.com" +
+              window.location.pathname +
+              window.location.search +
+              "#Intent;scheme=https;package=org.pecha.app;S.browser_fallback_url=" +
+              encodeURIComponent(androidStore) +
+              ";end",
+          );
         }
         // Desktop: show the buttons above — no redirect.
       })();

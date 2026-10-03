@@ -194,6 +194,25 @@ export type TitleSearchResult = {
   title: string;
 };
 
+/** A text whose title (or one of its alternative titles) matched a search. */
+export type TitleMatch = {
+  /** The text's id - what /texts/:id opens. */
+  id: string;
+  /** The title in the text's own language. */
+  title: string;
+  language: string;
+  /**
+   * The title that actually matched, when it is not the one above - e.g. an
+   * English alternative title that brought up a Tibetan text.
+   */
+  matchedTitle: string | null;
+};
+
+export type TitleMatchPage = {
+  items: TitleMatch[];
+  hasMore: boolean;
+};
+
 export type V2CollectionModel = {
   id: string;
   title: string;
@@ -315,7 +334,6 @@ export type V2SegmentRootTextResponse = {
   limit: number;
   has_more: boolean;
 };
-
 
 export type V2SegmentTextDetail = {
   text_id: string;

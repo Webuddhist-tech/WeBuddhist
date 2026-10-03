@@ -12,6 +12,45 @@
   }
 }
 
+/* The live recitation's glow, lit on a line of the live verse as the room
+   reaches it and dimmed again as the room leaves it for the next. */
+@keyframes recitation-glow-in {
+  from {
+    opacity: 0.45;
+    text-shadow: 0 0 0.6em transparent;
+  }
+  to {
+    opacity: 1;
+    text-shadow: 0 0 0.6em var(--rt-glow);
+  }
+}
+
+@keyframes recitation-glow-out {
+  from {
+    opacity: 1;
+    text-shadow: 0 0 0.6em var(--rt-glow);
+  }
+  to {
+    opacity: 0.45;
+    text-shadow: 0 0 0.6em transparent;
+  }
+}
+
+/* A ring of light around the live verse as the room arrives on it, fading
+   as the room settles in. */
+@keyframes recitation-arrive {
+  from {
+    box-shadow:
+      0 0 0 1.5px var(--rt-accent),
+      0 0 28px var(--rt-glow);
+  }
+  to {
+    box-shadow:
+      0 0 0 1.5px transparent,
+      0 0 28px transparent;
+  }
+}
+
 #root {
   --content-font-family: "EBGaramond-Regular", sans-serif;
   --overalltext-font-family: "overalltext-font", "Inter";
@@ -211,6 +250,17 @@ div::-webkit-scrollbar {
   .h-dvh-nav {
     height: calc(100dvh - 60px);
   }
+}
+
+/*
+  No rubber-band at either end of the page in the sidebar shell. Chrome's
+  overscroll bounce (and Android's stretch) moves the whole page, so the
+  sticky top bar visibly jumps at the top and bottom while the fixed tab bar
+  stays put. Scoped to the shell so the readers keep their own behaviour.
+  The cost is Android's pull-to-refresh on these pages.
+*/
+html:has([data-app-shell]) {
+  overscroll-behavior-y: none;
 }
 
 @keyframes fadeInUp {
