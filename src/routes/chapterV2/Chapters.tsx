@@ -103,7 +103,7 @@ const Chapters = ({
   );
 
   return (
-    <div className="flex w-full h-screen">
+    <div className="flex h-full w-full">
       {chapters.map((chapter: any, index: number) => (
         <div
           key={chapter.id}

@@ -55,7 +55,7 @@ const GroupAccumulatorDetailView = ({
   const imageUrl = resolveImageUrl(accumulator.image);
   const title =
     accumulator.title?.trim() ||
-    t("mantras.untitled_practice", "Group practice");
+    t("mantras.untitled_practice", "Untitled practice");
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 pb-10">
@@ -63,7 +63,7 @@ const GroupAccumulatorDetailView = ({
         type="button"
         onClick={onBack}
         className="inline-flex w-fit items-center gap-2 text-sm font-medium text-amber-800 transition hover:text-amber-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-        aria-label={t("mantras.back_to_group", "Back to group")}
+        aria-label={t("mantras.back_to_group", "Back to practice space")}
       >
         <IoArrowBack className="size-4" aria-hidden="true" />
         {t("mantras.back", "Back")}

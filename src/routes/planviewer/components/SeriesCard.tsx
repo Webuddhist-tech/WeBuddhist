@@ -26,7 +26,11 @@ const SeriesCard = ({
   variant = "carousel",
 }: SeriesCardProps) => {
   const { t } = useTranslate();
-  const title = getSeriesTitleForLanguage(series.metadata, language);
+  const title = getSeriesTitleForLanguage(
+    series.metadata,
+    language,
+    t("plans.untitled_series", "Untitled series"),
+  );
   const description = getSeriesDescriptionForLanguage(
     series.metadata,
     language,

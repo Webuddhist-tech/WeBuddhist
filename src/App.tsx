@@ -23,11 +23,10 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { setFontVariables } from "./config/commonConfigs.ts";
 import Sheets from "./routes/sheets/Sheets.tsx";
 import SheetChapters from "./routes/chapterV2/SheetChapters.tsx";
-import { MainLayout } from "./layouts/MainLayout";
 import { AuthLayout } from "./layouts/AuthLayout";
-import { NoFooterLayout } from "./layouts/NoFooterLayout";
+import { SidebarLayout } from "./layouts/SidebarLayout";
 import { useTolgee } from "@tolgee/react";
-import { changeLanguage } from "./routes/navbar/NavigationBar.tsx";
+import { changeLanguage } from "./routes/navbar/changeLanguage.ts";
 
 const tokenRefreshIntervalMs =
   Number(import.meta.env.VITE_TOKEN_EXPIRY_TIME_SEC) || 0;
@@ -70,10 +69,18 @@ const DeleteAccount = lazy(
   () => import("./routes/delete-account/DeleteAccount.tsx"),
 );
 const AppShare = lazy(() => import("./routes/app-share/AppShare.tsx"));
+const OpenApp = lazy(() => import("./routes/app-open/OpenApp.tsx"));
 const OpenReader = lazy(() => import("./routes/open-reader/OpenReader.tsx"));
 const LiveEvents = lazy(() => import("./routes/live-events/LiveEvents.tsx"));
 const LiveEventDetail = lazy(
   () => import("./routes/live-events/LiveEventDetail.tsx"),
+);
+const LiveRecitationPage = lazy(
+  () => import("./routes/live-events/LiveRecitationPage.tsx"),
+);
+const GroupPage = lazy(() => import("./routes/groups/GroupPage.tsx"));
+const VerseOfTheDayPage = lazy(
+  () => import("./routes/verse-of-the-day/VerseOfTheDayPage.tsx"),
 );
 
 type Auth0UserType = {
@@ -272,6 +279,10 @@ function App() {
       <Routes>
         <Route element={<AuthLayout />}>
           <Route path="/app/share" element={<AppShare />} />
+          {/* App links the app did not open: send the phone to its store.
+              /open/reader/:textId is more specific, so it still wins. */}
+          <Route path="/open" element={<OpenApp />} />
+          <Route path="/open/*" element={<OpenApp />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
@@ -288,19 +299,37 @@ function App() {
           </Route>
         </Route>
 
-        {/* Full-height readers, where a footer would sit under the fold anyway. */}
-        <Route element={<NoFooterLayout />}>
+        {/* A stage of its own: the live text fills the screen, with no site
+            chrome around it. */}
+        <Route
+          path="/live/:eventId/recitation"
+          element={<LiveRecitationPage />}
+        />
+
+        {/* Full-height readers in the same shell, minus the footer: the page
+            fills the space between the bars and scrolls inside it. */}
+        <Route element={<SidebarLayout reader />}>
           <Route path="/sheets/:id" element={<Sheets />} />
           <Route path="/chapter" element={<ChaptersV2 />} />
           <Route path="/open/reader/:textId" element={<OpenReader />} />
+          <Route
+            path="/:username/:sheetSlugAndId"
+            element={<SheetChapters />}
+          />
         </Route>
 
-        <Route element={<MainLayout />}>
+        {/* App-style shell: sidebar navigation on the left, page on the right. */}
+        <Route element={<SidebarLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/verse-of-the-day" element={<VerseOfTheDayPage />} />
           <Route path="/plans" element={<Planviewer />} />
           <Route path="/live" element={<LiveEvents />} />
           <Route path="/live/:eventId" element={<LiveEventDetail />} />
+          {/* /group/@{slug}, or /group/{id} from a page that only has the id. */}
+          <Route path="/group/:handle" element={<GroupPage />} />
           <Route path="/collections" element={<Collections />} />
+          <Route path="/about-us" element={<About />} />
+          <Route path="/search" element={<SearchResultsPage />} />
           <Route
             path="/profile"
             element={<AuthenticationGuard component={UserProfile} />}
@@ -313,12 +342,6 @@ function App() {
           <Route path="/note" element={<CommunityPage />} />
           <Route path="/texts/:id" element={<Texts />} />
           <Route path="/works/:id" element={<Works />} />
-          <Route path="/search" element={<SearchResultsPage />} />
-          <Route path="/about-us" element={<About />} />
-          <Route
-            path="/:username/:sheetSlugAndId"
-            element={<SheetChapters />}
-          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslate } from "@tolgee/react";
 import { Link } from "react-router-dom";
 import type { EventDTO } from "../types.ts";
@@ -32,6 +33,9 @@ const LiveEventCard = ({ event, language, locale }: LiveEventCardProps) => {
   const excerpt = eventDescriptionExcerpt(event, language);
   const phase = eventPhase(event);
   const imageUrl = eventImageUrl(event);
+  // The links are presigned and expire; a page left open past that shows the
+  // wash rather than a broken image.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const where = locationLabel(event);
   const titleFontClass = getLanguageClass(eventTitleLanguage(event, language));
 
@@ -41,11 +45,12 @@ const LiveEventCard = ({ event, language, locale }: LiveEventCardProps) => {
       className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-white ring-1 ring-slate-900/5 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#102544]/50"
     >
       <div className="relative aspect-[16/10] overflow-hidden">
-        {imageUrl ? (
+        {imageUrl && imageUrl !== failedUrl ? (
           <img
             src={imageUrl}
             alt=""
             loading="lazy"
+            onError={() => setFailedUrl(imageUrl)}
             className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
           />
         ) : (

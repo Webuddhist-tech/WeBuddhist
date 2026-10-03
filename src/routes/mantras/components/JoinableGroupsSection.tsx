@@ -53,10 +53,10 @@ const JoinableGroupsSection = ({
   return (
     <section
       className="space-y-5"
-      aria-label={t("mantras.joinable_groups", "Groups to Join")}
+      aria-label={t("mantras.joinable_groups", "Practice spaces to join")}
     >
       <SectionHeading
-        eyebrow={t("mantras.joinable_groups", "Groups to Join")}
+        eyebrow={t("mantras.joinable_groups", "Practice spaces to join")}
         title={
           <>
             {t("home.groups_heading_lead", "Practice")}{" "}

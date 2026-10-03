@@ -23,7 +23,11 @@ const JoinableGroupCard = ({
   variant = "carousel",
 }: JoinableGroupCardProps) => {
   const { t } = useTranslate();
-  const title = getGroupTitleForLanguage(group.metadata, language);
+  const title = getGroupTitleForLanguage(
+    group.metadata,
+    language,
+    t("group_page.untitled"),
+  );
   const description = getGroupDescriptionForLanguage(group.metadata, language);
   const contentFontClass = getLanguageClass(
     language === "BO" ? "bo-IN" : language === "ZH" ? "zh-Hans-CN" : "en",

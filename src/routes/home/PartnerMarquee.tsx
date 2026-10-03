@@ -66,12 +66,16 @@ const PartnerMarquee = ({ apiLanguage, language }: PartnerMarqueeProps) => {
   const shouldAnimate =
     groups.length >= MINIMUM_TO_ANIMATE && !prefersReducedMotion;
 
-  const label = t("home.partners_label", "Groups practising with us");
+  const label = t("home.partners_label", "Practice spaces on WeBuddhist");
 
   const titlesById = groups.map((group) => ({
     id: group.id,
     avatarUrl: group.avatar_url,
-    title: getGroupTitleForLanguage(group.metadata, language),
+    title: getGroupTitleForLanguage(
+      group.metadata,
+      language,
+      t("group_page.untitled"),
+    ),
   }));
 
   const renderAvatar = (

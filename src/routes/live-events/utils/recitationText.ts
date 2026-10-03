@@ -1,10 +1,13 @@
+import type { AnnotatedLine } from "@/services/library/segmentLines.ts";
 import type { LiveRecitationText, RecitationSegmentDTO } from "../types.ts";
 
 export type RecitationLine = {
-  /** The line as recited, in the text's recitation language. */
-  recited: string;
+  /** The line as recited, in the text's recitation language, line by line. */
+  recited: AnnotatedLine[];
   /** The reader's own translation, when they read another language. */
-  translation: string | null;
+  translation: AnnotatedLine[] | null;
+  /** The edition's citation for the line, e.g. "1-14", where it has one. */
+  reference: string | null;
 };
 
 export type RecitationLines = {
@@ -32,13 +35,55 @@ export const segmentPlainText = (
   return (parsed.body.textContent ?? "").trim();
 };
 
-const firstContent = (
+/** A bucket's segment in the language asked for, or else its first. */
+export const pickSegment = (
   bucket: Record<string, RecitationSegmentDTO> | undefined,
   preferred: string,
-): string => {
-  if (!bucket) return "";
-  const segment = bucket[preferred] ?? Object.values(bucket)[0];
-  return segmentPlainText(segment?.content);
+): RecitationSegmentDTO | undefined =>
+  bucket ? (bucket[preferred] ?? Object.values(bucket)[0]) : undefined;
+
+const plainLines = (content: string | null | undefined): AnnotatedLine[] =>
+  segmentPlainText(content)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((text) => [{ text, yigchung: false }]);
+
+/**
+ * The segment's lines as the library breaks and marks them, or - for a
+ * segment the library could not place - its own content, split only where
+ * the content itself breaks.
+ */
+const linesOf = (
+  segment: RecitationSegmentDTO | undefined,
+  text: LiveRecitationText,
+): AnnotatedLine[] => {
+  if (!segment) return [];
+  const annotated = text.annotations?.get(segment.id)?.lines;
+  return annotated?.length ? annotated : plainLines(segment.content);
+};
+
+/**
+ * The segment ids to ask the library about, one list per edition shown: the
+ * recited edition's, then the reader's translation's.
+ */
+export const annotationSegmentIds = (
+  text: Pick<LiveRecitationText, "segments" | "language">,
+  readerLanguage: string,
+): string[][] => {
+  const groups = [
+    text.segments.flatMap(
+      (row) => pickSegment(row.recitation, text.language)?.id ?? [],
+    ),
+  ];
+  if (readerLanguage !== text.language) {
+    groups.push(
+      text.segments.flatMap(
+        (row) => row.translations?.[readerLanguage]?.id ?? [],
+      ),
+    );
+  }
+  return groups.filter((group) => group.length > 0);
 };
 
 export const recitationLines = (
@@ -62,14 +107,18 @@ export const recitationLines = (
       }
     }
 
+    const recitedSegment = pickSegment(row.recitation, text.language);
     const translation =
       readerLanguage === text.language
-        ? null
-        : segmentPlainText(row.translations?.[readerLanguage]?.content) || null;
+        ? []
+        : linesOf(row.translations?.[readerLanguage], text);
 
     return {
-      recited: firstContent(row.recitation, text.language),
-      translation,
+      recited: linesOf(recitedSegment, text),
+      translation: translation.length > 0 ? translation : null,
+      reference: recitedSegment
+        ? (text.annotations?.get(recitedSegment.id)?.reference ?? null)
+        : null,
     };
   });
 
