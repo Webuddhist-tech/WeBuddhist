@@ -79,6 +79,7 @@ const LiveRecitationPage = lazy(
   () => import("./routes/live-events/LiveRecitationPage.tsx"),
 );
 const GroupPage = lazy(() => import("./routes/groups/GroupPage.tsx"));
+const GroupsPage = lazy(() => import("./routes/groups/GroupsPage.tsx"));
 const VerseOfTheDayPage = lazy(
   () => import("./routes/verse-of-the-day/VerseOfTheDayPage.tsx"),
 );
@@ -325,6 +326,7 @@ function App() {
           <Route path="/plans" element={<Planviewer />} />
           <Route path="/live" element={<LiveEvents />} />
           <Route path="/live/:eventId" element={<LiveEventDetail />} />
+          <Route path="/groups" element={<GroupsPage />} />
           {/* /group/@{slug}, or /group/{id} from a page that only has the id. */}
           <Route path="/group/:handle" element={<GroupPage />} />
           <Route path="/collections" element={<Collections />} />

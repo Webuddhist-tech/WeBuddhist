@@ -3,6 +3,7 @@ import type { PublicAuthorGroupListResponse } from "../../mantras/types.ts";
 import type {
   GroupDetailDTO,
   GroupEventsResponse,
+  GroupFeedResponse,
   GroupPostsResponse,
   GroupPracticesResponse,
 } from "../types.ts";
@@ -107,6 +108,21 @@ export const fetchGroupPostsPage = async (
   const { data } = await axiosInstance.get<GroupPostsResponse>(
     `/api/v1/groups/author/${encodeURIComponent(groupId)}/posts`,
     { params: { skip, limit } },
+  );
+  return data;
+};
+
+/**
+ * The newest posts and events across every public group, newest first - one
+ * request that says which groups have been active lately.
+ */
+export const fetchGroupActivityFeed = async (
+  language: string,
+  limit = 100,
+): Promise<GroupFeedResponse> => {
+  const { data } = await axiosInstance.get<GroupFeedResponse>(
+    "/api/v1/author/groups/feeds",
+    { params: { include_unfollowed: true, language, limit, skip: 0 } },
   );
   return data;
 };

@@ -101,3 +101,19 @@ export type GroupPostsResponse = {
   skip: number;
   limit: number;
 };
+
+/** One entry of the cross-group feed: a post or an event, tagged with its group. */
+export type GroupFeedItemDTO = {
+  type: "post" | "event";
+  feed_at: string;
+  group_id: string;
+  post?: GroupPostDTO | null;
+  event?: EventDTO | null;
+};
+
+export type GroupFeedResponse = {
+  items: GroupFeedItemDTO[];
+  total: number;
+  skip: number;
+  limit: number;
+};
