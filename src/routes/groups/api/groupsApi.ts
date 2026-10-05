@@ -113,6 +113,44 @@ export const fetchGroupPostsPage = async (
 };
 
 /**
+ * Every published community group, including the ones the caller has
+ * already joined (the listing leaves those out by default), each flagged
+ * with `is_joined` when the caller is signed in.
+ */
+export const fetchAllGroups = async (
+  language: string,
+  limit = LIST_PAGE_SIZE,
+): Promise<PublicAuthorGroupListResponse> => {
+  const { data } = await axiosInstance.get<PublicAuthorGroupListResponse>(
+    "/api/v1/author/groups",
+    {
+      params: {
+        language,
+        limit,
+        skip: 0,
+        group_type: "COMMUNITY",
+        include_joined: true,
+      },
+    },
+  );
+  return data;
+};
+
+export const joinGroup = async (groupId: string): Promise<void> => {
+  await axiosInstance.post(
+    `/api/v1/author/groups/${encodeURIComponent(groupId)}/join`,
+  );
+};
+
+/** A private group is joined by asking its admins. */
+export const requestToJoinGroup = async (groupId: string): Promise<void> => {
+  await axiosInstance.post(
+    `/api/v1/author/groups/${encodeURIComponent(groupId)}/join-requests`,
+    {},
+  );
+};
+
+/**
  * The newest posts and events across every public group, newest first - one
  * request that says which groups have been active lately.
  */

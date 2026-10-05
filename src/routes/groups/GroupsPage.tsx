@@ -1,21 +1,28 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "react-query";
+import { useMutation, useQuery, useQueryClient } from "react-query";
 import { useTolgee, useTranslate } from "@tolgee/react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import SectionHeading from "../../components/SectionHeading.tsx";
 import Seo from "../commons/seo/Seo.tsx";
+import { useAuth } from "../../config/AuthContext.tsx";
 import { LANGUAGE, siteName } from "../../utils/constants.ts";
 import { mapLanguageCode } from "../../utils/helperFunctions.tsx";
 import { tolgeeToPlanLanguage } from "../planviewer/utils/seriesUtils.ts";
-import { fetchPublicGroups } from "../mantras/api/accumulatorApi.ts";
 import {
   getGroupDescriptionForLanguage,
   getGroupTitleForLanguage,
   getMemberInitials,
 } from "../mantras/utils/groupUtils.ts";
 import type { AuthorGroupSummaryDTO } from "../mantras/types.ts";
-import { fetchGroupActivityFeed } from "./api/groupsApi.ts";
+import {
+  fetchAllGroups,
+  fetchGroupActivityFeed,
+  joinGroup,
+  requestToJoinGroup,
+} from "./api/groupsApi.ts";
 import { groupAddress } from "./utils/groupHandle.ts";
 import {
   formatTimeAgo,
@@ -52,11 +59,65 @@ const CardSkeleton = () => (
   </div>
 );
 
+const GROUPS_QUERY_KEY = "public-groups-all";
+
+/**
+ * Join for a public group, a join request for a private one; the badge once
+ * the caller is in. Shown only to signed-in callers, whose listing says
+ * which groups they have joined.
+ */
+const JoinAction = ({ group }: { group: AuthorGroupSummaryDTO }) => {
+  const { t } = useTranslate();
+  const queryClient = useQueryClient();
+  const join = useMutation(
+    () =>
+      group.is_public ? joinGroup(group.id) : requestToJoinGroup(group.id),
+    { onSuccess: () => queryClient.invalidateQueries(GROUPS_QUERY_KEY) },
+  );
+
+  if (group.is_joined) {
+    return (
+      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+        {t("groups_page.joined", "Joined")}
+      </span>
+    );
+  }
+  if (!group.is_public && group.my_join_request_status === "PENDING") {
+    return (
+      <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+        {t("groups_page.requested", "Requested")}
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      {join.isError && (
+        <span className="text-xs text-rose-700">
+          {t("groups_page.join_failed", "Could not join. Try again.")}
+        </span>
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        className="rounded-full"
+        disabled={join.isLoading}
+        onClick={() => join.mutate()}
+      >
+        {group.is_public
+          ? t("groups_page.join", "Join")
+          : t("groups_page.request_to_join", "Request to join")}
+      </Button>
+    </div>
+  );
+};
+
 /**
  * Every practice group, at `/groups`, sorted by how active it is: those
  * gathering right now first, then those that posted or meet this week, this
  * month, and the quiet ones last. Each card says why it sits where it does
- * and opens the group's own page, with its posts, events and plans.
+ * and opens the group's own page, with its posts, events and plans. A
+ * signed-in visitor sees the groups they have joined too, and can join the
+ * rest from here.
  */
 const GroupsPage = () => {
   const { t } = useTranslate();
@@ -66,14 +127,23 @@ const GroupsPage = () => {
   const apiLanguage = mapLanguageCode(storedLanguage);
   const planLanguage = tolgeeToPlanLanguage(storedLanguage);
 
+  const { isLoggedIn, isTokenReady } = useAuth() as {
+    isLoggedIn?: boolean;
+    isTokenReady?: boolean;
+  };
+  const { isAuthenticated } = useAuth0();
+  // In the key so the list is fetched again, with join state, once the
+  // token is there.
+  const isSignedIn = Boolean(isTokenReady && (isLoggedIn || isAuthenticated));
+
   const {
     data: groupsData,
     isLoading,
     error,
   } = useQuery(
-    ["public-groups-all", apiLanguage],
-    () => fetchPublicGroups(apiLanguage, 100),
-    { refetchOnWindowFocus: false },
+    [GROUPS_QUERY_KEY, apiLanguage, isSignedIn],
+    () => fetchAllGroups(apiLanguage),
+    { refetchOnWindowFocus: false, keepPreviousData: true },
   );
   // Activity only orders and annotates the list; without it the groups
   // still show, all of them under Quiet.
@@ -142,68 +212,74 @@ const GroupsPage = () => {
     const groupActivity = activity.get(group.id) ?? QUIET;
     const members = group.joiner_count ?? group.member_count ?? 0;
     return (
-      <Link
+      <div
         key={group.id}
-        to={groupAddress(group)}
-        className="group flex gap-4 rounded-3xl bg-white p-5 ring-1 ring-slate-900/5 transition hover:shadow-md"
+        className="flex flex-col rounded-3xl bg-white ring-1 ring-slate-900/5 transition hover:shadow-md"
       >
-        <span className="relative size-14 shrink-0">
-          {group.avatar_url ? (
-            <img
-              src={group.avatar_url}
-              alt=""
-              className="size-full rounded-full object-cover"
-            />
-          ) : (
-            <span className="flex size-full items-center justify-center rounded-full bg-rose-100 text-lg font-semibold text-rose-700">
-              {getMemberInitials(title)}
-            </span>
-          )}
-          <span
-            aria-hidden
-            className={cn(
-              "absolute right-0 bottom-0 size-3.5 rounded-full ring-2 ring-white",
-              DOT_CLASS[groupActivity.level],
-              groupActivity.level === "live" && "animate-pulse",
+        <Link to={groupAddress(group)} className="group flex flex-1 gap-4 p-5">
+          <span className="relative size-14 shrink-0">
+            {group.avatar_url ? (
+              <img
+                src={group.avatar_url}
+                alt=""
+                className="size-full rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex size-full items-center justify-center rounded-full bg-rose-100 text-lg font-semibold text-rose-700">
+                {getMemberInitials(title)}
+              </span>
             )}
-          />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3
-            className={cn(
-              "line-clamp-2 font-semibold text-[#102544] group-hover:underline",
-              TIBETAN.test(title) && "bo-text",
-            )}
-          >
-            {title}
-          </h3>
-          <p
-            className={cn(
-              "mt-1 text-sm",
-              groupActivity.level === "live"
-                ? "font-medium text-red-600"
-                : "text-slate-600",
-            )}
-          >
-            {statusLine(groupActivity)}
-          </p>
-          {description && (
-            <p
+            <span
+              aria-hidden
               className={cn(
-                "mt-2 line-clamp-2 text-sm text-slate-500",
-                TIBETAN.test(description) && "bo-text",
+                "absolute right-0 bottom-0 size-3.5 rounded-full ring-2 ring-white",
+                DOT_CLASS[groupActivity.level],
+                groupActivity.level === "live" && "animate-pulse",
+              )}
+            />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3
+              className={cn(
+                "line-clamp-2 font-semibold text-[#102544] group-hover:underline",
+                TIBETAN.test(title) && "bo-text",
               )}
             >
-              {description}
+              {title}
+            </h3>
+            <p
+              className={cn(
+                "mt-1 text-sm",
+                groupActivity.level === "live"
+                  ? "font-medium text-red-600"
+                  : "text-slate-600",
+              )}
+            >
+              {statusLine(groupActivity)}
             </p>
-          )}
-          <p className="mt-2 text-xs text-slate-400">
-            {t("group_page.members_count", {
-              count: members.toLocaleString(storedLanguage),
-            })}
-          </p>
-        </div>
-      </Link>
+            {description && (
+              <p
+                className={cn(
+                  "mt-2 line-clamp-2 text-sm text-slate-500",
+                  TIBETAN.test(description) && "bo-text",
+                )}
+              >
+                {description}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              {t("group_page.members_count", {
+                count: members.toLocaleString(storedLanguage),
+              })}
+            </p>
+          </div>
+        </Link>
+        {isSignedIn && typeof group.is_joined === "boolean" && (
+          <div className="flex justify-end px-5 pb-5">
+            <JoinAction group={group} />
+          </div>
+        )}
+      </div>
     );
   };
 

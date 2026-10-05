@@ -1,4 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -20,15 +26,23 @@ vi.mock("react-query", async () => vi.importActual("react-query"));
 
 vi.mock("../commons/seo/Seo.tsx", () => ({ default: () => null }));
 
-const fetchPublicGroupsMock = vi.fn();
-vi.mock("../mantras/api/accumulatorApi.ts", () => ({
-  fetchPublicGroups: (...args: unknown[]) => fetchPublicGroupsMock(...args),
+let signedIn = false;
+vi.mock("../../config/AuthContext.tsx", () => ({
+  useAuth: () => ({ isLoggedIn: signedIn, isTokenReady: signedIn }),
+}));
+vi.mock("@auth0/auth0-react", () => ({
+  useAuth0: () => ({ isAuthenticated: false }),
 }));
 
+const fetchPublicGroupsMock = vi.fn();
 const fetchGroupActivityFeedMock = vi.fn();
+const joinGroupMock = vi.fn();
 vi.mock("./api/groupsApi.ts", () => ({
+  fetchAllGroups: (...args: unknown[]) => fetchPublicGroupsMock(...args),
   fetchGroupActivityFeed: (...args: unknown[]) =>
     fetchGroupActivityFeedMock(...args),
+  joinGroup: (...args: unknown[]) => joinGroupMock(...args),
+  requestToJoinGroup: vi.fn(),
 }));
 
 import GroupsPage from "./GroupsPage.tsx";
@@ -63,8 +77,10 @@ const renderPage = () =>
 
 describe("GroupsPage", () => {
   beforeEach(() => {
+    signedIn = false;
     fetchPublicGroupsMock.mockReset();
     fetchGroupActivityFeedMock.mockReset();
+    joinGroupMock.mockReset();
   });
 
   it("sorts groups into bands by how active they are, linking each to its page", async () => {
@@ -156,5 +172,52 @@ describe("GroupsPage", () => {
     expect(
       await screen.findByText("groups_page.load_failed"),
     ).toBeInTheDocument();
+  });
+
+  it("lists joined groups too, and offers to join the others", async () => {
+    signedIn = true;
+    fetchPublicGroupsMock.mockResolvedValue({
+      groups: [
+        { ...group("mine", "My Sangha"), is_joined: true },
+        { ...group("other", "Other Sangha"), is_joined: false },
+      ],
+      total: 2,
+      skip: 0,
+      limit: 100,
+    });
+    fetchGroupActivityFeedMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      skip: 0,
+      limit: 100,
+    });
+    joinGroupMock.mockResolvedValue(undefined);
+
+    renderPage();
+
+    expect(await screen.findByText("My Sangha")).toBeInTheDocument();
+    expect(screen.getByText("groups_page.joined")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "groups_page.join" }));
+    await waitFor(() => expect(joinGroupMock).toHaveBeenCalledWith("other"));
+  });
+
+  it("shows no join buttons to signed-out visitors", async () => {
+    fetchPublicGroupsMock.mockResolvedValue({
+      groups: [group("a", "Alpha Sangha")],
+      total: 1,
+      skip: 0,
+      limit: 100,
+    });
+    fetchGroupActivityFeedMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      skip: 0,
+      limit: 100,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Alpha Sangha")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

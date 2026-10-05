@@ -57,6 +57,9 @@ export type AuthorGroupSummaryDTO = {
   follower_count: number;
   joiner_count: number;
   member_count: number;
+  /** Absent for anonymous callers. */
+  is_joined?: boolean | null;
+  my_join_request_status?: "PENDING" | "APPROVED" | "REJECTED" | null;
 };
 
 export type PublicAuthorGroupListResponse = {
