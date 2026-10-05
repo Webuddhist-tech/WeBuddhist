@@ -31,7 +31,9 @@ export class GroupNotFoundError extends Error {
  * descriptions rather than slugs, so the public listing is walked until the
  * slug turns up. There are a few dozen groups, so this is one request in
  * practice. Only published public groups are listed: a private group is
- * reached by its id.
+ * reached by its id. `include_joined` matters: a signed-in caller's listing
+ * otherwise leaves out the groups they have joined, so a member would get
+ * "not found" for their own group.
  */
 export const findGroupIdBySlug = async (
   slug: string,
@@ -42,7 +44,14 @@ export const findGroupIdBySlug = async (
     for (let skip = 0; ; skip += LIST_PAGE_SIZE) {
       const { data } = await axiosInstance.get<PublicAuthorGroupListResponse>(
         "/api/v1/author/groups",
-        { params: { group_type: groupType, limit: LIST_PAGE_SIZE, skip } },
+        {
+          params: {
+            group_type: groupType,
+            limit: LIST_PAGE_SIZE,
+            skip,
+            include_joined: true,
+          },
+        },
       );
       const groups = data.groups ?? [];
       const match = groups.find(

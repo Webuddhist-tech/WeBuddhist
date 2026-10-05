@@ -79,7 +79,7 @@ export const useNavItems = () => {
     },
     {
       to: "/groups",
-      label: t("header.practice_groups", "Practice groups"),
+      label: t("header.practice_groups", "Practice spaces"),
       shortLabel: t("header.groups", "Groups"),
       icon: IoPeopleOutline,
       activeIcon: IoPeople,

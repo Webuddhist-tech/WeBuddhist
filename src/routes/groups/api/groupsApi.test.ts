@@ -47,10 +47,18 @@ describe("findGroupIdBySlug", () => {
 
     expect(await findGroupIdBySlug("shantideva")).toBe("p1");
     expect(getMock.mock.calls.map(([, { params }]) => params)).toEqual([
-      { group_type: "COMMUNITY", limit: 100, skip: 0 },
-      { group_type: "COMMUNITY", limit: 100, skip: 100 },
-      { group_type: "PAGE", limit: 100, skip: 0 },
+      { group_type: "COMMUNITY", limit: 100, skip: 0, include_joined: true },
+      { group_type: "COMMUNITY", limit: 100, skip: 100, include_joined: true },
+      { group_type: "PAGE", limit: 100, skip: 0, include_joined: true },
     ]);
+  });
+
+  it("asks for joined groups too, so a member finds their own group", async () => {
+    listing({ COMMUNITY: [[{ slug: "webuddhist", id: "g1" }]] });
+
+    await findGroupIdBySlug("webuddhist");
+
+    expect(getMock.mock.calls[0][1].params.include_joined).toBe(true);
   });
 
   it("is null when no public group has the slug", async () => {

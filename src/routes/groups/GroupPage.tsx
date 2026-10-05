@@ -4,6 +4,7 @@ import { isAxiosError } from "axios";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "react-query";
 import { useTolgee, useTranslate } from "@tolgee/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Seo from "../commons/seo/Seo.tsx";
 import { LANGUAGE, siteName } from "../../utils/constants.ts";
 import {
@@ -45,6 +46,9 @@ import type { GroupHandle } from "./utils/groupHandle.ts";
 
 /** Past this length the About section opens folded, a few paragraphs in. */
 const ABOUT_CLAMP_CHARS = 1200;
+
+/** Faces shown beside the member count in the header. */
+const MEMBER_PREVIEW_COUNT = 2;
 
 const handleKey = (handle: GroupHandle | null) =>
   !handle ? "" : "slug" in handle ? `@${handle.slug.toLowerCase()}` : handle.id;
@@ -240,6 +244,11 @@ const GroupPage = () => {
   const events = sortByPhaseThenTime(eventsData?.events ?? []);
   const tags = (group.tags ?? []).filter((tag) => tag?.trim());
   const count = (value: number) => value.toLocaleString(storedLanguage);
+  const memberCount = group.joiner_count ?? 0;
+  // Members are listed to joiners only on a private group; then only the
+  // number shows.
+  const previewMembers = members.members.slice(0, MEMBER_PREVIEW_COUNT);
+  const otherMemberCount = Math.max(memberCount - previewMembers.length, 0);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
@@ -277,7 +286,6 @@ const GroupPage = () => {
 
           <div className="min-w-0 flex-1 sm:pb-1">
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-              <span>@{group.slug}</span>
               {/* Only a page is labelled; "community" is the default and
                   says nothing a visitor needs. */}
               {group.group_type === "PAGE" && (
@@ -309,9 +317,41 @@ const GroupPage = () => {
             <div className="flex gap-1.5">
               <dt className="sr-only">{t("group_page.members")}</dt>
               <dd>
-                {t("group_page.members_count", {
-                  count: count(group.joiner_count ?? 0),
-                })}
+                {/* The first members' faces, then how many more; it leads to
+                    the full list beside the posts. */}
+                {previewMembers.length > 0 ? (
+                  <a
+                    href="#group-members"
+                    className="flex items-center gap-2 transition hover:text-[#102544]"
+                  >
+                    <span className="flex -space-x-2">
+                      {previewMembers.map((member, index) => (
+                        <Avatar
+                          key={member.username ?? `${member.fullname}-${index}`}
+                          className="size-8 ring-2 ring-white"
+                        >
+                          {member.avatar_url ? (
+                            <AvatarImage src={member.avatar_url} alt="" />
+                          ) : null}
+                          <AvatarFallback className="bg-amber-50 text-xs text-amber-800">
+                            {getMemberInitials(member.fullname)}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </span>
+                    <span>
+                      {otherMemberCount > 0
+                        ? t("group_page.members_more", {
+                            count: count(otherMemberCount),
+                          })
+                        : t("group_page.members_count", {
+                            count: count(memberCount),
+                          })}
+                    </span>
+                  </a>
+                ) : (
+                  t("group_page.members_count", { count: count(memberCount) })
+                )}
               </dd>
             </div>
           </dl>

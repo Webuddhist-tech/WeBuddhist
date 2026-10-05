@@ -191,9 +191,16 @@ describe("GroupPage", () => {
     expect(
       screen.getByText("A living Tibetan Buddhist shedra."),
     ).toBeInTheDocument();
+    // The loaded member's face, then everyone else as a number, leading to
+    // the full list.
     expect(
-      screen.getByText('group_page.members_count:{"count":"1,110"}'),
+      await screen.findByText('group_page.members_more:{"count":"1,109"}'),
     ).toBeInTheDocument();
+    expect(
+      screen
+        .getByText('group_page.members_more:{"count":"1,109"}')
+        .closest("a"),
+    ).toHaveAttribute("href", "#group-members");
     // Neither the follower count nor a "community" label is shown.
     expect(
       screen.queryByText(/group_page\.followers_count/),

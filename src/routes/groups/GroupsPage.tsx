@@ -112,7 +112,7 @@ const JoinAction = ({ group }: { group: AuthorGroupSummaryDTO }) => {
 };
 
 /**
- * Every practice group, at `/groups`, sorted by how active it is: those
+ * Every practice space, at `/groups`, sorted by how active it is: those
  * gathering right now first, then those that posted or meet this week, this
  * month, and the quiet ones last. Each card says why it sits where it does
  * and opens the group's own page, with its posts, events and plans. A
@@ -286,7 +286,7 @@ const GroupsPage = () => {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <Seo
-        title={`${t("groups_page.title", "Practice groups")} | ${siteName}`}
+        title={`${t("groups_page.title", "Practice spaces")} | ${siteName}`}
         description={t(
           "groups_page.subtitle",
           "Communities practising together. See who is gathering now, what they have posted, and the events and plans they share.",
@@ -295,7 +295,7 @@ const GroupsPage = () => {
       />
       <SectionHeading
         eyebrow={t("home.practice_spaces", "Practice spaces")}
-        title={t("groups_page.title", "Practice groups")}
+        title={t("groups_page.title", "Practice spaces")}
         description={t(
           "groups_page.subtitle",
           "Communities practising together. See who is gathering now, what they have posted, and the events and plans they share.",
@@ -314,14 +314,14 @@ const GroupsPage = () => {
         <p className="rounded-3xl bg-rose-50 px-6 py-8 text-center text-sm text-rose-800">
           {t(
             "groups_page.load_failed",
-            "We could not load the practice groups just now. Please try again.",
+            "We could not load the practice spaces just now. Please try again.",
           )}
         </p>
       )}
 
       {!isLoading && !error && bands.length === 0 && (
         <p className="rounded-3xl bg-slate-50 px-6 py-16 text-center text-sm text-slate-600">
-          {t("groups_page.empty", "There are no practice groups yet.")}
+          {t("groups_page.empty", "There are no practice spaces yet.")}
         </p>
       )}
 
