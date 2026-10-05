@@ -1,4 +1,5 @@
 {
+  "about.title": "About",
   "admin.editor": "Category Editor",
   "admin.english_title": "Title",
   "admin.tibetan_title": "Tibetan Title",
@@ -1105,6 +1106,7 @@
   "app_banner.quote": "”The mind is everything. What you think you become.” — Buddha",
   "app_banner.store_link": "Open mobile app store link",
   "app_banner.download_now": "Download now",
+  "footer.about": "About",
   "footer.label": "Footer",
   "footer.fork_github": "Fork us on GitHub",
   "footer.products": "Products",

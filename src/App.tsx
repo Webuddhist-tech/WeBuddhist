@@ -33,6 +33,7 @@ const tokenRefreshIntervalMs =
 const Collections = lazy(() => import("./routes/collections/Collections.tsx"));
 const UserLogin = lazy(() => import("./routes/user-login/UserLogin.tsx"));
 const About = lazy(() => import("./routes/about/About.tsx"));
+const Team = lazy(() => import("./routes/team/Team.tsx"));
 const UserRegistration = lazy(
   () => import("./routes/user-registration/UserRegistration.tsx"),
 );
@@ -330,7 +331,9 @@ function App() {
           {/* /group/@{slug}, or /group/{id} from a page that only has the id. */}
           <Route path="/group/:handle" element={<GroupPage />} />
           <Route path="/collections" element={<Collections />} />
-          <Route path="/about-us" element={<About />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/team" element={<Team />} />
+          <Route path="/about-us" element={<Navigate to="/about" replace />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route
             path="/profile"

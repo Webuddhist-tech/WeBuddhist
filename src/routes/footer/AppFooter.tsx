@@ -10,23 +10,17 @@ type FooterLink = {
 
 export const FOOTER_LINKS: FooterLink[] = [
   { href: "https://buddhistai.tools/", label: "Buddhist AI Studio" },
-  { href: "https://sherab.org/", label: "Sherab" },
+  { href: "https://apps.webuddhistacademy.com/", label: "Academy" },
   {
-    href: "https://github.com/OpenPecha",
+    href: "https://github.com/Webuddhist-tech/",
     label: "Fork us on GitHub",
     i18nKey: "footer.fork_github",
   },
   { href: "https://discord.com/invite/7GFpPFSTeA", label: "Discord" },
   {
-    href: "https://dharmaduta.in/about",
-    label: "About Us",
-    i18nKey: "footer.about_us",
-  },
-  { href: "https://dharmaduta.in/team", label: "Team", i18nKey: "footer.team" },
-  {
-    href: "https://dharmaduta.in/projects",
-    label: "Products",
-    i18nKey: "footer.products",
+    href: "https://dharmaduta.in",
+    label: "Dharmaduta",
+    i18nKey: "footer.dharmaduta",
   },
 ];
 
@@ -57,6 +51,9 @@ const AppFooter = () => {
             {i18nKey ? t(i18nKey, label) : label}
           </a>
         ))}
+        <Link to="/team" className={LINK_CLASS}>
+          {t("footer.team", "Team")}
+        </Link>
         <Link to="/privacy-policy" className={LINK_CLASS}>
           {t("footer.privacy_policy", "Privacy Policy")}
         </Link>

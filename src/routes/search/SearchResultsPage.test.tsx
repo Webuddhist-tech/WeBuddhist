@@ -213,9 +213,10 @@ describe("SearchResultsPage", () => {
   test("puts each section's count beside its heading, with no filter tabs", async () => {
     renderPage();
 
-    const heading = (name: RegExp) => screen.findByRole("heading", { name });
-    expect(await heading(/^Plans/)).toHaveTextContent("2");
-    expect(await heading(/^Verses/)).toHaveTextContent("4");
+    // A section's heading shows while it loads, before its count arrives.
+    const heading = (name: RegExp) => screen.getByRole("heading", { name });
+    await waitFor(() => expect(heading(/^Plans/)).toHaveTextContent("2"));
+    await waitFor(() => expect(heading(/^Verses/)).toHaveTextContent("4"));
     expect(
       screen.queryByRole("navigation", { name: /categories/i }),
     ).not.toBeInTheDocument();

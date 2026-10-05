@@ -28,12 +28,14 @@ describe("AppFooter", () => {
     }
   });
 
-  it("links to the privacy policy and terms of service in the app", () => {
+  it("links to the team, privacy policy and terms of service in the app", () => {
     renderFooter();
-    expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute(
-      "href",
-      "/privacy-policy",
-    );
+    const team = screen.getByRole("link", { name: "Team" });
+    expect(team).toHaveAttribute("href", "/team");
+    expect(team).not.toHaveAttribute("target");
+    expect(
+      screen.getByRole("link", { name: "Privacy Policy" }),
+    ).toHaveAttribute("href", "/privacy-policy");
     expect(
       screen.getByRole("link", { name: "Terms of Service" }),
     ).toHaveAttribute("href", "/terms-of-service");

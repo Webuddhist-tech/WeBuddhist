@@ -89,8 +89,8 @@ export const useNavItems = () => {
   ];
   const secondary: NavItem[] = [
     {
-      to: "/about-us",
-      label: t("about.tag"),
+      to: "/about",
+      label: t("about.title", "About"),
       icon: IoInformationCircleOutline,
       activeIcon: IoInformationCircle,
     },
