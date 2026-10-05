@@ -83,7 +83,7 @@ describe("LiveEventDetail", () => {
     expect(screen.getByText("A daily gathering.")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Sera Monastery" }),
-    ).toHaveAttribute("href", "/group/group-1");
+    ).toHaveAttribute("href", "/spaces/group-1");
     expect(screen.getByText("Asia/Kolkata")).toBeInTheDocument();
   });
 

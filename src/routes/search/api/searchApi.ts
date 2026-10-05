@@ -1,4 +1,5 @@
 import axiosInstance from "../../../config/axios-config.ts";
+import { GROUP_TYPES } from "../../groups/api/groupsApi.ts";
 import type {
   GroupMetadataDTO,
   PublicAccumulatorDTO,
@@ -128,25 +129,48 @@ export type GroupSearchItem = {
 export type GroupSearchResponse = {
   groups: GroupSearchItem[];
   total: number;
+  /** Whether either kind of group has a further page. */
+  hasMore?: boolean;
 };
 
-/** Groups of every kind - communities and pages - whose name matches. */
+/**
+ * Spaces of every kind - communities and pages - whose title, subtitle or
+ * description matches. The listing returns one kind per request and, left to
+ * itself, only communities and none the caller has joined, so each kind is
+ * asked for separately with `include_joined` and the two are put together.
+ * A leading "@" is dropped so a space's handle can be typed as shown.
+ */
 export async function searchGroups(params: {
   query: string;
   language: string;
   limit: number;
   skip: number;
 }): Promise<GroupSearchResponse> {
-  const { data } = await axiosInstance.get<GroupSearchResponse>(
-    "/api/v1/author/groups",
-    {
-      params: {
-        search: params.query,
-        language: params.language,
-        limit: params.limit,
-        skip: params.skip,
-      },
-    },
+  const search = params.query.replace(/^@+/, "").trim();
+  const pages = await Promise.all(
+    GROUP_TYPES.map(async (groupType) => {
+      const { data } = await axiosInstance.get<GroupSearchResponse>(
+        "/api/v1/author/groups",
+        {
+          params: {
+            search,
+            language: params.language,
+            group_type: groupType,
+            include_joined: true,
+            limit: params.limit,
+            skip: params.skip,
+          },
+        },
+      );
+      return data;
+    }),
   );
-  return data;
+
+  return {
+    groups: pages.flatMap((page) => page.groups ?? []),
+    total: pages.reduce((sum, page) => sum + (page.total ?? 0), 0),
+    hasMore: pages.some(
+      (page) => params.skip + params.limit < (page.total ?? 0),
+    ),
+  };
 }

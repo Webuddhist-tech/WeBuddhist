@@ -95,7 +95,7 @@ const renderAt = (path: string) =>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route
-            path="/group/:handle"
+            path="/spaces/:handle"
             element={
               <>
                 <GroupPage />
@@ -177,7 +177,7 @@ describe("GroupPage", () => {
   });
 
   it("shows everything about the group at its @slug address", async () => {
-    renderAt("/group/@dzongsar");
+    renderAt("/spaces/@dzongsar");
 
     expect(
       await screen.findByRole("heading", {
@@ -237,11 +237,11 @@ describe("GroupPage", () => {
   });
 
   it("moves an id address to the @slug one without loading the group again", async () => {
-    renderAt(`/group/${GROUP_ID}`);
+    renderAt(`/spaces/${GROUP_ID}`);
 
     await waitFor(() =>
       expect(screen.getByTestId("address")).toHaveTextContent(
-        "/group/@dzongsar",
+        "/spaces/@dzongsar",
       ),
     );
     expect(
@@ -257,7 +257,7 @@ describe("GroupPage", () => {
   it("keeps the id address for a private group, whose slug would not load again", async () => {
     api.fetchGroupDetail.mockResolvedValue(group({ is_public: false }));
 
-    renderAt(`/group/${GROUP_ID}`);
+    renderAt(`/spaces/${GROUP_ID}`);
 
     expect(
       await screen.findByRole("heading", {
@@ -265,7 +265,7 @@ describe("GroupPage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("address")).toHaveTextContent(
-      `/group/${GROUP_ID}`,
+      `/spaces/${GROUP_ID}`,
     );
   });
 
@@ -281,7 +281,7 @@ describe("GroupPage", () => {
       }),
     );
 
-    renderAt("/group/@dzongsar");
+    renderAt("/spaces/@dzongsar");
 
     const toggle = await screen.findByRole("button", {
       name: "group_page.read_more",
@@ -300,7 +300,7 @@ describe("GroupPage", () => {
       new GroupNotFoundError({ slug: "nobody" }),
     );
 
-    renderAt("/group/@nobody");
+    renderAt("/spaces/@nobody");
 
     expect(await screen.findByText("group_page.not_found")).toBeInTheDocument();
   });
@@ -308,7 +308,7 @@ describe("GroupPage", () => {
   it("tells a failed load apart from a missing group", async () => {
     api.fetchGroupDetail.mockRejectedValue(new Error("Network Error"));
 
-    renderAt("/group/@dzongsar");
+    renderAt("/spaces/@dzongsar");
 
     // The page tries once more before giving up, a second later.
     expect(
@@ -318,7 +318,7 @@ describe("GroupPage", () => {
   });
 
   it("refuses an address that names no group", () => {
-    renderAt("/group/dzongsar");
+    renderAt("/spaces/dzongsar");
 
     expect(screen.getByText("group_page.not_found")).toBeInTheDocument();
     expect(api.resolveGroupId).not.toHaveBeenCalled();

@@ -120,7 +120,7 @@ export const useMantraResults = (query: string, language: string) =>
     };
   });
 
-/** Communities and pages. */
+/** Practice spaces: communities and pages, joined or not. */
 export const useGroupResults = (query: string, language: string) =>
   useCategory(["groups", language], query, async (pageIndex) => {
     const data = await searchGroups({
@@ -132,7 +132,7 @@ export const useGroupResults = (query: string, language: string) =>
     return {
       items: data.groups,
       total: data.total,
-      hasMore: (pageIndex + 1) * SEARCH_PAGE_SIZE < data.total,
+      hasMore: data.hasMore ?? false,
     };
   });
 

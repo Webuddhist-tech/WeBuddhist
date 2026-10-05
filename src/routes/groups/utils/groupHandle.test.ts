@@ -33,11 +33,11 @@ describe("parseGroupHandle", () => {
 
 describe("group paths", () => {
   it("names a group by its slug", () => {
-    expect(groupPath("webuddhist")).toBe("/group/@webuddhist");
+    expect(groupPath("webuddhist")).toBe("/spaces/@webuddhist");
   });
 
   it("falls back to the id when that is all a page has", () => {
-    expect(groupPathById(ID)).toBe(`/group/${ID}`);
+    expect(groupPathById(ID)).toBe(`/spaces/${ID}`);
   });
 });
 
@@ -51,11 +51,11 @@ describe("groupAddress", () => {
 
   it("names a published public group by its slug", () => {
     expect(hasSlugAddress(group)).toBe(true);
-    expect(groupAddress(group)).toBe("/group/@dzongsar");
+    expect(groupAddress(group)).toBe("/spaces/@dzongsar");
   });
 
   it("keeps the id for a group the public listing leaves out", () => {
-    expect(groupAddress({ ...group, is_public: false })).toBe(`/group/${ID}`);
-    expect(groupAddress({ ...group, status: "DRAFT" })).toBe(`/group/${ID}`);
+    expect(groupAddress({ ...group, is_public: false })).toBe(`/spaces/${ID}`);
+    expect(groupAddress({ ...group, status: "DRAFT" })).toBe(`/spaces/${ID}`);
   });
 });

@@ -10,7 +10,7 @@ import type {
 import type { GroupHandle } from "../utils/groupHandle.ts";
 
 /** Both kinds of public group; the listing returns one kind per request. */
-const GROUP_TYPES = ["COMMUNITY", "PAGE"] as const;
+export const GROUP_TYPES = ["COMMUNITY", "PAGE"] as const;
 
 /** The listing's largest page. */
 const LIST_PAGE_SIZE = 100;

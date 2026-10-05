@@ -78,13 +78,11 @@ export const useNavItems = () => {
       activeIcon: IoRadio,
     },
     {
-      to: "/groups",
+      to: "/spaces",
       label: t("header.practice_groups", "Practice spaces"),
       shortLabel: t("header.groups", "Groups"),
       icon: IoPeopleOutline,
       activeIcon: IoPeople,
-      // A single group's page belongs to the list it was opened from.
-      alsoActiveOn: ["/group"],
     },
   ];
   const secondary: NavItem[] = [

@@ -136,7 +136,7 @@ describe("GroupsPage", () => {
     });
     expect(
       within(active).getByRole("link", { name: /Posting Sangha/ }),
-    ).toHaveAttribute("href", "/group/@posting");
+    ).toHaveAttribute("href", "/spaces/@posting");
 
     const quiet = screen.getByRole("region", {
       name: /groups_page.band_quiet/,

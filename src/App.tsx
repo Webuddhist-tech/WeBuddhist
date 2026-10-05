@@ -4,6 +4,7 @@ import {
   Route,
   Routes,
   useNavigate,
+  useParams,
   useSearchParams,
 } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "react-query";
@@ -117,6 +118,14 @@ type AuthUserType = {
   logout: () => void;
   setIsTokenReady: (ready: boolean) => void;
 };
+
+/** `/group/{handle}` was a space's address before `/spaces/{handle}`. */
+const LegacyGroupRedirect = () => {
+  const { handle = "" } = useParams();
+  const path = encodeURIComponent(handle).replace(/^%40/, "@");
+  return <Navigate to={`/spaces/${path}`} replace />;
+};
+
 function App() {
   const navigate = useNavigate();
   const {
@@ -327,9 +336,12 @@ function App() {
           <Route path="/plans" element={<Planviewer />} />
           <Route path="/live" element={<LiveEvents />} />
           <Route path="/live/:eventId" element={<LiveEventDetail />} />
-          <Route path="/groups" element={<GroupsPage />} />
-          {/* /group/@{slug}, or /group/{id} from a page that only has the id. */}
-          <Route path="/group/:handle" element={<GroupPage />} />
+          <Route path="/spaces" element={<GroupsPage />} />
+          {/* /spaces/@{slug}, or /spaces/{id} from a page that only has the id. */}
+          <Route path="/spaces/:handle" element={<GroupPage />} />
+          {/* Old addresses, kept working for links already shared. */}
+          <Route path="/groups" element={<Navigate to="/spaces" replace />} />
+          <Route path="/group/:handle" element={<LegacyGroupRedirect />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/about" element={<About />} />
           <Route path="/team" element={<Team />} />

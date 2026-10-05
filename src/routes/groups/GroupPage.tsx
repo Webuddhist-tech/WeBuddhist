@@ -105,11 +105,11 @@ const GroupSkeleton = () => (
 );
 
 /**
- * A group's page, at `/group/@{slug}`: who they are, what they practise,
+ * A group's page, at `/spaces/@{slug}`: who they are, what they practise,
  * when they gather, what they have posted, and who belongs - everything the
  * app shows about a group, on one page anyone can open from a link.
  *
- * A link that knows only the group's id lands on `/group/{id}`, and the page
+ * A link that knows only the group's id lands on `/spaces/{id}`, and the page
  * moves the address to the `@slug` form once the group is known.
  */
 const GroupPage = () => {

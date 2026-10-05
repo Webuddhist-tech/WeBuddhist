@@ -1,9 +1,9 @@
 /**
  * How a group is named in its URL.
  *
- * Its address is `/group/@{slug}` - the handle the group's admins chose in
+ * Its address is `/spaces/@{slug}` - the handle the group's admins chose in
  * Studio. Pages that only know the group's id (an event carries `group_id`
- * and a display name, never the slug) link to `/group/{id}` instead, and the
+ * and a display name, never the slug) link to `/spaces/{id}` instead, and the
  * group page settles on the `@slug` form once it has loaded.
  */
 export type GroupHandle = { slug: string } | { id: string };
@@ -22,11 +22,11 @@ export const parseGroupHandle = (
 };
 
 export const groupPath = (slug: string): string =>
-  `/group/@${encodeURIComponent(slug)}`;
+  `/spaces/@${encodeURIComponent(slug)}`;
 
 /** For a page that knows the group only by id; see the note above. */
 export const groupPathById = (groupId: string): string =>
-  `/group/${encodeURIComponent(groupId)}`;
+  `/spaces/${encodeURIComponent(groupId)}`;
 
 /**
  * Whether the group's `@slug` address can be opened afresh. A slug is looked

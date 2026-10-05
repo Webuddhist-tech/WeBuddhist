@@ -223,7 +223,7 @@ describe("Home", () => {
 
     expect(
       await screen.findByRole("link", { name: /Sakya Centre/ }),
-    ).toHaveAttribute("href", "/group/@sakya");
+    ).toHaveAttribute("href", "/spaces/@sakya");
   });
 
   test("strings one bead per preset mantra", async () => {

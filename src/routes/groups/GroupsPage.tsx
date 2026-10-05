@@ -112,7 +112,7 @@ const JoinAction = ({ group }: { group: AuthorGroupSummaryDTO }) => {
 };
 
 /**
- * Every practice space, at `/groups`, sorted by how active it is: those
+ * Every practice space, at `/spaces`, sorted by how active it is: those
  * gathering right now first, then those that posted or meet this week, this
  * month, and the quiet ones last. Each card says why it sits where it does
  * and opens the group's own page, with its posts, events and plans. A
