@@ -35,6 +35,10 @@ const Collections = lazy(() => import("./routes/collections/Collections.tsx"));
 const UserLogin = lazy(() => import("./routes/user-login/UserLogin.tsx"));
 const About = lazy(() => import("./routes/about/About.tsx"));
 const Team = lazy(() => import("./routes/team/Team.tsx"));
+const PartnerWork = lazy(() => import("./routes/partner-work/PartnerWork.tsx"));
+const PartnerWorkArticle = lazy(
+  () => import("./routes/partner-work/PartnerWorkArticle.tsx"),
+);
 const UserRegistration = lazy(
   () => import("./routes/user-registration/UserRegistration.tsx"),
 );
@@ -344,6 +348,11 @@ function App() {
           <Route path="/group/:handle" element={<LegacyGroupRedirect />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/about" element={<About />} />
+          <Route path="/about/partner-work" element={<PartnerWork />} />
+          <Route
+            path="/about/partner-work/:slug"
+            element={<PartnerWorkArticle />}
+          />
           <Route path="/team" element={<Team />} />
           <Route path="/about-us" element={<Navigate to="/about" replace />} />
           <Route path="/search" element={<SearchResultsPage />} />

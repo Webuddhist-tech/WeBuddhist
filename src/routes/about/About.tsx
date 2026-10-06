@@ -18,6 +18,14 @@ import productsContent from "./products.md?raw";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { ArticleList } from "../partner-work/ArticleList";
+import {
+  PARTNER_WORK_PATH,
+  partnerWorkIntro,
+  partnerWorkMilestones,
+  partnerWorkStepsWithPosts,
+} from "../partner-work/partnerWorkContent";
+import { PartnerWorkInlineMarkdown } from "../partner-work/PartnerWorkMarkdown";
 
 const SECTION_HEADING = /^(Why|How|What) —|^The Team$/;
 const FRONT_MATTER_HEADING = /^## (Tagline|Mission|Vision)$/;
@@ -559,6 +567,57 @@ const PlatformSections = () => (
   </>
 );
 
+const PARTNER_WORK_HEADING = "Partner Work";
+
+sectionMeta[PARTNER_WORK_HEADING] = { accent: "text-primary", bar: "#0f479a" };
+
+const PartnerWorkSection = () => (
+  <section
+    aria-labelledby={sectionSlug(PARTNER_WORK_HEADING)}
+    className="border-t border-custom-border py-12 sm:py-14"
+  >
+    <SectionHeading heading={PARTNER_WORK_HEADING} className="mb-8" />
+
+    <div className="max-w-prose space-y-4">
+      {partnerWorkIntro.map((paragraph) => (
+        <p
+          key={paragraph}
+          className="overalltext text-base leading-relaxed text-muted-foreground"
+        >
+          <PartnerWorkInlineMarkdown content={paragraph} />
+        </p>
+      ))}
+    </div>
+
+    <div className="mt-8 space-y-8">
+      {partnerWorkStepsWithPosts.map((step) => (
+        <div key={step.heading} className="space-y-4">
+          <h3 className="en-serif-text text-xl font-medium text-foreground">
+            {step.heading}
+          </h3>
+          <ArticleList articles={step.articles} />
+        </div>
+      ))}
+
+      {partnerWorkMilestones.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="en-serif-text text-xl font-medium text-foreground">
+            Milestone updates
+          </h3>
+          <ArticleList articles={partnerWorkMilestones} numbered={false} />
+        </div>
+      )}
+    </div>
+
+    <Link
+      to={PARTNER_WORK_PATH}
+      className="overalltext mt-6 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
+    >
+      Read the full series →
+    </Link>
+  </section>
+);
+
 const SponsorLogo = ({ sponsor }: { sponsor: Sponsor }) => {
   const image = (
     <img
@@ -632,6 +691,7 @@ const TOC_ITEMS: TocItem[] = [
       })),
     ];
   }),
+  { heading: PARTNER_WORK_HEADING, id: sectionSlug(PARTNER_WORK_HEADING) },
   ...(SPONSORS.length > 0 ? [{ heading: "Sponsors", id: "sponsors" }] : []),
 ];
 
@@ -853,6 +913,7 @@ const About = () => {
               );
             })}
 
+            <PartnerWorkSection />
             <SponsorsSection />
           </div>
 
