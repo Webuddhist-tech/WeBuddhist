@@ -1,5 +1,9 @@
 import type { ComponentType } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import {
   IoBookOutline,
   IoChatbubblesOutline,
@@ -10,6 +14,7 @@ import {
   IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 import aboutContent from "./about.md?raw";
+import productsContent from "./products.md?raw";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -280,6 +285,23 @@ const sectionMeta: Record<string, { accent: string; bar: string }> = {
   },
 };
 
+const PLATFORM_BARS = ["#802F3E", "#102544", "#18345d", "#0f479a"];
+
+type PlatformSection = { heading: string; body: string };
+
+/** Splits the products markdown into its intro and one section per `## ` heading. */
+const parseProductsContent = (raw: string) => {
+  const [intro, ...chunks] = raw.trim().split(/^## /m);
+  const platforms: PlatformSection[] = chunks.map((chunk) => {
+    const newlineIndex = chunk.indexOf("\n");
+    return {
+      heading: chunk.slice(0, newlineIndex).trim(),
+      body: chunk.slice(newlineIndex + 1).trim(),
+    };
+  });
+  return { intro: intro.trim(), platforms };
+};
+
 const pillarMeta: Record<
   string,
   {
@@ -330,6 +352,18 @@ const SPONSORS: Sponsor[] = [
 const { title, tagline, mission, vision, sections } =
   parseAboutContent(aboutContent);
 
+const { intro: productsIntro, platforms } =
+  parseProductsContent(productsContent);
+
+const PLATFORMS_HEADING = "Our Platforms";
+
+platforms.forEach((platform, index) => {
+  sectionMeta[platform.heading] = {
+    accent: "text-primary",
+    bar: PLATFORM_BARS[index % PLATFORM_BARS.length],
+  };
+});
+
 const SectionHeading = ({
   heading,
   className,
@@ -349,7 +383,7 @@ const SectionHeading = ({
       />
       <h2
         id={headingId}
-        className="en-serif-text text-2xl sm:text-3xl font-medium text-foreground"
+        className="en-serif-text scroll-mt-20 text-2xl sm:text-3xl font-medium text-foreground"
       >
         {heading}
       </h2>
@@ -468,6 +502,63 @@ const TeamCard = ({ text }: { text: string }) => {
   );
 };
 
+const productMarkdownComponents: Components = {
+  p: ({ children }) => (
+    <p className="overalltext max-w-prose text-base leading-relaxed text-muted-foreground">
+      {children}
+    </p>
+  ),
+  h3: ({ children }) => (
+    <h3 className="en-serif-text pt-2 text-xl font-medium text-foreground">
+      {children}
+    </h3>
+  ),
+  ul: ({ children }) => (
+    <ul className="divide-y divide-custom-border overflow-hidden rounded-xl border border-custom-border bg-white">
+      {children}
+    </ul>
+  ),
+  li: ({ children }) => (
+    <li className="overalltext px-5 py-4 text-sm leading-relaxed text-muted-foreground sm:px-6">
+      {children}
+    </li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-medium text-foreground">{children}</strong>
+  ),
+};
+
+const ProductMarkdown = ({ content }: { content: string }) => (
+  <div className="space-y-5">
+    <ReactMarkdown components={productMarkdownComponents}>
+      {content}
+    </ReactMarkdown>
+  </div>
+);
+
+const PlatformSections = () => (
+  <>
+    <section
+      aria-labelledby={sectionSlug(PLATFORMS_HEADING)}
+      className="border-t border-custom-border py-12 sm:py-14"
+    >
+      <SectionHeading heading={PLATFORMS_HEADING} className="mb-8" />
+      <ProductMarkdown content={productsIntro} />
+    </section>
+
+    {platforms.map((platform) => (
+      <section
+        key={platform.heading}
+        aria-labelledby={sectionSlug(platform.heading)}
+        className="border-t border-custom-border py-12 sm:py-14"
+      >
+        <SectionHeading heading={platform.heading} className="mb-8" />
+        <ProductMarkdown content={platform.body} />
+      </section>
+    ))}
+  </>
+);
+
 const SponsorLogo = ({ sponsor }: { sponsor: Sponsor }) => {
   const image = (
     <img
@@ -509,7 +600,7 @@ const SponsorsSection = () => {
     >
       <h2
         id="sponsors"
-        className="en-serif-text text-2xl sm:text-3xl font-medium text-foreground"
+        className="en-serif-text scroll-mt-20 text-2xl sm:text-3xl font-medium text-foreground"
       >
         Sponsors
       </h2>
@@ -523,6 +614,95 @@ const SponsorsSection = () => {
   );
 };
 
+type TocItem = { heading: string; id: string; nested?: boolean };
+
+const isWhatSection = (heading: string) => heading.startsWith("What —");
+
+const TOC_ITEMS: TocItem[] = [
+  ...sections.flatMap((section) => {
+    const item = { heading: section.heading, id: sectionSlug(section.heading) };
+    if (!isWhatSection(section.heading)) return [item];
+    return [
+      item,
+      { heading: PLATFORMS_HEADING, id: sectionSlug(PLATFORMS_HEADING) },
+      ...platforms.map((platform) => ({
+        heading: platform.heading,
+        id: sectionSlug(platform.heading),
+        nested: true,
+      })),
+    ];
+  }),
+  ...(SPONSORS.length > 0 ? [{ heading: "Sponsors", id: "sponsors" }] : []),
+];
+
+/** Tracks which section heading sits nearest the top of the viewport. */
+const useActiveSection = (ids: string[]) => {
+  const [activeId, setActiveId] = useState(ids[0] ?? "");
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveId(visible[0].target.id);
+      },
+      { rootMargin: "-80px 0px -65% 0px" },
+    );
+
+    ids.forEach((id) => {
+      const heading = document.getElementById(id);
+      if (heading) observer.observe(heading);
+    });
+
+    return () => observer.disconnect();
+  }, [ids]);
+
+  return [activeId, setActiveId] as const;
+};
+
+const TOC_IDS = TOC_ITEMS.map((item) => item.id);
+
+const TableOfContents = () => {
+  const [activeId, setActiveId] = useActiveSection(TOC_IDS);
+
+  return (
+    <nav aria-label="On this page" className="sticky top-20 py-12 sm:py-14">
+      <p className="overalltext mb-3 text-xs font-semibold uppercase tracking-wide text-faded-grey">
+        On this page
+      </p>
+      <ul className="space-y-1 border-l border-custom-border">
+        {TOC_ITEMS.map((item) => {
+          const isActive = item.id === activeId;
+          return (
+            <li key={item.id}>
+              <a
+                href={`#${item.id}`}
+                onClick={() => setActiveId(item.id)}
+                aria-current={isActive ? "location" : undefined}
+                className={cn(
+                  "overalltext -ml-px block border-l-2 py-1 pr-2 text-sm leading-snug transition-colors",
+                  item.nested ? "pl-6" : "pl-3",
+                  isActive
+                    ? "border-primary font-medium text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {item.heading}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+};
+
+const PAGE_GRID =
+  "mx-auto max-w-6xl px-4 sm:px-6 lg:grid lg:grid-cols-[minmax(0,48rem)_14rem] lg:justify-between lg:gap-12 lg:px-8";
+
 const About = () => {
   return (
     <>
@@ -533,20 +713,21 @@ const About = () => {
 
       <div className="min-h-screen bg-white">
         <header className="border-b border-custom-border bg-navbar">
-          <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-            <div aria-hidden="true" />
-            <h1 className="en-serif-text text-3xl font-medium leading-tight text-foreground sm:text-4xl lg:text-5xl">
-              {title}
-            </h1>
-            <p className="overalltext mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              {tagline}
-            </p>
+          <div className={cn(PAGE_GRID, "py-12 sm:py-16")}>
+            <div>
+              <h1 className="en-serif-text text-3xl font-medium leading-tight text-foreground sm:text-4xl lg:text-5xl">
+                {title}
+              </h1>
+              <p className="overalltext mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                {tagline}
+              </p>
+            </div>
           </div>
         </header>
 
         {(mission.length > 0 || vision.length > 0) && (
           <div className="border-b border-custom-border bg-white">
-            <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+            <div className={cn(PAGE_GRID, "py-10 sm:py-12")}>
               <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                 {mission.length > 0 && (
                   <IntroCard
@@ -571,93 +752,113 @@ const About = () => {
           </div>
         )}
 
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          {sections.map((section, sectionIndex) => {
-            const headingId = sectionSlug(section.heading);
+        <div className={PAGE_GRID}>
+          <div className="min-w-0">
+            {sections.map((section, sectionIndex) => {
+              const headingId = sectionSlug(section.heading);
 
-            return (
-              <section
-                key={section.heading}
-                aria-labelledby={headingId}
-                className={cn(
-                  "py-12 sm:py-14",
-                  sectionIndex > 0 && "border-t border-custom-border",
-                )}
-              >
-                <SectionHeading heading={section.heading} className="mb-8" />
+              return (
+                <Fragment key={section.heading}>
+                  <section
+                    aria-labelledby={headingId}
+                    className={cn(
+                      "py-12 sm:py-14",
+                      sectionIndex > 0 && "border-t border-custom-border",
+                    )}
+                  >
+                    <SectionHeading
+                      heading={section.heading}
+                      className="mb-8"
+                    />
 
-                <div className="space-y-8">
-                  {section.blocks.map((block) => {
-                    if (block.type === "paragraphs") {
-                      return (
-                        <div
-                          key={block.items[0]}
-                          className="max-w-prose space-y-4"
-                        >
-                          {block.items.map((paragraph) => (
-                            <p
-                              key={paragraph}
-                              className="overalltext text-base leading-relaxed text-muted-foreground"
+                    <div className="space-y-8">
+                      {section.blocks.map((block) => {
+                        if (block.type === "paragraphs") {
+                          return (
+                            <div
+                              key={block.items[0]}
+                              className="max-w-prose space-y-4"
                             >
-                              {paragraph}
-                            </p>
-                          ))}
-                        </div>
-                      );
-                    }
+                              {block.items.map((paragraph) => (
+                                <p
+                                  key={paragraph}
+                                  className="overalltext text-base leading-relaxed text-muted-foreground"
+                                >
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
 
-                    if (block.type === "numbered") {
-                      return (
-                        <div
-                          key={block.items[0]}
-                          className="grid gap-4 sm:grid-cols-3"
-                        >
-                          {block.items.map((item, index) => (
-                            <TruthCard
-                              key={item}
-                              index={index + 1}
-                              text={item}
-                            />
-                          ))}
-                        </div>
-                      );
-                    }
+                        if (block.type === "numbered") {
+                          return (
+                            <div
+                              key={block.items[0]}
+                              className="grid gap-4 sm:grid-cols-3"
+                            >
+                              {block.items.map((item, index) => (
+                                <TruthCard
+                                  key={item}
+                                  index={index + 1}
+                                  text={item}
+                                />
+                              ))}
+                            </div>
+                          );
+                        }
 
-                    if (block.type === "pillars") {
-                      return (
-                        <div
-                          key={block.items[0]}
-                          className="grid gap-4 sm:grid-cols-2"
-                        >
-                          {block.items.map((pillar) => (
-                            <PillarCard key={pillar} text={pillar} />
-                          ))}
-                        </div>
-                      );
-                    }
+                        if (block.type === "pillars") {
+                          return (
+                            <div
+                              key={block.items[0]}
+                              className="grid gap-4 sm:grid-cols-2"
+                            >
+                              {block.items.map((pillar) => (
+                                <PillarCard key={pillar} text={pillar} />
+                              ))}
+                            </div>
+                          );
+                        }
 
-                    return (
-                      <div
-                        key={block.items[0]}
-                        className="overflow-hidden rounded-xl border border-custom-border bg-white"
-                      >
-                        {block.items.map((item, index) => (
-                          <div key={item}>
-                            <TeamCard text={item} />
-                            {index < block.items.length - 1 && (
-                              <Separator className="bg-custom-border" />
-                            )}
+                        return (
+                          <div
+                            key={block.items[0]}
+                            className="overflow-hidden rounded-xl border border-custom-border bg-white"
+                          >
+                            {block.items.map((item, index) => (
+                              <div key={item}>
+                                <TeamCard text={item} />
+                                {index < block.items.length - 1 && (
+                                  <Separator className="bg-custom-border" />
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+                        );
+                      })}
+                    </div>
 
-          <SponsorsSection />
+                    {section.heading === "The Team" && (
+                      <Link
+                        to="/team"
+                        className="overalltext mt-6 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Meet the team →
+                      </Link>
+                    )}
+                  </section>
+                  {isWhatSection(section.heading) && <PlatformSections />}
+                </Fragment>
+              );
+            })}
+
+            <SponsorsSection />
+          </div>
+
+          <aside className="hidden lg:block">
+            <TableOfContents />
+          </aside>
         </div>
       </div>
     </>

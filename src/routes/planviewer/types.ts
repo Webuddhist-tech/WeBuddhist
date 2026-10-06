@@ -150,6 +150,16 @@ export type UserPlanDayCompletionStatusResponse = {
   start_date?: string | null;
 };
 
+/** Display payload for a subtask that points at other content (event, post, group). */
+export type SubTaskReferenceDTO = {
+  id: string;
+  content_type: string;
+  title?: string | null;
+  subtitle?: string | null;
+  image_url?: string | null;
+  group_id?: string | null;
+};
+
 export type SubTaskDTO = {
   id: string;
   content_type: string;
@@ -157,6 +167,7 @@ export type SubTaskDTO = {
   duration?: string | null;
   image_url?: string | null;
   audio_url?: string | null;
+  reference?: SubTaskReferenceDTO | null;
   display_order?: number | null;
 };
 

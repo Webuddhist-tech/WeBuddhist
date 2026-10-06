@@ -162,7 +162,7 @@ const DailyPlanView = ({
               <SubtaskAudioPlay
                 audioId={PLAN_DAILY_AUDIO_ID}
                 audioUrl={daily.audio_url}
-                label="Play daily audio"
+                label={t("plans.play_daily_audio", "Play daily audio")}
               />
             </div>
           )}

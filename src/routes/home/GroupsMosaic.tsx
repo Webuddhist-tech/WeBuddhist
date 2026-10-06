@@ -63,7 +63,7 @@ const GroupsMosaic = ({ apiLanguage, language }: GroupsMosaicProps) => {
   }
 
   if (groups.length === 0) {
-    return <PanelWord>{t("mantras.joinable_groups", "Groups")}</PanelWord>;
+    return <PanelWord>{t("home.practice_spaces", "Practice spaces")}</PanelWord>;
   }
 
   // Deal the groups out across staggered rows.
@@ -85,7 +85,11 @@ const GroupsMosaic = ({ apiLanguage, language }: GroupsMosaicProps) => {
           // whole cluster sit off to one side of its column.
           <div key={rowIndex} className="flex justify-center">
             {row.map((group) => {
-              const title = getGroupTitleForLanguage(group.metadata, language);
+              const title = getGroupTitleForLanguage(
+                group.metadata,
+                language,
+                t("group_page.untitled"),
+              );
               return (
                 <Avatar
                   key={group.id}
@@ -109,7 +113,7 @@ const GroupsMosaic = ({ apiLanguage, language }: GroupsMosaicProps) => {
       <p className="mt-6 text-center text-sm text-slate-600">
         {t(
           "home.groups_caption",
-          "A lot of communities already practise here together.",
+          "A lot of communities already practice here together.",
         )}
       </p>
     </div>

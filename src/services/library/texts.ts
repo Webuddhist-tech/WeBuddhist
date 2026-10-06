@@ -19,6 +19,8 @@ import type {
   TextLanguageVersionsResponse,
   TextVersion,
   TextVersionResponse,
+  TitleMatch,
+  TitleMatchPage,
   TitleSearchResult,
   V2TextDTO,
   V2TextsCategoryResponse,
@@ -155,6 +157,59 @@ export const searchTitles = async (params: {
       title: extractTitle(text.title, text.language),
     }))
     .filter((item): item is TitleSearchResult => Boolean(item.id));
+};
+
+/**
+ * Lower-cased with diacritics stripped, so "tara" finds "Tārā" the way the
+ * library's own title filter does.
+ */
+const foldForMatch = (value: string) =>
+  value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/**
+ * Texts whose title matches `query`, in any language, for the search page.
+ *
+ * The library also matches alternative titles, so a Tibetan text can come up
+ * for an English query. Each match keeps the title in the text's own language
+ * and, when that is not what matched, the alternative title that did - so the
+ * reader can see why it is there.
+ */
+export const findTextsByTitle = async (params: {
+  query: string;
+  limit: number;
+  offset: number;
+}): Promise<TitleMatchPage> => {
+  const query = params.query.trim();
+  if (!query) return { items: [], hasMore: false };
+
+  const page = await fetchTexts({
+    category_id: null,
+    language: null,
+    title: query,
+    limit: params.limit,
+    offset: params.offset,
+  });
+
+  const needle = foldForMatch(query);
+  const items = (page.items ?? []).map((text): TitleMatch => {
+    const title = extractTitle(text.title, text.language);
+    const candidates = [text.title, ...(text.alt_titles ?? [])].flatMap(
+      (entry) => Object.values(entry ?? {}),
+    );
+    const matched = foldForMatch(title).includes(needle)
+      ? null
+      : (candidates.find((candidate) =>
+          foldForMatch(candidate).includes(needle),
+        ) ?? null);
+    return {
+      id: text.id,
+      title,
+      language: text.language,
+      matchedTitle: matched,
+    };
+  });
+
+  return { items, hasMore: Boolean(page.has_more) };
 };
 
 /**

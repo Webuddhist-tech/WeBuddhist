@@ -1,4 +1,5 @@
 import { IoPause, IoPlay } from "react-icons/io5";
+import { useTranslate } from "@tolgee/react";
 import { useDailyAudioPlay } from "../context/DailyAudioContext.tsx";
 
 type SubtaskAudioPlayProps = {
@@ -11,9 +12,10 @@ type SubtaskAudioPlayProps = {
 const SubtaskAudioPlay = ({
   audioId,
   audioUrl,
-  label = "Play audio",
+  label,
   compact = false,
 }: SubtaskAudioPlayProps) => {
+  const { t } = useTranslate();
   const { audioRef, playing, handlePlayClick, onPlay, onPause, onEnded } =
     useDailyAudioPlay(audioId, audioUrl);
 
@@ -26,7 +28,11 @@ const SubtaskAudioPlay = ({
         type="button"
         onClick={handlePlayClick}
         className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full bg-stone-900 text-white transition hover:bg-stone-800`}
-        aria-label={playing ? "Pause audio" : label}
+        aria-label={
+          playing
+            ? t("plans.pause_audio", "Pause audio")
+            : (label ?? t("plans.play_audio", "Play audio"))
+        }
       >
         {playing ? (
           <IoPause className={iconClass} aria-hidden="true" />

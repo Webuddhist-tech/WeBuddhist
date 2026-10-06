@@ -4,13 +4,20 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import { vi, describe, test, expect, beforeEach } from "vitest";
 import "@testing-library/jest-dom";
 
-// The shared test setup stubs react-query's useQuery; the hero uses a real one.
+// The shared test setup stubs react-query's useQuery; the sections use real ones.
 vi.mock("react-query", async () => await vi.importActual("react-query"));
 
 vi.mock("@tolgee/react", () => ({
   useTolgee: () => ({ getLanguage: () => "en" }),
   useTranslate: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (
+      _key: string,
+      fallback?: string,
+      params?: Record<string, string | number>,
+    ) =>
+      (fallback ?? _key).replace(/\{(\w+)\}/g, (_, name) =>
+        String(params?.[name] ?? ""),
+      ),
   }),
 }));
 
@@ -39,14 +46,28 @@ vi.mock("../mantras/api/accumulatorApi.ts", () => ({
   fetchPublicGroups: (...args: unknown[]) => fetchPublicGroups(...args),
 }));
 
-const mala = (id: string, title: string) => ({
-  id,
-  metadata: [{ language: "EN", title, description: "" }],
-  mantra: { mantra: `${title} mantra`, mala_image_url: "" },
-  mala_image_url: "",
-});
+const fetchCollections = vi.fn();
+vi.mock("../collections/Collections.tsx", () => ({
+  fetchCollections: (...args: unknown[]) => fetchCollections(...args),
+}));
+
+const fetchFeaturedEvents = vi.fn();
+vi.mock("../live-events/api/eventsApi.ts", () => ({
+  fetchFeaturedEvents: (...args: unknown[]) => fetchFeaturedEvents(...args),
+}));
 
 import Home from "./Home.tsx";
+
+const HOUR = 60 * 60 * 1000;
+
+const event = (id: string, name: string, startOffset: number) => ({
+  id,
+  group_name: "Sangha",
+  metadata: [{ name, language: "en" }],
+  start_date: new Date(Date.now() + startOffset).toISOString(),
+  end_date: new Date(Date.now() + startOffset + 2 * HOUR).toISOString(),
+  image: null,
+});
 
 const renderHome = (initialEntry = "/") =>
   render(
@@ -69,116 +90,153 @@ beforeEach(() => {
   fetchVerseOfDayToday.mockResolvedValue({ verse_of_day: null });
   fetchPublicSeries.mockResolvedValue({
     series: [
-      { id: "s-1", metadata: [], image: "https://img.test/a.jpg" },
-      { id: "s-2", metadata: [], image: "https://img.test/b.jpg" },
+      {
+        id: "s-1",
+        metadata: [{ language: "EN", title: "Daily Tipitaka" }],
+        image: "https://img.test/a.jpg",
+        featured: false,
+        total_days: 195,
+        plan_count: 27,
+      },
+      {
+        id: "s-2",
+        metadata: [{ language: "EN", title: "Bodhisattva Challenge" }],
+        image: "https://img.test/b.jpg",
+        featured: true,
+        total_days: 358,
+        plan_count: 37,
+      },
+      // No artwork, so it never makes it onto the page.
+      { id: "s-3", metadata: [{ language: "EN", title: "Bare" }], image: null },
     ],
   });
   fetchPublicGroups.mockResolvedValue({
-    total: 128,
-    groups: Array.from({ length: 15 }, (_, index) => ({
-      id: `g-${index}`,
-      metadata: [],
-      avatar_url: `https://img.test/g${index}.png`,
-    })),
+    total: 2,
+    groups: [
+      {
+        id: "g-1",
+        slug: "sakya",
+        is_public: true,
+        metadata: [{ language: "EN", title: "Sakya Centre" }],
+        avatar_url: "https://img.test/g1.png",
+      },
+    ],
   });
   fetchPresetAccumulators.mockResolvedValue({
     accumulators: [
-      mala("m-1", "Chenrezig"),
-      mala("m-2", "Tara"),
-      mala("m-3", "Guru Rinpoche"),
+      {
+        id: "m-1",
+        metadata: [],
+        mantra: { title: "Green Tara", mala_image_url: "https://img.test/1" },
+      },
+      {
+        id: "m-2",
+        metadata: [],
+        mantra: { title: "Manjushri", mala_image_url: "https://img.test/2" },
+      },
     ],
   });
+  fetchCollections.mockResolvedValue({
+    collections: [
+      { id: "c-1", title: "Liturgy", has_child: false, language: "en" },
+      { id: "c-2", title: "Middle Way", has_child: true, language: "en" },
+    ],
+  });
+  fetchFeaturedEvents.mockResolvedValue([
+    event("e-live", "Tara Puja", -HOUR),
+    event("e-past", "Old Retreat", -10 * HOUR),
+  ]);
 });
 
 describe("Home", () => {
-  test("introduces plans, mala and groups", async () => {
-    renderHome();
-
-    expect(await screen.findByText("A practice that")).toBeInTheDocument();
-    expect(screen.getByText("Recitation, counted")).toBeInTheDocument();
-    expect(screen.getByText("Practise")).toBeInTheDocument();
-  });
-
-  test("keeps the partners on the first screen at every width", async () => {
-    renderHome();
-
-    const band = await screen.findByRole("region", {
-      name: /Groups practising with us/i,
+  test("quotes today's verse and links to the verse page", async () => {
+    fetchVerseOfDayToday.mockResolvedValue({
+      verse_of_day: {
+        verse:
+          "Know all compounded phenomena to be like this.\n ~Vajracchedikā",
+        date: "2026-10-03",
+      },
     });
-    // A definite viewport height, not min-h-dvh / lg:h-dvh: below lg the hero
-    // used to fill the window and the strip disappeared into it.
-    expect(band.parentElement).toHaveClass("h-dvh");
-    expect(band.parentElement).not.toHaveClass("lg:h-dvh");
-    expect(band).toHaveClass("shrink-0");
-  });
 
-  test("explains each one rather than listing what is in it", () => {
     renderHome();
 
-    // Each section describes the category and offers a way in; none of them
-    // renders the plans, mantras or groups themselves.
     expect(
-      screen.getByRole("link", { name: /See the plans/i }),
-    ).toHaveAttribute("href", "/plans");
-    expect(screen.getByRole("link", { name: /Find a group/i })).toHaveAttribute(
+      await screen.findByText(/Know all compounded phenomena/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Vajracchedikā")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Read now" })).toHaveAttribute(
       "href",
-      "/plans?view=groups",
+      "/verse-of-the-day",
     );
-    // The hero's second call to action, which used to be an in-page anchor to a
-    // section that has since moved to its own route.
+  });
+
+  test("lists the library's collections as links onto their shelves", async () => {
+    renderHome();
+
     expect(
-      screen.getByRole("link", { name: /Browse practices/i }),
-    ).toHaveAttribute("href", "/plans");
+      await screen.findByRole("link", { name: "Liturgy" }),
+    ).toHaveAttribute("href", "/works/c-1");
+    // A collection with sub-collections opens the library to browse them.
+    expect(screen.getByRole("link", { name: "Middle Way" })).toHaveAttribute(
+      "href",
+      "/collections",
+    );
+  });
+
+  test("shows what is live and leaves finished events out", async () => {
+    renderHome();
+
+    const card = await screen.findByRole("link", { name: /Tara Puja/ });
+    expect(card).toHaveAttribute("href", "/live/e-live");
+    expect(screen.queryByText("Old Retreat")).not.toBeInTheDocument();
+  });
+
+  test("leaves the live panel out when nothing is on or coming up", async () => {
+    fetchFeaturedEvents.mockResolvedValue([
+      event("e-past", "Old Retreat", -10 * HOUR),
+    ]);
+
+    renderHome();
+
+    await screen.findByRole("link", { name: "Liturgy" });
+    expect(
+      screen.queryByText("Practise together, as it happens"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("shows plan series with artwork, featured first, linking to the plan", async () => {
+    renderHome();
+
+    const plans = await screen.findAllByRole("link", {
+      name: /Bodhisattva Challenge|Daily Tipitaka/,
+    });
+    expect(plans.map((link) => link.getAttribute("href"))).toEqual([
+      "/plans?series=s-2&lang=en",
+      "/plans?series=s-1&lang=en",
+    ]);
+    expect(screen.getByText("358 days")).toBeInTheDocument();
+    expect(screen.queryByText("Bare")).not.toBeInTheDocument();
+  });
+
+  test("links each group tile to the group's own page", async () => {
+    renderHome();
+
+    expect(
+      await screen.findByRole("link", { name: /Sakya Centre/ }),
+    ).toHaveAttribute("href", "/spaces/@sakya");
+  });
+
+  test("strings one bead per preset mantra", async () => {
+    renderHome();
+
+    expect(await screen.findByAltText("Green Tara")).toBeInTheDocument();
+    expect(screen.getByAltText("Manjushri")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Get the app/i }),
     ).toBeInTheDocument();
   });
 
-  test("shows a single mala, not the list of them", async () => {
-    renderHome();
-
-    const shown = await screen.findAllByRole("button", {
-      name: /Download the app to practice/i,
-    });
-
-    // The web does not list the malas - one example stands for the rest.
-    expect(shown).toHaveLength(1);
-    expect(shown[0].textContent).toMatch(/Chenrezig|Tara|Guru Rinpoche/);
-  });
-
-  test("shows one plan's artwork, not the plan listing", async () => {
-    renderHome();
-
-    // One plan stands for the rest, so exactly one piece of artwork.
-    const artwork = await screen.findAllByTestId("plan-artwork");
-    expect(artwork).toHaveLength(1);
-    expect(artwork[0].getAttribute("src")).toMatch(/\/(a|b)\.jpg$/);
-  });
-
-  test("shows the groups as a wall of avatars with the total", async () => {
-    renderHome();
-
-    // Scale is the point of this panel - a crowd of groups, said in words
-    // rather than quoted as a figure.
-    expect(
-      await screen.findByText(/A lot of communities/i),
-    ).toBeInTheDocument();
-    expect(screen.getAllByTestId("group-avatar").length).toBeGreaterThan(8);
-    expect(screen.queryByText("128")).not.toBeInTheDocument();
-  });
-
-  test("falls back to the Buddha image when the day has no verse picture", async () => {
-    renderHome();
-
-    // The hero is full-bleed, so it cannot wait on the verse with nothing
-    // behind the headline.
-    expect(await screen.findByTestId("hero-backdrop")).toHaveAttribute(
-      "src",
-      "/img/buddha_hero.jpg",
-    );
-  });
-
-  test("uses the day's verse picture once it arrives", async () => {
+  test("uses the day's verse picture in the hero once it arrives", async () => {
     fetchVerseOfDayToday.mockResolvedValue({
       verse_of_day: { image_url: "https://img.test/verse.jpg" },
     });
@@ -186,7 +244,7 @@ describe("Home", () => {
     renderHome();
 
     await waitFor(() =>
-      expect(screen.getByTestId("hero-backdrop")).toHaveAttribute(
+      expect(screen.getByTestId("hero-image")).toHaveAttribute(
         "src",
         "https://img.test/verse.jpg",
       ),
@@ -200,13 +258,13 @@ describe("Home", () => {
 
     renderHome();
 
-    const backdrop = await screen.findByTestId("hero-backdrop");
+    const image = screen.getByTestId("hero-image");
     await waitFor(() =>
-      expect(backdrop).toHaveAttribute("src", "https://img.test/gone.jpg"),
+      expect(image).toHaveAttribute("src", "https://img.test/gone.jpg"),
     );
-    fireEvent.error(backdrop);
+    fireEvent.error(image);
 
-    expect(screen.getByTestId("hero-backdrop")).toHaveAttribute(
+    expect(screen.getByTestId("hero-image")).toHaveAttribute(
       "src",
       "/img/buddha_hero.jpg",
     );
@@ -222,6 +280,6 @@ describe("Home", () => {
     renderHome("/?lang=en");
 
     expect(screen.queryByText("plans page")).not.toBeInTheDocument();
-    expect(screen.getByText("A practice that")).toBeInTheDocument();
+    expect(screen.getByText("Read the texts")).toBeInTheDocument();
   });
 });

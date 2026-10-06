@@ -1,0 +1,246 @@
+{
+  "title": "Meet Our Team",
+  "description": "A collaborative community of practitioners, scholars, and technologists working together to bridge ancient wisdom with modern technology.",
+  "groups": [
+    {
+      "name": "Operation",
+      "members": [
+        {
+          "name": "Kalzang Furbu",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/operation/kalsang.jpg"
+        },
+        {
+          "name": "Yonten Wangchuk",
+          "role": "Education Specialist",
+          "image": "https://dharmaduta.in/team/operation/yonten.jpg"
+        },
+        {
+          "name": "Tenzin Noryang",
+          "role": "Executive Manager",
+          "image": "https://dharmaduta.in/team/operation/noryang.jpg"
+        },
+        {
+          "name": "Tenzin Palkyi",
+          "role": "Community Growth Engineer",
+          "image": "https://dharmaduta.in/team/operation/palkyi.jpg"
+        },
+        {
+          "name": "Norbu Tsering",
+          "role": "Social Media & Communication Officer",
+          "image": "https://dharmaduta.in/team/operation/nortse.jpg"
+        }
+      ]
+    },
+    {
+      "name": "WeBuddhist Team",
+      "members": [
+        {
+          "name": "Tenzin Kaldan",
+          "role": "Senior Software Developer II",
+          "image": "https://dharmaduta.in/team/webuddhist/kaldan.jpg"
+        },
+        {
+          "name": "Tenzin Tamdin",
+          "role": "Software Developer II",
+          "image": "https://dharmaduta.in/team/webuddhist/tamdin.jpg"
+        },
+        {
+          "name": "Tenzin Delek",
+          "role": "Software Developer II",
+          "image": "https://dharmaduta.in/team/webuddhist/delek.jpg"
+        },
+        {
+          "name": "Tenzin Youdon",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/webuddhist/youdon.jpg"
+        },
+        {
+          "name": "Tenzin Lungsang",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/webuddhist/lungsang.jpg"
+        },
+        {
+          "name": "Lobzang Sandup",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/webuddhist/sandup.jpg"
+        },
+        {
+          "name": "Gade",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/gade.jpg"
+        },
+        {
+          "name": "Tenzin Tsewang",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/tsewang.jpg"
+        },
+        {
+          "name": "Gyaltsen Dhargyal",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/dhagyal.jpg"
+        },
+        {
+          "name": "Choedup",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/choedup.jpg"
+        },
+        {
+          "name": "Pema Namgyal",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/namgyal.jpg"
+        },
+        {
+          "name": "Jampa Gonpo",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/gonpo.jpg"
+        },
+        {
+          "name": "Sangdu Kyi",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/kyi.jpg"
+        },
+        {
+          "name": "Jampa Thupten",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/thupten.jpg"
+        },
+        {
+          "name": "Gelek Gyatso (A)",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/gyatso.jpg"
+        },
+        {
+          "name": "Tsethar Dolma",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/dolma.jpg"
+        },
+        {
+          "name": "Tsering",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/webuddhist/tsering.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Sherab Team",
+      "members": [
+        {
+          "name": "Menla Tsomo",
+          "role": "Project Coordinator",
+          "image": "https://dharmaduta.in/team/sherab/menla.jpg"
+        },
+        {
+          "name": "Tenzin Kalden",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/sherab/tenkal.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Pecha AI Studio Team",
+      "members": [
+        {
+          "name": "Tenzin Kunsang",
+          "role": "Senior Software Developer I",
+          "image": "https://dharmaduta.in/team/pecha_studio/tenkus.jpg"
+        },
+        {
+          "name": "Ganga Gyatso",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/pecha_studio/ganga.jpg"
+        },
+        {
+          "name": "Karma Tsering",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/pecha_studio/kartse.jpg"
+        },
+        {
+          "name": "Passang Tsering",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_studio/passang.jpg"
+        },
+        {
+          "name": "Karma Tsepak",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_studio/tsepak.jpg"
+        },
+        {
+          "name": "Kunchok Gawa",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_studio/gawa.jpg"
+        },
+        {
+          "name": "Jampa Lobsang",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_studio/lobsang.jpg"
+        },
+        {
+          "name": "Kalsang Thardoe",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_studio/thardoe.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Pecha Data & API Team",
+      "members": [
+        {
+          "name": "Tashi Tsering",
+          "role": "Senior Software Developer II",
+          "image": "https://dharmaduta.in/team/pecha_server/tatse.jpg"
+        },
+        {
+          "name": "Tenzin Tsering",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/pecha_server/tentse.png"
+        },
+        {
+          "name": "Tenzin Dhakar",
+          "role": "Software Developer I",
+          "image": "https://dharmaduta.in/team/pecha_server/dhakar.jpg"
+        },
+        {
+          "name": "Tenpa Darchuk",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/darchuk.jpg"
+        },
+        {
+          "name": "Kunsang",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/kunsang.jpg"
+        },
+        {
+          "name": "Tenzin Rabten",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/rabten.jpg"
+        },
+        {
+          "name": "Sonam Gyal",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/sonam.jpg"
+        },
+        {
+          "name": "Sangyal Kher",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/kher.jpg"
+        },
+        {
+          "name": "Jangchup Dorjee",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/dorjee.jpg"
+        },
+        {
+          "name": "Lhujam Gyal",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/gyal.jpg"
+        },
+        {
+          "name": "Gelek Gyatso",
+          "role": "Buddhist Text Specialist",
+          "image": "https://dharmaduta.in/team/pecha_server/gyatso.jpg"
+        }
+      ]
+    }
+  ]
+}

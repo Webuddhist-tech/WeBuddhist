@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { EventDTO } from "../types.ts";
 import {
   eventDescriptionExcerpt,
+  eventImageUrl,
   eventPhase,
   eventTitle,
   formatEventWindow,
@@ -343,6 +344,59 @@ describe("formatEventWindow", () => {
     expect(
       formatEventWindow(event({ timezone: "Not/AZone" }), "en-GB"),
     ).not.toBe("");
+  });
+});
+
+describe("eventImageUrl", () => {
+  const S3 =
+    "https://app-webuddhist-prd.s3.amazonaws.com/images/plan_images/e1";
+  // What the API actually sends: a storage key, and the links under `image`.
+  const withArtwork = event({
+    image_url: "images/plan_images/e1/original/Tara Thangkha.webp",
+    image: {
+      thumbnail: `${S3}/thumbnail/a.webp?X-Amz-Signature=t`,
+      medium: `${S3}/medium/a.webp?X-Amz-Signature=m`,
+      original: `${S3}/original/a.webp?X-Amz-Signature=o`,
+    },
+  });
+
+  it("never hands the storage key to the browser as a link", () => {
+    expect(eventImageUrl(withArtwork)).not.toContain("Tara Thangkha");
+    expect(
+      eventImageUrl(
+        event({ image_url: "images/plan_images/e1/original/a.webp" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("takes the size asked for, medium by default", () => {
+    expect(eventImageUrl(withArtwork)).toBe(
+      `${S3}/medium/a.webp?X-Amz-Signature=m`,
+    );
+    expect(eventImageUrl(withArtwork, "original")).toBe(
+      `${S3}/original/a.webp?X-Amz-Signature=o`,
+    );
+  });
+
+  it("falls back to another size when the one asked for is missing", () => {
+    expect(
+      eventImageUrl(
+        event({ image: { thumbnail: `${S3}/thumbnail/a.webp` } }),
+        "original",
+      ),
+    ).toBe(`${S3}/thumbnail/a.webp`);
+  });
+
+  it("uses the series artwork when the event has none of its own", () => {
+    expect(
+      eventImageUrl(
+        event({ series: { id: "s1", image_url: `${S3}/series.webp` } }),
+      ),
+    ).toBe(`${S3}/series.webp`);
+  });
+
+  it("is null for an event without artwork", () => {
+    expect(eventImageUrl(event())).toBeNull();
   });
 });
 

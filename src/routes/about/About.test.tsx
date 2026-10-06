@@ -1,11 +1,17 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, test } from "vitest";
 import "../../test-utils/CommonMocks.ts";
 
 import About from "./About";
 
-const setup = () => render(<About />);
+const setup = () =>
+  render(
+    <MemoryRouter>
+      <About />
+    </MemoryRouter>,
+  );
 
 describe("About", () => {
   test("renders the page title and front-matter tagline", () => {
@@ -142,6 +148,73 @@ describe("About", () => {
     expect(
       screen.getByText(/Six teams carry on our mission/),
     ).toBeInTheDocument();
+  });
+
+  test("renders the platform sections from the products markdown", () => {
+    setup();
+
+    for (const name of [
+      "Our Platforms",
+      "WeBuddhist Practice Platform",
+      "WeBuddhist Academy",
+      "Buddhist Creators Platform",
+      "WeBuddhist Tech",
+      "Free Access and Long-Term Sustainability",
+    ]) {
+      expect(
+        screen.getByRole("heading", { level: 2, name }),
+      ).toBeInTheDocument();
+    }
+
+    expect(
+      screen.getByRole("heading", {
+        level: 3,
+        name: "Five sections in the app",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Specialist agent memory:")).toHaveClass(
+      "font-medium",
+    );
+  });
+
+  test("places the platforms between the What section and the team", () => {
+    setup();
+
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.textContent);
+    const whatIndex = headings.indexOf("What — Content and Technology");
+
+    expect(headings[whatIndex + 1]).toBe("Our Platforms");
+    expect(headings.indexOf("The Team")).toBeGreaterThan(
+      headings.indexOf("WeBuddhist Tech"),
+    );
+  });
+
+  test("renders an on-this-page nav linking to every section heading", () => {
+    setup();
+
+    const toc = screen.getByRole("navigation", { name: "On this page" });
+    const links = within(toc).getAllByRole("link");
+    const sectionHeadings = screen.getAllByRole("heading", { level: 2 });
+
+    expect(links.map((link) => link.textContent)).toEqual(
+      sectionHeadings.map((heading) => heading.textContent),
+    );
+    links.forEach((link, index) => {
+      expect(link).toHaveAttribute("href", `#${sectionHeadings[index].id}`);
+    });
+  });
+
+  test("links the team section to the team page", () => {
+    setup();
+
+    const teamSection = screen
+      .getByRole("heading", { name: "The Team" })
+      .closest("section") as HTMLElement;
+    expect(
+      within(teamSection).getByRole("link", { name: /Meet the team/ }),
+    ).toHaveAttribute("href", "/team");
   });
 
   test("renders the sponsors section with logos", () => {
