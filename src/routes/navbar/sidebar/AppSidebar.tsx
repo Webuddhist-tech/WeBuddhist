@@ -62,7 +62,7 @@ const AppSidebar = () => {
           >
             <Link to={item.to} onClick={closeOnMobile}>
               <item.icon />
-              <span>{item.label}</span>
+              <span className="leading-[2]">{item.label}</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

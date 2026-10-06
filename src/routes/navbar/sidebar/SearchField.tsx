@@ -84,7 +84,7 @@ const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
             aria-label={t("common.placeholder.search")}
             // The submit arrow and the ✕ replace the browser's clear button.
             className={cn(
-              "w-full min-w-0 border-none bg-transparent text-primary outline-none placeholder:text-faded-grey [&::-webkit-search-cancel-button]:appearance-none",
+              "h-full w-full min-w-0 border-none leading-[2] bg-transparent text-primary outline-none placeholder:text-faded-grey [&::-webkit-search-cancel-button]:appearance-none",
               large ? "text-base" : "text-sm",
             )}
           />
