@@ -75,7 +75,7 @@ const RecitationSettings = ({
         <div
           role="dialog"
           aria-label={t("live_events.recitation_settings")}
-          className="absolute left-full top-0 z-30 ml-2 w-60 rounded-2xl border border-[var(--rt-line)] bg-[var(--rt-panel)] p-3 text-[var(--rt-ink)] shadow-xl shadow-black/20"
+          className="absolute right-0 top-full z-30 mt-2 w-60 lg:left-full lg:right-auto lg:top-0 lg:ml-2 lg:mt-0 rounded-2xl border border-[var(--rt-line)] bg-[var(--rt-panel)] p-3 text-[var(--rt-ink)] shadow-xl shadow-black/20"
         >
           <p
             id="recitation-theme-label"

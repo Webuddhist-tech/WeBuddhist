@@ -460,9 +460,9 @@ const LiveRecitationView = ({
         progress={progress}
       >
         {liveMarker}
-        {/* A rail down the left edge, level with the middle of the text, so
-          the bar keeps only the live marker. */}
-        <div className="fixed left-2 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-2 lg:left-4">
+        {/* In the bar beside the live marker on a phone; on a wide screen, a
+          rail down the left edge, level with the middle of the text. */}
+        <div className="flex items-center gap-2 lg:fixed lg:left-4 lg:top-1/2 lg:z-30 lg:-translate-y-1/2 lg:flex-col">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -510,7 +510,7 @@ const LiveRecitationView = ({
           )}
           <div
             ref={scrollerRef}
-            className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain pl-14 pr-2 pt-6 outline-none [scrollbar-color:var(--rt-line)_transparent] sm:px-6 sm:pl-14 lg:px-6"
+            className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain px-2 pt-6 outline-none [scrollbar-color:var(--rt-line)_transparent] sm:px-6"
             onWheel={handleWheel}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
