@@ -17,7 +17,17 @@ export const ICON_BUTTON =
  * just the icon with its label beneath, lit when it is the one in use.
  */
 export const RAIL_BUTTON =
-  "lg:h-auto lg:w-14 lg:flex-col lg:gap-0.5 lg:rounded-lg lg:border-0 lg:py-1 lg:text-[var(--rt-soft)] lg:hover:bg-transparent lg:hover:text-[var(--rt-ink)]";
+  "lg:h-auto lg:w-14 lg:flex-col lg:gap-0.5 lg:rounded-lg lg:border-0 lg:py-1 lg:hover:bg-transparent";
+
+/**
+ * The rail button's colour, one or the other and never both: the red of the
+ * mark for the one in use, a quiet grey for the rest. Two colour classes on one
+ * element would be settled by stylesheet order, not by which was meant.
+ */
+export const railColor = (active: boolean): string =>
+  active
+    ? "lg:text-[var(--rt-accent)]"
+    : "lg:text-[var(--rt-soft)] lg:hover:text-[var(--rt-ink)]";
 
 /** The caption under a rail button's icon; the bar's buttons go without. */
 export const RAIL_LABEL =
@@ -77,7 +87,7 @@ const RecitationSettings = ({
         aria-haspopup="dialog"
         aria-label={t("live_events.recitation_settings")}
         title={t("live_events.recitation_settings")}
-        className={`${ICON_BUTTON} ${RAIL_BUTTON} ${open ? "lg:text-[var(--rt-accent)]" : ""}`}
+        className={`${ICON_BUTTON} ${RAIL_BUTTON} ${railColor(open)}`}
       >
         <span
           aria-hidden

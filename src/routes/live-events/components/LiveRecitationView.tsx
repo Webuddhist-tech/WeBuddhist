@@ -39,6 +39,7 @@ import type { RecitationSection } from "./RecitationMenu.tsx";
 import RecitationSettings, {
   ICON_BUTTON,
   RAIL_BUTTON,
+  railColor,
   RAIL_LABEL,
 } from "./RecitationSettings.tsx";
 import RecitationTopBar from "./RecitationTopBar.tsx";
@@ -528,9 +529,9 @@ const LiveRecitationView = ({
                 aria-pressed={view === mode}
                 aria-label={t(label)}
                 title={t(label)}
-                className={`${ICON_BUTTON} ${RAIL_BUTTON} ${
+                className={`${ICON_BUTTON} ${RAIL_BUTTON} ${railColor(view === mode)} ${
                   view === mode
-                    ? "border-[var(--rt-accent)] bg-[var(--rt-raised)] lg:bg-transparent lg:text-[var(--rt-accent)]"
+                    ? "border-[var(--rt-accent)] bg-[var(--rt-raised)] lg:bg-transparent"
                     : ""
                 }`}
               >
@@ -545,7 +546,7 @@ const LiveRecitationView = ({
               aria-expanded={menuOpen}
               aria-label={t("live_events.recitation_contents")}
               title={t("live_events.recitation_contents")}
-              className={`${ICON_BUTTON} ${RAIL_BUTTON} ${menuOpen ? "lg:text-[var(--rt-accent)]" : ""}`}
+              className={`${ICON_BUTTON} ${RAIL_BUTTON} ${railColor(menuOpen)}`}
             >
               <IoListOutline className="size-[18px] lg:size-4" aria-hidden />
               <span className={RAIL_LABEL}>
