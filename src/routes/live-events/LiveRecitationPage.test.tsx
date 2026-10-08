@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -27,14 +26,9 @@ vi.mock("./hooks/useLiveViewerCount.ts", () => ({
 // buttons and the stream it hands the view are drawn, so they can be used.
 const liveRecitationViewMock = vi.fn();
 vi.mock("./components/LiveRecitationView.tsx", () => ({
-  default: (props: { actions?: ReactNode; aside?: ReactNode }) => {
+  default: (props: object) => {
     liveRecitationViewMock(props);
-    return (
-      <div data-testid="live-recitation">
-        {props.actions}
-        {props.aside}
-      </div>
-    );
+    return <div data-testid="live-recitation" />;
   },
 }));
 
@@ -116,7 +110,7 @@ describe("LiveRecitationPage", () => {
     );
   });
 
-  it("keeps the stream hidden until asked for, then puts it away again", () => {
+  it("leaves the stream to the event's own page", () => {
     mockQuery({ data: event() });
 
     renderPage();
@@ -124,22 +118,8 @@ describe("LiveRecitationPage", () => {
     expect(
       screen.queryByTitle("live_events.watch_stream"),
     ).not.toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "live_events.show_stream" }),
-    );
-
-    expect(screen.getByTitle("live_events.watch_stream")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "live_events.hide_stream" }),
-    ).toHaveAttribute("aria-expanded", "true");
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "live_events.hide_stream" }),
-    );
-
-    expect(
-      screen.queryByTitle("live_events.watch_stream"),
+      screen.queryByRole("button", { name: /live_events.(show|hide)_stream/ }),
     ).not.toBeInTheDocument();
   });
 

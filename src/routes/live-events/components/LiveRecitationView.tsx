@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { useQuery } from "react-query";
 import { useTranslate } from "@tolgee/react";
 import { IoListOutline } from "react-icons/io5";
@@ -42,10 +41,6 @@ type LiveRecitationViewProps = {
   titleLanguage?: string;
   /** The event's own page, which the mark in the top bar leads back to. */
   backTo: string;
-  /** The page's own buttons for the top bar, ahead of the text's. */
-  actions?: ReactNode;
-  /** What the page sets beside the text - the stream - or above it on a phone. */
-  aside?: ReactNode;
 };
 
 /**
@@ -108,8 +103,6 @@ const LiveRecitationView = ({
   title,
   titleLanguage,
   backTo,
-  actions,
-  aside,
 }: LiveRecitationViewProps) => {
   const { t } = useTranslate();
   const { count, position, status, detail, sessionEnded } = live;
@@ -467,19 +460,22 @@ const LiveRecitationView = ({
         progress={progress}
       >
         {liveMarker}
-        {actions}
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          aria-haspopup="dialog"
-          aria-expanded={menuOpen}
-          aria-label={t("live_events.recitation_contents")}
-          title={t("live_events.recitation_contents")}
-          className={ICON_BUTTON}
-        >
-          <IoListOutline className="size-[18px]" aria-hidden />
-        </button>
-        <RecitationSettings theme={theme} onThemeChange={onThemeChange} />
+        {/* A rail down the left edge, level with the middle of the text, so
+          the bar keeps only the live marker. */}
+        <div className="fixed left-2 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-2 lg:left-4">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-label={t("live_events.recitation_contents")}
+            title={t("live_events.recitation_contents")}
+            className={ICON_BUTTON}
+          >
+            <IoListOutline className="size-[18px]" aria-hidden />
+          </button>
+          <RecitationSettings theme={theme} onThemeChange={onThemeChange} />
+        </div>
       </RecitationTopBar>
 
       {notice && (
@@ -500,7 +496,6 @@ const LiveRecitationView = ({
       )}
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        {aside}
         {/* The way back floats over the text rather than sitting in the header,
           so the text does not jump as it comes and goes. */}
         <div className="relative flex min-h-0 flex-1 flex-col">
@@ -515,7 +510,7 @@ const LiveRecitationView = ({
           )}
           <div
             ref={scrollerRef}
-            className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain px-2 pt-6 outline-none [scrollbar-color:var(--rt-line)_transparent] sm:px-6"
+            className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain pl-14 pr-2 pt-6 outline-none [scrollbar-color:var(--rt-line)_transparent] sm:px-6 sm:pl-14 lg:px-6"
             onWheel={handleWheel}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}

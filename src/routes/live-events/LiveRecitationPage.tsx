@@ -2,14 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "react-query";
 import { useTolgee, useTranslate } from "@tolgee/react";
-import { IoVideocamOffOutline, IoVideocamOutline } from "react-icons/io5";
 import Seo from "../commons/seo/Seo.tsx";
 import { LANGUAGE, siteName } from "../../utils/constants.ts";
 import { mapLanguageCode } from "../../utils/helperFunctions.tsx";
 import { fetchEventById } from "./api/eventsApi.ts";
-import EventVideo from "./components/EventVideo.tsx";
 import LiveRecitationView from "./components/LiveRecitationView.tsx";
-import { ICON_BUTTON } from "./components/RecitationSettings.tsx";
 import RecitationTopBar from "./components/RecitationTopBar.tsx";
 import { useLiveViewerCount } from "./hooks/useLiveViewerCount.ts";
 import {
@@ -17,7 +14,6 @@ import {
   eventTitle,
   eventTitleLanguage,
   formatEventWindow,
-  preferredVideo,
 } from "./utils/eventUtils.ts";
 import {
   loadRecitationTheme,
@@ -37,9 +33,8 @@ const STAGE =
  * The live recitation, given the whole screen: the text the room is chanting,
  * kept on the line the operator has it on, under one plain bar.
  *
- * Anyone can follow, signed in or not. The stream is a button in the bar, a
- * tap away on every screen: the page is for the text, and a stream that is
- * merely hidden would still play and spend the reader's data.
+ * Anyone can follow, signed in or not. The page is for the text alone: the
+ * stream is on the event's own page.
  *
  * The event detail page links here, in the same tab: this page holds its own
  * socket, and the detail page's closes as it unmounts, so the reader is never
@@ -84,9 +79,6 @@ const LiveRecitationPage = () => {
   const isLive = phase === "live";
   const live = useLiveViewerCount(event?.id, isLive);
 
-  // Shut until the reader asks for it.
-  const [videoOpen, setVideoOpen] = useState(false);
-
   const backTo = `/live/${eventId}`;
 
   const plainBar = (title: string, titleLanguage?: string) => (
@@ -125,7 +117,6 @@ const LiveRecitationPage = () => {
 
   const title = eventTitle(event, apiLanguage) || t("live_events.untitled");
   const titleLanguage = eventTitleLanguage(event, apiLanguage);
-  const hasVideo = preferredVideo(event, apiLanguage) !== null;
 
   const seo = (
     <Seo
@@ -166,34 +157,6 @@ const LiveRecitationPage = () => {
     );
   }
 
-  const streamLabel = videoOpen
-    ? t("live_events.hide_stream")
-    : t("live_events.show_stream");
-
-  const streamToggle = hasVideo ? (
-    <button
-      type="button"
-      onClick={() => setVideoOpen(!videoOpen)}
-      aria-expanded={videoOpen}
-      aria-label={streamLabel}
-      title={streamLabel}
-      className={ICON_BUTTON}
-    >
-      {videoOpen ? (
-        <IoVideocamOffOutline className="size-[18px]" aria-hidden />
-      ) : (
-        <IoVideocamOutline className="size-[18px]" aria-hidden />
-      )}
-    </button>
-  ) : null;
-
-  const stream =
-    hasVideo && videoOpen ? (
-      <aside className="shrink-0 border-b border-[var(--rt-line)] p-3 md:w-[22rem] md:overflow-y-auto md:border-b-0 md:border-r md:p-4 lg:w-[24rem] [&_figure]:rounded-xl [&_figure]:shadow-none [&_figure]:ring-1 [&_figure]:ring-[var(--rt-line)]">
-        <EventVideo event={event} language={apiLanguage} isLive />
-      </aside>
-    ) : null;
-
   return (
     <main style={themeStyle} className={STAGE}>
       {seo}
@@ -206,8 +169,6 @@ const LiveRecitationPage = () => {
         title={title}
         titleLanguage={titleLanguage}
         backTo={backTo}
-        actions={streamToggle}
-        aside={stream}
       />
     </main>
   );
