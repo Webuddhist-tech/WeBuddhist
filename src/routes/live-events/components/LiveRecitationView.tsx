@@ -8,6 +8,7 @@ import {
   IoListOutline,
   IoRadioOutline,
 } from "react-icons/io5";
+import { getLanguageClass } from "@/utils/helperFunctions.tsx";
 import { getTableOfContentsOutline } from "@/services/library/tableOfContents.ts";
 import { fetchEventLiturgies, fetchRecitationText } from "../api/eventsApi.ts";
 import type { LiveViewerCount } from "../hooks/useLiveViewerCount.ts";
@@ -22,6 +23,7 @@ import {
   verseChantedLength,
   verseLineTimings,
 } from "../utils/recitationPace.ts";
+import { imageForLine } from "../utils/recitationImages.ts";
 import { recitationLines } from "../utils/recitationText.ts";
 import type {
   RecitationTheme,
@@ -186,6 +188,8 @@ const LiveRecitationView = ({
   }, [text, matched]);
 
   const currentLine = current && current.text === text ? current.line : null;
+  const verseImage =
+    currentLine !== null ? imageForLine(lines[currentLine]) : undefined;
 
   // The room's pace, learned from how long it took over each line it has
   // finished, against how much of the line is chanted. Each move is timed
@@ -598,15 +602,40 @@ const LiveRecitationView = ({
                   {body ?? t("live_events.recitation_waiting")}
                 </p>
               ) : (
-                <div className="w-full max-w-3xl rounded-3xl border border-[var(--rt-line)] bg-[var(--rt-panel)] px-6 py-8 text-center sm:px-10 sm:py-10">
-                  <RecitationVerse
-                    line={lines[currentLine]}
-                    recitedLanguage={text?.language ?? language}
-                    readerLanguage={language}
-                    isCurrent
-                    paceTimings={paceTimings}
-                    paceKey={moves}
-                  />
+                <div
+                  className={`flex w-full flex-col items-center gap-6 md:flex-row ${
+                    verseImage ? "max-w-6xl" : "max-w-3xl"
+                  }`}
+                >
+                  <div className="flex min-w-0 w-full flex-1 flex-col">
+                    {verseImage && (
+                      <div className="mb-2 flex flex-col items-end text-right text-[var(--rt-soft)]">
+                        <span className="text-xs font-semibold uppercase tracking-wide">
+                          {verseImage.label.en}
+                        </span>
+                        <span className={`text-lg ${getLanguageClass("bo")}`}>
+                          {verseImage.label.bo}
+                        </span>
+                      </div>
+                    )}
+                    <div className="w-full rounded-3xl border border-[var(--rt-line)] bg-[var(--rt-panel)] px-6 py-8 text-center sm:px-10 sm:py-10">
+                      <RecitationVerse
+                        line={lines[currentLine]}
+                        recitedLanguage={text?.language ?? language}
+                        readerLanguage={language}
+                        isCurrent
+                        paceTimings={paceTimings}
+                        paceKey={moves}
+                      />
+                    </div>
+                  </div>
+                  {verseImage && (
+                    <img
+                      src={verseImage.src}
+                      alt={verseImage.alt}
+                      className="max-h-[70dvh] w-auto max-w-full rounded-2xl border border-[var(--rt-line)] object-contain md:w-[min(34vw,26rem)]"
+                    />
+                  )}
                 </div>
               )}
             </div>
