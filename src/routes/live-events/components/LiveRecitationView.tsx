@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "react-query";
 import { useTranslate } from "@tolgee/react";
 import {
+  IoChevronBackOutline,
+  IoChevronForwardOutline,
   IoDocumentTextOutline,
   IoListOutline,
   IoRadioOutline,
@@ -34,7 +36,11 @@ import { shortTitle } from "../utils/shortTitle.ts";
 import { smoothScrollTo } from "../utils/smoothScroll.ts";
 import RecitationMenu from "./RecitationMenu.tsx";
 import type { RecitationSection } from "./RecitationMenu.tsx";
-import RecitationSettings, { ICON_BUTTON } from "./RecitationSettings.tsx";
+import RecitationSettings, {
+  ICON_BUTTON,
+  RAIL_BUTTON,
+  RAIL_LABEL,
+} from "./RecitationSettings.tsx";
 import RecitationTopBar from "./RecitationTopBar.tsx";
 import RecitationVerse from "./RecitationVerse.tsx";
 
@@ -231,6 +237,12 @@ const LiveRecitationView = ({
     saveRecitationView(next);
     setFollowing(true);
   };
+
+  // The rail's buttons can be put away, for a reader who wants the page bare.
+  const [railHidden, setRailHidden] = useState(false);
+  const railLabel = railHidden
+    ? t("live_events.recitation_show_buttons")
+    : t("live_events.recitation_hide_buttons");
 
   const [following, setFollowing] = useState(true);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -482,47 +494,69 @@ const LiveRecitationView = ({
         {/* In the bar beside the live marker on a phone; on a wide screen, a
           rail down the left edge, level with the middle of the text. */}
         <div className="flex items-center gap-2 lg:fixed lg:left-4 lg:top-1/2 lg:z-30 lg:-translate-y-1/2 lg:flex-col">
-          {(
-            [
-              ["live", "live_events.recitation_view_live", IoRadioOutline],
-              [
-                "full",
-                "live_events.recitation_view_full",
-                IoDocumentTextOutline,
-              ],
-            ] as const
-          ).map(([mode, label, Icon]) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => changeView(mode)}
-              aria-pressed={view === mode}
-              aria-label={t(label)}
-              title={t(label)}
-              className={`${ICON_BUTTON} lg:size-14 lg:flex-col lg:gap-0.5 lg:rounded-2xl ${
-                view === mode
-                  ? "border-[var(--rt-accent)] bg-[var(--rt-raised)]"
-                  : ""
-              }`}
-            >
-              <Icon className="size-[18px]" aria-hidden />
-              <span className="hidden text-[10px] font-medium leading-none text-[var(--rt-soft)] lg:block">
-                {t(label)}
-              </span>
-            </button>
-          ))}
           <button
             type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={menuOpen}
-            aria-label={t("live_events.recitation_contents")}
-            title={t("live_events.recitation_contents")}
-            className={ICON_BUTTON}
+            onClick={() => setRailHidden(!railHidden)}
+            aria-expanded={!railHidden}
+            aria-label={railLabel}
+            title={railLabel}
+            className="hidden size-8 items-center justify-center rounded-full text-[var(--rt-soft)] transition hover:text-[var(--rt-ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-accent)] lg:flex"
           >
-            <IoListOutline className="size-[18px]" aria-hidden />
+            {railHidden ? (
+              <IoChevronForwardOutline className="size-5" aria-hidden />
+            ) : (
+              <IoChevronBackOutline className="size-5" aria-hidden />
+            )}
           </button>
-          <RecitationSettings theme={theme} onThemeChange={onThemeChange} />
+          <div
+            className={`flex items-center gap-2 lg:flex-col ${railHidden ? "lg:hidden" : ""}`}
+          >
+            {(
+              [
+                ["live", "live_events.recitation_view_live", IoRadioOutline],
+                [
+                  "full",
+                  "live_events.recitation_view_full",
+                  IoDocumentTextOutline,
+                ],
+              ] as const
+            ).map(([mode, label, Icon]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => changeView(mode)}
+                aria-pressed={view === mode}
+                aria-label={t(label)}
+                title={t(label)}
+                className={`${ICON_BUTTON} ${RAIL_BUTTON} ${
+                  view === mode
+                    ? "border-[var(--rt-accent)] bg-[var(--rt-raised)] lg:bg-transparent lg:text-[var(--rt-accent)]"
+                    : ""
+                }`}
+              >
+                <Icon className="size-[18px] lg:size-[22px]" aria-hidden />
+                <span className={RAIL_LABEL}>{t(label)}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              aria-label={t("live_events.recitation_contents")}
+              title={t("live_events.recitation_contents")}
+              className={`${ICON_BUTTON} ${RAIL_BUTTON}`}
+            >
+              <IoListOutline
+                className="size-[18px] lg:size-[22px]"
+                aria-hidden
+              />
+              <span className={RAIL_LABEL}>
+                {t("live_events.recitation_contents")}
+              </span>
+            </button>
+            <RecitationSettings theme={theme} onThemeChange={onThemeChange} />
+          </div>
         </div>
       </RecitationTopBar>
 

@@ -922,6 +922,8 @@
   "live_events.recitation_sections": "Sections",
   "live_events.recitation_no_contents": "This text has no sections listed yet.",
   "live_events.recitation_settings": "Settings",
+  "live_events.recitation_hide_buttons": "Hide buttons",
+  "live_events.recitation_show_buttons": "Show buttons",
   "live_events.recitation_view_live": "Live",
   "live_events.recitation_view_full": "Full text",
   "live_events.recitation_theme": "Theme",

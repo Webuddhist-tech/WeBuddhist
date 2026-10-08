@@ -12,6 +12,17 @@ type RecitationSettingsProps = {
 export const ICON_BUTTON =
   "flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--rt-line)] text-[var(--rt-ink)] transition hover:bg-[var(--rt-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-accent)] max-[380px]:size-9";
 
+/**
+ * On a wide screen the buttons stand in a rail down the page's edge: no box,
+ * just the icon with its label beneath, lit when it is the one in use.
+ */
+export const RAIL_BUTTON =
+  "lg:h-auto lg:w-16 lg:flex-col lg:gap-1 lg:rounded-lg lg:border-0 lg:py-1 lg:text-[var(--rt-soft)] lg:hover:bg-transparent lg:hover:text-[var(--rt-ink)]";
+
+/** The caption under a rail button's icon; the bar's buttons go without. */
+export const RAIL_LABEL =
+  "hidden font-sans text-[11px] font-semibold leading-none lg:block";
+
 const OPTIONS: {
   theme: RecitationTheme;
   label: string;
@@ -66,9 +77,17 @@ const RecitationSettings = ({
         aria-haspopup="dialog"
         aria-label={t("live_events.recitation_settings")}
         title={t("live_events.recitation_settings")}
-        className={`${ICON_BUTTON} font-serif text-[15px] font-semibold`}
+        className={`${ICON_BUTTON} ${RAIL_BUTTON} ${open ? "lg:text-[var(--rt-accent)]" : ""}`}
       >
-        <span aria-hidden>Aa</span>
+        <span
+          aria-hidden
+          className="font-serif text-[15px] font-semibold lg:text-[18px] lg:leading-[18px]"
+        >
+          Aa
+        </span>
+        <span className={RAIL_LABEL}>
+          {t("live_events.recitation_settings")}
+        </span>
       </button>
 
       {open && (
