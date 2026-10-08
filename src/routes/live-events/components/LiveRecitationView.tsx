@@ -498,7 +498,7 @@ const LiveRecitationView = ({
         {liveMarker}
         {/* In the bar beside the live marker on a phone; on a wide screen, a
           rail down the left edge, level with the middle of the text. */}
-        <div className="flex items-center gap-2 lg:fixed lg:left-4 lg:top-1/2 lg:z-30 lg:-translate-y-1/2 lg:flex-col">
+        <div className="flex items-center gap-2 lg:gap-4 lg:fixed lg:left-4 lg:top-1/2 lg:z-30 lg:-translate-y-1/2 lg:flex-col">
           <button
             type="button"
             onClick={() => setRailHidden(!railHidden)}
@@ -514,7 +514,7 @@ const LiveRecitationView = ({
             )}
           </button>
           <div
-            className={`flex items-center gap-2 lg:flex-col ${railHidden ? "lg:hidden" : ""}`}
+            className={`flex items-center gap-2 lg:flex-col lg:gap-5 ${railHidden ? "lg:hidden" : ""}`}
           >
             {(
               [
