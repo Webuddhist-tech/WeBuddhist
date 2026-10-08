@@ -70,3 +70,25 @@ export const saveRecitationTheme = (theme: RecitationTheme): void => {
     // A private window or blocked storage: the choice lasts for this visit.
   }
 };
+
+/** The whole text, scrolling with the room, or only the line it is on. */
+export type RecitationView = "live" | "full";
+
+const VIEW_STORAGE_KEY = "webuddhist.liveRecitation.view";
+
+/** The reader's last choice on this device; the live line until they make one. */
+export const loadRecitationView = (): RecitationView => {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === "full" ? "full" : "live";
+  } catch {
+    return "live";
+  }
+};
+
+export const saveRecitationView = (view: RecitationView): void => {
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    // A private window or blocked storage: the choice lasts for this visit.
+  }
+};

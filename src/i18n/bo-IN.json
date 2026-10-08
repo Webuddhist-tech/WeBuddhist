@@ -869,6 +869,8 @@
   "live_events.recitation_sections": "ས་བཅད།",
   "live_events.recitation_no_contents": "གཞུང་འདིར་ད་དུང་ས་བཅད་མེད།",
   "live_events.recitation_settings": "སྒྲིག་འགོད།",
+  "live_events.recitation_view_live": "ད་ལྟ།",
+  "live_events.recitation_view_full": "གཞུང་ཆ་ཚང་།",
   "live_events.recitation_theme": "བརྗོད་གཞི།",
   "live_events.recitation_theme_dark": "ནག་པོ།",
   "live_events.recitation_theme_light": "དཀར་པོ།",

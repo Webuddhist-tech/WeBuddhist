@@ -124,6 +124,7 @@ const scrollTo = (top: number) =>
 describe("LiveRecitationView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.setItem("webuddhist.liveRecitation.view", "full");
     smoothScrollMock.mockReturnValue(() => {});
     outlineMock.mockResolvedValue([]);
     fetchEventLiturgiesMock.mockResolvedValue([]);
@@ -152,6 +153,34 @@ describe("LiveRecitationView", () => {
     // The scroll follows the live line in an effect of its own, a beat after
     // the line is marked.
     await waitFor(() => expect(smoothScrollMock).toHaveBeenCalled());
+  });
+
+  it("opens on the live line alone, and remembers the reader's choice", async () => {
+    localStorage.removeItem("webuddhist.liveRecitation.view");
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["one", "two", "three"]),
+    );
+
+    const first = renderView(live({ position: at("tara", "tara-bo-1") }));
+
+    expect(await screen.findByText("two")).toBeInTheDocument();
+    expect(screen.queryByText("one")).not.toBeInTheDocument();
+    expect(screen.queryByText("three")).not.toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_view_full" }),
+    );
+    expect(await screen.findByText("one")).toBeInTheDocument();
+    expect(screen.getByText("three")).toBeInTheDocument();
+    expect(currentLine()).toContain("two");
+    first.unmount();
+
+    renderView(live({ position: at("tara", "tara-bo-1") }));
+    expect(await screen.findByText("three")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "live_events.recitation_view_full" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("lays a verse out by the library's lines, with its yigchung set small", async () => {

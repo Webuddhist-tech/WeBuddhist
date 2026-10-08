@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "react-query";
 import { useTranslate } from "@tolgee/react";
-import { IoListOutline } from "react-icons/io5";
+import {
+  IoDocumentTextOutline,
+  IoListOutline,
+  IoRadioOutline,
+} from "react-icons/io5";
 import { getTableOfContentsOutline } from "@/services/library/tableOfContents.ts";
 import { fetchEventLiturgies, fetchRecitationText } from "../api/eventsApi.ts";
 import type { LiveViewerCount } from "../hooks/useLiveViewerCount.ts";
@@ -17,8 +21,15 @@ import {
   verseLineTimings,
 } from "../utils/recitationPace.ts";
 import { recitationLines } from "../utils/recitationText.ts";
-import type { RecitationTheme } from "../utils/recitationTheme.ts";
-import { recitationThemeStyle } from "../utils/recitationTheme.ts";
+import type {
+  RecitationTheme,
+  RecitationView,
+} from "../utils/recitationTheme.ts";
+import {
+  loadRecitationView,
+  recitationThemeStyle,
+  saveRecitationView,
+} from "../utils/recitationTheme.ts";
 import { shortTitle } from "../utils/shortTitle.ts";
 import { smoothScrollTo } from "../utils/smoothScroll.ts";
 import RecitationMenu from "./RecitationMenu.tsx";
@@ -213,6 +224,14 @@ const LiveRecitationView = ({
     [msPerCharacter, currentLine, lines],
   );
 
+  // Live: only the line the room is on. Full: the whole text, scrolling with it.
+  const [view, setView] = useState<RecitationView>(loadRecitationView);
+  const changeView = (next: RecitationView) => {
+    setView(next);
+    saveRecitationView(next);
+    setFollowing(true);
+  };
+
   const [following, setFollowing] = useState(true);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const cancelGlide = useRef<() => void>(() => {});
@@ -239,8 +258,8 @@ const LiveRecitationView = ({
   // `position` is a dependency even though the line may not change: the
   // operator returning to the same line is still a move worth landing on.
   useEffect(() => {
-    if (following) scrollToLine(currentLine);
-  }, [currentLine, following, position, scrollToLine]);
+    if (following && view === "full") scrollToLine(currentLine);
+  }, [currentLine, following, position, scrollToLine, view]);
 
   // Following stops only once the reader actually moves the text. A push
   // against either end of it moves nothing, and leaves the live line in charge.
@@ -463,6 +482,35 @@ const LiveRecitationView = ({
         {/* In the bar beside the live marker on a phone; on a wide screen, a
           rail down the left edge, level with the middle of the text. */}
         <div className="flex items-center gap-2 lg:fixed lg:left-4 lg:top-1/2 lg:z-30 lg:-translate-y-1/2 lg:flex-col">
+          {(
+            [
+              ["live", "live_events.recitation_view_live", IoRadioOutline],
+              [
+                "full",
+                "live_events.recitation_view_full",
+                IoDocumentTextOutline,
+              ],
+            ] as const
+          ).map(([mode, label, Icon]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => changeView(mode)}
+              aria-pressed={view === mode}
+              aria-label={t(label)}
+              title={t(label)}
+              className={`${ICON_BUTTON} lg:size-14 lg:flex-col lg:gap-0.5 lg:rounded-2xl ${
+                view === mode
+                  ? "border-[var(--rt-accent)] bg-[var(--rt-raised)]"
+                  : ""
+              }`}
+            >
+              <Icon className="size-[18px]" aria-hidden />
+              <span className="hidden text-[10px] font-medium leading-none text-[var(--rt-soft)] lg:block">
+                {t(label)}
+              </span>
+            </button>
+          ))}
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -499,7 +547,7 @@ const LiveRecitationView = ({
         {/* The way back floats over the text rather than sitting in the header,
           so the text does not jump as it comes and goes. */}
         <div className="relative flex min-h-0 flex-1 flex-col">
-          {currentLine !== null && !following && (
+          {view === "full" && currentLine !== null && !following && (
             <button
               type="button"
               onClick={handleResync}
@@ -508,73 +556,97 @@ const LiveRecitationView = ({
               {t("live_events.recitation_resync")}
             </button>
           )}
-          <div
-            ref={scrollerRef}
-            className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain px-2 pt-6 outline-none [scrollbar-color:var(--rt-line)_transparent] sm:px-6"
-            onWheel={handleWheel}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onKeyDown={handleKeyDown}
-            tabIndex={0}
-            aria-label={t("live_events.recitation_heading")}
-          >
-            {body ? (
-              <p className="px-4 py-16 text-center text-sm text-[var(--rt-soft)]">
-                {body}
-              </p>
-            ) : (
-              // The room below the last verse lets it, too, scroll up to where
-              // the live line is held.
-              <ol className="mx-auto max-w-3xl space-y-2 pb-[45vh]">
-                {lines.map((line, index) => {
-                  const isCurrent = index === currentLine;
-                  return (
-                    <li
-                      // Lines have no id of their own that survives a reload, and
-                      // the list is replaced whole, never reordered.
-                      key={index}
-                      data-line={index}
-                      aria-current={isCurrent ? "true" : undefined}
-                      className={`relative rounded-xl px-3 py-3 transition-colors duration-1000 ease-in-out sm:px-4 ${
-                        isCurrent ? "bg-[var(--rt-live)]" : "bg-transparent"
-                      }`}
-                    >
-                      {/* The live line's edge, fading in and out with it. */}
-                      <span
-                        aria-hidden
-                        className={`pointer-events-none absolute bottom-3.5 left-0 top-3.5 w-[3px] rounded-full bg-gradient-to-b from-[var(--rt-accent)] to-[var(--rt-accent)]/20 transition-opacity duration-500 ${
-                          isCurrent ? "opacity-100" : "opacity-0"
+          {view === "live" ? (
+            <div
+              aria-label={t("live_events.recitation_heading")}
+              className="flex min-h-[16rem] flex-1 items-center justify-center overflow-y-auto px-4 py-6 sm:px-6"
+            >
+              {body || currentLine === null ? (
+                <p className="px-4 py-16 text-center text-sm text-[var(--rt-soft)]">
+                  {body ?? t("live_events.recitation_waiting")}
+                </p>
+              ) : (
+                <div className="w-full max-w-3xl rounded-3xl border border-[var(--rt-line)] bg-[var(--rt-panel)] px-6 py-8 text-center sm:px-10 sm:py-10">
+                  <RecitationVerse
+                    line={lines[currentLine]}
+                    recitedLanguage={text?.language ?? language}
+                    readerLanguage={language}
+                    isCurrent
+                    paceTimings={paceTimings}
+                    paceKey={moves}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              ref={scrollerRef}
+              className="relative min-h-[16rem] flex-1 overflow-y-auto overscroll-contain px-2 pt-6 outline-none [scrollbar-color:var(--rt-line)_transparent] sm:px-6"
+              onWheel={handleWheel}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onKeyDown={handleKeyDown}
+              tabIndex={0}
+              aria-label={t("live_events.recitation_heading")}
+            >
+              {body ? (
+                <p className="px-4 py-16 text-center text-sm text-[var(--rt-soft)]">
+                  {body}
+                </p>
+              ) : (
+                // The room below the last verse lets it, too, scroll up to where
+                // the live line is held.
+                <ol className="mx-auto max-w-3xl space-y-2 pb-[45vh]">
+                  {lines.map((line, index) => {
+                    const isCurrent = index === currentLine;
+                    return (
+                      <li
+                        // Lines have no id of their own that survives a reload, and
+                        // the list is replaced whole, never reordered.
+                        key={index}
+                        data-line={index}
+                        aria-current={isCurrent ? "true" : undefined}
+                        className={`relative rounded-xl px-3 py-3 transition-colors duration-1000 ease-in-out sm:px-4 ${
+                          isCurrent ? "bg-[var(--rt-live)]" : "bg-transparent"
                         }`}
-                      />
-                      {/* Remade on every move, so the ring lights up on each. */}
-                      {isCurrent && (
+                      >
+                        {/* The live line's edge, fading in and out with it. */}
                         <span
-                          key={moves}
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 rounded-xl animate-[recitation-arrive_1.6s_ease-out]"
+                          className={`pointer-events-none absolute bottom-3.5 left-0 top-3.5 w-[3px] rounded-full bg-gradient-to-b from-[var(--rt-accent)] to-[var(--rt-accent)]/20 transition-opacity duration-500 ${
+                            isCurrent ? "opacity-100" : "opacity-0"
+                          }`}
                         />
-                      )}
-                      {isCurrent && position?.round_number != null && (
-                        <span className="absolute -top-2.5 right-3.5 rounded-full bg-[var(--rt-accent)] px-2.5 py-0.5 text-[11.5px] font-bold tracking-[0.06em] text-white">
-                          {t("live_events.recitation_round", {
-                            round: position.round_number,
-                          })}
-                        </span>
-                      )}
-                      <RecitationVerse
-                        line={line}
-                        recitedLanguage={text?.language ?? language}
-                        readerLanguage={language}
-                        isCurrent={isCurrent}
-                        paceTimings={isCurrent ? paceTimings : null}
-                        paceKey={moves}
-                      />
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </div>
+                        {/* Remade on every move, so the ring lights up on each. */}
+                        {isCurrent && (
+                          <span
+                            key={moves}
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 rounded-xl animate-[recitation-arrive_1.6s_ease-out]"
+                          />
+                        )}
+                        {isCurrent && position?.round_number != null && (
+                          <span className="absolute -top-2.5 right-3.5 rounded-full bg-[var(--rt-accent)] px-2.5 py-0.5 text-[11.5px] font-bold tracking-[0.06em] text-white">
+                            {t("live_events.recitation_round", {
+                              round: position.round_number,
+                            })}
+                          </span>
+                        )}
+                        <RecitationVerse
+                          line={line}
+                          recitedLanguage={text?.language ?? language}
+                          readerLanguage={language}
+                          isCurrent={isCurrent}
+                          paceTimings={isCurrent ? paceTimings : null}
+                          paceKey={moves}
+                        />
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
