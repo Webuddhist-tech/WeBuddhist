@@ -23,11 +23,6 @@ vi.mock("./hooks/useLiveViewerCount.ts", () => ({
     useLiveViewerCountMock(eventId, enabled),
 }));
 
-const isMobileMock = vi.fn(() => false);
-vi.mock("@/hooks/use-mobile.ts", () => ({
-  useIsMobile: () => isMobileMock(),
-}));
-
 // The recitation view loads its own text; it has tests of its own. The page's
 // buttons and the stream it hands the view are drawn, so they can be used.
 const liveRecitationViewMock = vi.fn();
@@ -97,7 +92,6 @@ const connected = {
 describe("LiveRecitationPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isMobileMock.mockReturnValue(false);
     useLiveViewerCountMock.mockReturnValue(connected);
     vi.setSystemTime(new Date("2026-03-10T11:00:00Z"));
   });
@@ -122,24 +116,7 @@ describe("LiveRecitationPage", () => {
     );
   });
 
-  it("shows the stream beside the text on a wide screen, until put away", () => {
-    mockQuery({ data: event() });
-
-    renderPage();
-
-    expect(screen.getByTitle("live_events.watch_stream")).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "live_events.hide_stream" }),
-    );
-
-    expect(
-      screen.queryByTitle("live_events.watch_stream"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("keeps the stream a tap away on a phone", () => {
-    isMobileMock.mockReturnValue(true);
+  it("keeps the stream hidden until asked for, then puts it away again", () => {
     mockQuery({ data: event() });
 
     renderPage();
@@ -156,6 +133,14 @@ describe("LiveRecitationPage", () => {
     expect(
       screen.getByRole("button", { name: "live_events.hide_stream" }),
     ).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.hide_stream" }),
+    );
+
+    expect(
+      screen.queryByTitle("live_events.watch_stream"),
+    ).not.toBeInTheDocument();
   });
 
   it("stays off the socket until the event begins", () => {

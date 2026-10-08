@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "react-query";
 import { useTolgee, useTranslate } from "@tolgee/react";
 import { IoVideocamOffOutline, IoVideocamOutline } from "react-icons/io5";
-import { useIsMobile } from "@/hooks/use-mobile.ts";
 import Seo from "../commons/seo/Seo.tsx";
 import { LANGUAGE, siteName } from "../../utils/constants.ts";
 import { mapLanguageCode } from "../../utils/helperFunctions.tsx";
@@ -38,9 +37,9 @@ const STAGE =
  * The live recitation, given the whole screen: the text the room is chanting,
  * kept on the line the operator has it on, under one plain bar.
  *
- * Anyone can follow, signed in or not. The stream is a button in the bar: open
- * beside the text on a wide screen, and a tap away on a phone, where a stream
- * that is merely hidden would still play and spend the reader's data.
+ * Anyone can follow, signed in or not. The stream is a button in the bar, a
+ * tap away on every screen: the page is for the text, and a stream that is
+ * merely hidden would still play and spend the reader's data.
  *
  * The event detail page links here, in the same tab: this page holds its own
  * socket, and the detail page's closes as it unmounts, so the reader is never
@@ -53,7 +52,6 @@ const LiveRecitationPage = () => {
   const storedLanguage =
     tolgee.getLanguage() || localStorage.getItem(LANGUAGE) || "en";
   const apiLanguage = mapLanguageCode(storedLanguage);
-  const isMobile = useIsMobile();
 
   // Dark stage or paper, as this reader last chose on this device.
   const [theme, setTheme] = useState<RecitationTheme>(loadRecitationTheme);
@@ -86,9 +84,8 @@ const LiveRecitationPage = () => {
   const isLive = phase === "live";
   const live = useLiveViewerCount(event?.id, isLive);
 
-  // Null until the reader chooses: open on a wide screen, shut on a phone.
-  const [videoChoice, setVideoChoice] = useState<boolean | null>(null);
-  const videoOpen = videoChoice ?? !isMobile;
+  // Shut until the reader asks for it.
+  const [videoOpen, setVideoOpen] = useState(false);
 
   const backTo = `/live/${eventId}`;
 
@@ -176,7 +173,7 @@ const LiveRecitationPage = () => {
   const streamToggle = hasVideo ? (
     <button
       type="button"
-      onClick={() => setVideoChoice(!videoOpen)}
+      onClick={() => setVideoOpen(!videoOpen)}
       aria-expanded={videoOpen}
       aria-label={streamLabel}
       title={streamLabel}
