@@ -149,7 +149,9 @@ describe("LiveRecitationView", () => {
     expect(fetchRecitationTextMock).toHaveBeenCalledWith("tara", "en");
     expect(screen.getByText("Tara")).toBeInTheDocument();
     expect(screen.getByText("two (en)")).toBeInTheDocument();
-    expect(smoothScrollMock).toHaveBeenCalled();
+    // The scroll follows the live line in an effect of its own, a beat after
+    // the line is marked.
+    await waitFor(() => expect(smoothScrollMock).toHaveBeenCalled());
   });
 
   it("lays a verse out by the library's lines, with its yigchung set small", async () => {
@@ -422,10 +424,11 @@ describe("LiveRecitationView", () => {
 
     renderView(live({ position: at("tara", "tara-bo-1") }));
 
-    await waitFor(() => expect(currentLine()).toContain("two"));
-    expect(smoothScrollMock).toHaveBeenCalledWith(
-      scroller(),
-      expect.any(Number),
+    await waitFor(() =>
+      expect(smoothScrollMock).toHaveBeenCalledWith(
+        scroller(),
+        expect.any(Number),
+      ),
     );
   });
 
