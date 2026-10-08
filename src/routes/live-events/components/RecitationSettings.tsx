@@ -17,11 +17,11 @@ export const ICON_BUTTON =
  * just the icon with its label beneath, lit when it is the one in use.
  */
 export const RAIL_BUTTON =
-  "lg:h-auto lg:w-16 lg:flex-col lg:gap-1 lg:rounded-lg lg:border-0 lg:py-1 lg:text-[var(--rt-soft)] lg:hover:bg-transparent lg:hover:text-[var(--rt-ink)]";
+  "lg:h-auto lg:w-14 lg:flex-col lg:gap-0.5 lg:rounded-lg lg:border-0 lg:py-1 lg:text-[var(--rt-soft)] lg:hover:bg-transparent lg:hover:text-[var(--rt-ink)]";
 
 /** The caption under a rail button's icon; the bar's buttons go without. */
 export const RAIL_LABEL =
-  "hidden font-sans text-[11px] font-semibold leading-none lg:block";
+  "hidden font-sans text-[10px] font-semibold leading-none lg:block";
 
 const OPTIONS: {
   theme: RecitationTheme;
@@ -81,7 +81,7 @@ const RecitationSettings = ({
       >
         <span
           aria-hidden
-          className="font-serif text-[15px] font-semibold lg:text-[18px] lg:leading-[18px]"
+          className="font-serif text-[15px] font-semibold lg:text-[16px] lg:leading-4"
         >
           Aa
         </span>

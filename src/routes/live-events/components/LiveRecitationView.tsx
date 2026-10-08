@@ -534,7 +534,7 @@ const LiveRecitationView = ({
                     : ""
                 }`}
               >
-                <Icon className="size-[18px] lg:size-[22px]" aria-hidden />
+                <Icon className="size-[18px] lg:size-4" aria-hidden />
                 <span className={RAIL_LABEL}>{t(label)}</span>
               </button>
             ))}
@@ -545,12 +545,9 @@ const LiveRecitationView = ({
               aria-expanded={menuOpen}
               aria-label={t("live_events.recitation_contents")}
               title={t("live_events.recitation_contents")}
-              className={`${ICON_BUTTON} ${RAIL_BUTTON}`}
+              className={`${ICON_BUTTON} ${RAIL_BUTTON} ${menuOpen ? "lg:text-[var(--rt-accent)]" : ""}`}
             >
-              <IoListOutline
-                className="size-[18px] lg:size-[22px]"
-                aria-hidden
-              />
+              <IoListOutline className="size-[18px] lg:size-4" aria-hidden />
               <span className={RAIL_LABEL}>
                 {t("live_events.recitation_contents")}
               </span>
