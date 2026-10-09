@@ -7,10 +7,12 @@ import { useQuery } from "react-query";
 import axiosInstance from "../../../../../../config/axios-config.ts";
 import ResourceHeader from "../common/ResourceHeader.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { siteName } from "@/utils/constants.ts";
 
 type ShareViewProps = {
   setIsShareView: (view: string) => void;
   segmentId: string;
+  textId?: string;
   handleNavigate: () => void;
 };
 
@@ -27,9 +29,60 @@ const getURLwithUpdatedSegmentId = (segmentId: string) => {
   urlObj.searchParams.set("segment_id", segmentId);
   return urlObj.toString();
 };
+
+/** The chromeless reader for this text, opened at the chosen segment. */
+const getReaderUrl = (textId: string, segmentId: string) => {
+  const url = new URL(
+    `/reader/${encodeURIComponent(textId)}`,
+    window.location.origin,
+  );
+  if (segmentId) url.searchParams.set("segment_id", segmentId);
+  return url.toString();
+};
+
+const getEmbedCode = (readerUrl: string, title: string) =>
+  `<iframe src="${readerUrl}" title="${title}" width="100%" height="600" style="border:0" loading="lazy"></iframe>`;
+
+const CopyField = ({
+  value,
+  copyLabel,
+  copiedLabel,
+}: {
+  value: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!value) return;
+
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 3000);
+  };
+
+  return (
+    <div className="mb-3 flex items-center gap-3 rounded bg-gray-100 px-4 py-3">
+      <p className="flex-1 truncate text-sm text-gray-600">{value}</p>
+      <Button
+        variant="ghost"
+        className="text-gray-600"
+        onClick={handleCopy}
+        aria-label={copied ? copiedLabel : copyLabel}
+      >
+        {copied ? <IoMdCheckmark size={16} /> : <IoCopy size={16} />}
+      </Button>
+    </div>
+  );
+};
+
 const ShareView = ({
   setIsShareView,
   segmentId,
+  textId,
   handleNavigate,
 }: ShareViewProps) => {
   const [copied, setCopied] = useState(false);
@@ -44,6 +97,7 @@ const ShareView = ({
     },
   );
   const shareLink = shorturldata?.shortUrl ?? url;
+  const readerUrl = textId ? getReaderUrl(textId, segmentId) : "";
 
   const handleCopyLink = () => {
     if (!shareLink) return;
@@ -79,6 +133,23 @@ const ShareView = ({
             {copied ? <IoMdCheckmark size={16} /> : <IoCopy size={16} />}
           </Button>
         </div>
+        {textId && (
+          <>
+            <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-medium text-gray-500">
+              {t("text.embed")}
+            </p>
+            <CopyField
+              value={readerUrl}
+              copyLabel="Copy reader link"
+              copiedLabel="Copied reader link"
+            />
+            <CopyField
+              value={getEmbedCode(readerUrl, siteName)}
+              copyLabel="Copy embed code"
+              copiedLabel="Copied embed code"
+            />
+          </>
+        )}
         <p className="text-sm font-medium text-gray-500">
           {t("text.more_options")}
         </p>

@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "react-query";
@@ -74,7 +75,7 @@ describe("ShareView Component", () => {
     });
   });
 
-  const setup = (props = mockProps) => {
+  const setup = (props: ComponentProps<typeof ShareView> = mockProps) => {
     return render(
       <Router>
         <QueryClientProvider client={queryClient}>
@@ -133,6 +134,42 @@ describe("ShareView Component", () => {
           "https://example.com/text/123?segment_id=test-segment-123",
         ),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Embed", () => {
+    const readerUrl =
+      "https://example.com/reader/text-1?segment_id=test-segment-123";
+
+    it("hides the embed section when the text id is unknown", () => {
+      setup();
+      expect(screen.queryByText("text.embed")).not.toBeInTheDocument();
+    });
+
+    it("shows the reader link and iframe code for the text", () => {
+      setup({ ...mockProps, textId: "text-1" });
+      expect(screen.getByText("text.embed")).toBeInTheDocument();
+      expect(screen.getByText(readerUrl)).toBeInTheDocument();
+      expect(
+        screen.getByText((text) =>
+          text.startsWith(`<iframe src="${readerUrl}"`),
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("copies the reader link", () => {
+      setup({ ...mockProps, textId: "text-1" });
+      fireEvent.click(screen.getByLabelText("Copy reader link"));
+      expect(mockWriteText).toHaveBeenCalledWith(readerUrl);
+      expect(screen.getByLabelText("Copied reader link")).toBeInTheDocument();
+    });
+
+    it("copies the embed code", () => {
+      setup({ ...mockProps, textId: "text-1" });
+      fireEvent.click(screen.getByLabelText("Copy embed code"));
+      expect(mockWriteText).toHaveBeenCalledWith(
+        expect.stringContaining(`<iframe src="${readerUrl}"`),
+      );
     });
   });
 

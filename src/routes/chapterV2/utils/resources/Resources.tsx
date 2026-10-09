@@ -254,6 +254,7 @@ const Resources = ({
         return (
           <ShareView
             segmentId={segmentId}
+            textId={textId ?? sidePanelData?.segment_info?.text_id}
             setIsShareView={setActiveView}
             handleNavigate={() => setActiveView("main")}
           />
