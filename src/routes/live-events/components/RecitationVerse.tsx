@@ -11,6 +11,8 @@ type RecitationVerseProps = {
   /** The reader's language, which the translation is in. */
   readerLanguage: string;
   isCurrent: boolean;
+  /** Set the line larger and airier, for the live view where it stands alone. */
+  spacious?: boolean;
   /**
    * For the live line, once the room's pace is known: when the glow reaches
    * each of its recited lines, and how long it stays.
@@ -85,6 +87,7 @@ const RecitationVerse = ({
   recitedLanguage,
   readerLanguage,
   isCurrent,
+  spacious = false,
   paceTimings,
   paceKey,
 }: RecitationVerseProps) => {
@@ -97,11 +100,17 @@ const RecitationVerse = ({
 
   const recitedClass = `${
     isTibetan
-      ? "text-[22px] leading-[1.75] sm:text-2xl sm:leading-[1.75]"
+      ? spacious
+        ? "text-[26px] leading-[1.7] sm:text-[32px] sm:leading-[1.7]"
+        : "text-[22px] leading-[1.75] sm:text-2xl sm:leading-[1.75]"
       : "text-lg leading-8 sm:text-xl"
   } ${FADE} ${isCurrent ? "text-[var(--rt-live-ink)]" : "text-[var(--rt-soft)]"} ${getLanguageClass(recitedLanguage)}`;
 
-  const translationClass = `text-[15px] leading-6 sm:text-base sm:leading-7 ${FADE} ${
+  const translationClass = `${
+    spacious
+      ? "mt-1 text-[16px] leading-7 sm:text-[18px]"
+      : "text-[15px] leading-6 sm:text-base sm:leading-7"
+  } ${FADE} ${
     isCurrent ? "text-[var(--rt-live-soft)]" : "text-[var(--rt-faint)]"
   } ${getLanguageClass(readerLanguage)}`;
 
@@ -144,7 +153,10 @@ const RecitationVerse = ({
     <div className="text-balance break-words">
       {interleaved ? (
         recited.map((row, index) => (
-          <div key={index} className={index > 0 ? "mt-2" : undefined}>
+          <div
+            key={index}
+            className={index > 0 ? (spacious ? "mt-5" : "mt-2") : undefined}
+          >
             {recitedLine(row, index)}
             <p className={translationClass}>
               <Runs line={translation[index]} />

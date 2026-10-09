@@ -638,12 +638,13 @@ const LiveRecitationView = ({
                         </span>
                       </div>
                     )}
-                    <div className="w-full rounded-3xl border border-[var(--rt-line)] bg-[var(--rt-panel)] px-6 py-8 text-center sm:px-10 sm:py-10">
+                    <div className="mx-auto w-full max-w-2xl px-2 text-center">
                       <RecitationVerse
                         line={shown(lines[currentLine])}
                         recitedLanguage={text?.language ?? language}
                         readerLanguage={language}
                         isCurrent
+                        spacious
                         paceTimings={paceTimings}
                         paceKey={moves}
                       />
