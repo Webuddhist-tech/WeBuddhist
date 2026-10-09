@@ -111,3 +111,32 @@ export const saveShowTranslation = (show: boolean): void => {
     // A private window or blocked storage: the choice lasts for this visit.
   }
 };
+
+/** The verse's size as a multiple of its usual size, smallest to largest. */
+export const TEXT_SIZES = [0.85, 1, 1.2, 1.4, 1.7];
+export const DEFAULT_TEXT_SIZE = 1;
+
+const TEXT_SIZE_STORAGE_KEY = "webuddhist.liveRecitation.textSize";
+
+/** The reader's last choice (an index into TEXT_SIZES); the usual size until they make one. */
+export const loadTextSize = (): number => {
+  try {
+    const stored = Number(localStorage.getItem(TEXT_SIZE_STORAGE_KEY));
+    const valid =
+      localStorage.getItem(TEXT_SIZE_STORAGE_KEY) !== null &&
+      Number.isInteger(stored) &&
+      stored >= 0 &&
+      stored < TEXT_SIZES.length;
+    return valid ? stored : DEFAULT_TEXT_SIZE;
+  } catch {
+    return DEFAULT_TEXT_SIZE;
+  }
+};
+
+export const saveTextSize = (index: number): void => {
+  try {
+    localStorage.setItem(TEXT_SIZE_STORAGE_KEY, String(index));
+  } catch {
+    // A private window or blocked storage: the choice lasts for this visit.
+  }
+};

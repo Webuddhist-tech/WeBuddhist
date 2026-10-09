@@ -15,6 +15,10 @@ type RecitationSettingsProps = {
   canTranslate?: boolean;
   showTranslation?: boolean;
   onShowTranslationChange?: (show: boolean) => void;
+  /** The text size as a step, 0 the smallest, and how many steps there are. */
+  textSize?: number;
+  textSizeCount?: number;
+  onTextSizeChange?: (size: number) => void;
 };
 
 /** The top bar's round buttons. */
@@ -86,6 +90,9 @@ const RecitationSettings = ({
   canTranslate = false,
   showTranslation = true,
   onShowTranslationChange,
+  textSize = 0,
+  textSizeCount = 0,
+  onTextSizeChange,
 }: RecitationSettingsProps) => {
   const { t } = useTranslate();
   const [open, setOpen] = useState(false);
@@ -167,6 +174,55 @@ const RecitationSettings = ({
               );
             })}
           </div>
+
+          {onTextSizeChange && textSizeCount > 1 && (
+            <>
+              <p
+                id="recitation-text-size-label"
+                className="mt-4 px-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--rt-soft)]"
+              >
+                {t("live_events.recitation_text_size")}
+              </p>
+              <div
+                role="group"
+                aria-labelledby="recitation-text-size-label"
+                className="mt-2 flex items-center gap-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => onTextSizeChange(textSize - 1)}
+                  disabled={textSize <= 0}
+                  aria-label={t("live_events.recitation_text_smaller")}
+                  title={t("live_events.recitation_text_smaller")}
+                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--rt-line)] font-serif text-sm font-semibold text-[var(--rt-ink)] transition hover:bg-[var(--rt-raised)] disabled:opacity-35 disabled:hover:bg-transparent"
+                >
+                  A
+                </button>
+                <div aria-hidden className="flex items-center gap-1">
+                  {Array.from({ length: textSizeCount }, (_, index) => (
+                    <span
+                      key={index}
+                      className={`size-1.5 rounded-full ${
+                        index === textSize
+                          ? "bg-[var(--rt-accent)]"
+                          : "bg-[var(--rt-line)]"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onTextSizeChange(textSize + 1)}
+                  disabled={textSize >= textSizeCount - 1}
+                  aria-label={t("live_events.recitation_text_larger")}
+                  title={t("live_events.recitation_text_larger")}
+                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--rt-line)] font-serif text-2xl font-semibold text-[var(--rt-ink)] transition hover:bg-[var(--rt-raised)] disabled:opacity-35 disabled:hover:bg-transparent"
+                >
+                  A
+                </button>
+              </div>
+            </>
+          )}
 
           {canTranslate && onShowTranslationChange && (
             <>

@@ -125,6 +125,7 @@ describe("LiveRecitationView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem("webuddhist.liveRecitation.translation");
+    localStorage.removeItem("webuddhist.liveRecitation.textSize");
     localStorage.setItem("webuddhist.liveRecitation.view", "full");
     smoothScrollMock.mockReturnValue(() => {});
     outlineMock.mockResolvedValue([]);
@@ -583,6 +584,42 @@ describe("LiveRecitationView", () => {
       }),
     );
     expect(screen.getByText("abcd (en)")).toBeInTheDocument();
+  });
+
+  it("makes the text larger or smaller from the settings, and remembers it", async () => {
+    fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["abcd"]));
+    const size = () =>
+      (screen.getByText("abcd").closest("div[style]") as HTMLElement).style
+        .fontSize;
+    const { unmount } = renderView(live({ position: at("tara", "tara-bo-0") }));
+    await screen.findByText("abcd");
+    expect(size()).toBe("16px");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "live_events.recitation_text_larger",
+      }),
+    );
+    expect(size()).toBe("19.2px");
+
+    unmount();
+    renderView(live({ position: at("tara", "tara-bo-0") }));
+    await screen.findByText("abcd");
+    expect(size()).toBe("19.2px");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    const smaller = screen.getByRole("button", {
+      name: "live_events.recitation_text_smaller",
+    });
+    fireEvent.click(smaller);
+    fireEvent.click(smaller);
+    expect(size()).toBe("13.6px");
+    expect(smaller).toBeDisabled();
   });
 
   it("glows down the live line at the pace the room kept over the line before", async () => {

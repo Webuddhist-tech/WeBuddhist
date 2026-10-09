@@ -33,9 +33,12 @@ import type {
 import {
   loadRecitationView,
   loadShowTranslation,
+  loadTextSize,
   recitationThemeStyle,
   saveRecitationView,
   saveShowTranslation,
+  saveTextSize,
+  TEXT_SIZES,
 } from "../utils/recitationTheme.ts";
 import { shortTitle } from "../utils/shortTitle.ts";
 import { smoothScrollTo } from "../utils/smoothScroll.ts";
@@ -252,6 +255,11 @@ const LiveRecitationView = ({
   const changeShowTranslation = (next: boolean) => {
     setShowTranslation(next);
     saveShowTranslation(next);
+  };
+  const [textSize, setTextSize] = useState<number>(loadTextSize);
+  const changeTextSize = (next: number) => {
+    setTextSize(next);
+    saveTextSize(next);
   };
   const canTranslate = lines.some((line) => line.translation !== null);
   const shown = (line: RecitationLine): RecitationLine =>
@@ -577,6 +585,9 @@ const LiveRecitationView = ({
               canTranslate={canTranslate}
               showTranslation={showTranslation}
               onShowTranslationChange={changeShowTranslation}
+              textSize={textSize}
+              textSizeCount={TEXT_SIZES.length}
+              onTextSizeChange={changeTextSize}
             />
           </div>
         </div>
@@ -645,6 +656,7 @@ const LiveRecitationView = ({
                         readerLanguage={language}
                         isCurrent
                         spacious
+                        scale={TEXT_SIZES[textSize]}
                         paceTimings={paceTimings}
                         paceKey={moves}
                       />
@@ -716,6 +728,7 @@ const LiveRecitationView = ({
                         )}
                         <RecitationVerse
                           line={shown(line)}
+                          scale={TEXT_SIZES[textSize]}
                           recitedLanguage={text?.language ?? language}
                           readerLanguage={language}
                           isCurrent={isCurrent}
