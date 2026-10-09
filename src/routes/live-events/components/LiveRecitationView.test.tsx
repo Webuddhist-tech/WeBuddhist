@@ -124,6 +124,7 @@ const scrollTo = (top: number) =>
 describe("LiveRecitationView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.removeItem("webuddhist.liveRecitation.translation");
     localStorage.setItem("webuddhist.liveRecitation.view", "full");
     smoothScrollMock.mockReturnValue(() => {});
     outlineMock.mockResolvedValue([]);
@@ -543,6 +544,45 @@ describe("LiveRecitationView", () => {
     );
 
     expect(onThemeChange).toHaveBeenCalledWith("light");
+  });
+
+  it("shows the translation, or leaves it out, from the settings", async () => {
+    fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["abcd"]));
+    const { unmount } = renderView(live({ position: at("tara", "tara-bo-0") }));
+    expect(await screen.findByText("abcd (en)")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    expect(
+      screen.getByRole("radio", {
+        name: "live_events.recitation_translation_with",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: "live_events.recitation_translation_without",
+      }),
+    );
+    expect(screen.queryByText("abcd (en)")).not.toBeInTheDocument();
+    expect(screen.getByText("abcd")).toBeInTheDocument();
+
+    // The choice is remembered on this device.
+    unmount();
+    renderView(live({ position: at("tara", "tara-bo-0") }));
+    await screen.findByText("abcd");
+    expect(screen.queryByText("abcd (en)")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: "live_events.recitation_translation_with",
+      }),
+    );
+    expect(screen.getByText("abcd (en)")).toBeInTheDocument();
   });
 
   it("glows down the live line at the pace the room kept over the line before", async () => {

@@ -25,14 +25,17 @@ import {
 } from "../utils/recitationPace.ts";
 import { imageForLine } from "../utils/recitationImages.ts";
 import { recitationLines } from "../utils/recitationText.ts";
+import type { RecitationLine } from "../utils/recitationText.ts";
 import type {
   RecitationTheme,
   RecitationView,
 } from "../utils/recitationTheme.ts";
 import {
   loadRecitationView,
+  loadShowTranslation,
   recitationThemeStyle,
   saveRecitationView,
+  saveShowTranslation,
 } from "../utils/recitationTheme.ts";
 import { shortTitle } from "../utils/shortTitle.ts";
 import { smoothScrollTo } from "../utils/smoothScroll.ts";
@@ -242,6 +245,17 @@ const LiveRecitationView = ({
     saveRecitationView(next);
     setFollowing(true);
   };
+
+  // The reader's translation under each line, which they may do without.
+  const [showTranslation, setShowTranslation] =
+    useState<boolean>(loadShowTranslation);
+  const changeShowTranslation = (next: boolean) => {
+    setShowTranslation(next);
+    saveShowTranslation(next);
+  };
+  const canTranslate = lines.some((line) => line.translation !== null);
+  const shown = (line: RecitationLine): RecitationLine =>
+    showTranslation ? line : { ...line, translation: null };
 
   // The rail's buttons can be put away, for a reader who wants the page bare.
   const [railHidden, setRailHidden] = useState(false);
@@ -557,7 +571,13 @@ const LiveRecitationView = ({
                 {t("live_events.recitation_contents")}
               </span>
             </button>
-            <RecitationSettings theme={theme} onThemeChange={onThemeChange} />
+            <RecitationSettings
+              theme={theme}
+              onThemeChange={onThemeChange}
+              canTranslate={canTranslate}
+              showTranslation={showTranslation}
+              onShowTranslationChange={changeShowTranslation}
+            />
           </div>
         </div>
       </RecitationTopBar>
@@ -620,7 +640,7 @@ const LiveRecitationView = ({
                     )}
                     <div className="w-full rounded-3xl border border-[var(--rt-line)] bg-[var(--rt-panel)] px-6 py-8 text-center sm:px-10 sm:py-10">
                       <RecitationVerse
-                        line={lines[currentLine]}
+                        line={shown(lines[currentLine])}
                         recitedLanguage={text?.language ?? language}
                         readerLanguage={language}
                         isCurrent
@@ -694,7 +714,7 @@ const LiveRecitationView = ({
                           </span>
                         )}
                         <RecitationVerse
-                          line={line}
+                          line={shown(line)}
                           recitedLanguage={text?.language ?? language}
                           readerLanguage={language}
                           isCurrent={isCurrent}

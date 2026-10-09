@@ -92,3 +92,22 @@ export const saveRecitationView = (view: RecitationView): void => {
     // A private window or blocked storage: the choice lasts for this visit.
   }
 };
+
+const TRANSLATION_STORAGE_KEY = "webuddhist.liveRecitation.translation";
+
+/** The reader's last choice on this device; with the translation until they make one. */
+export const loadShowTranslation = (): boolean => {
+  try {
+    return localStorage.getItem(TRANSLATION_STORAGE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+};
+
+export const saveShowTranslation = (show: boolean): void => {
+  try {
+    localStorage.setItem(TRANSLATION_STORAGE_KEY, show ? "on" : "off");
+  } catch {
+    // A private window or blocked storage: the choice lasts for this visit.
+  }
+};

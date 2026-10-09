@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslate } from "@tolgee/react";
-import { IoMoonOutline, IoSunnyOutline } from "react-icons/io5";
+import {
+  IoLanguageOutline,
+  IoMoonOutline,
+  IoSunnyOutline,
+  IoTextOutline,
+} from "react-icons/io5";
 import type { RecitationTheme } from "../utils/recitationTheme.ts";
 
 type RecitationSettingsProps = {
   theme: RecitationTheme;
   onThemeChange: (theme: RecitationTheme) => void;
+  /** Whether there is a translation to show or leave out. */
+  canTranslate?: boolean;
+  showTranslation?: boolean;
+  onShowTranslationChange?: (show: boolean) => void;
 };
 
 /** The top bar's round buttons. */
@@ -50,13 +59,33 @@ const OPTIONS: {
   },
 ];
 
+const TRANSLATION_OPTIONS: {
+  show: boolean;
+  label: string;
+  Icon: typeof IoMoonOutline;
+}[] = [
+  {
+    show: true,
+    label: "live_events.recitation_translation_with",
+    Icon: IoLanguageOutline,
+  },
+  {
+    show: false,
+    label: "live_events.recitation_translation_without",
+    Icon: IoTextOutline,
+  },
+];
+
 /**
- * The page's settings, behind the "Aa" button: for now,
- * whether the text is set on a dark stage or on paper.
+ * The page's settings, behind the "Aa" button: whether the text is set on a
+ * dark stage or on paper, and whether the translation comes with it.
  */
 const RecitationSettings = ({
   theme,
   onThemeChange,
+  canTranslate = false,
+  showTranslation = true,
+  onShowTranslationChange,
 }: RecitationSettingsProps) => {
   const { t } = useTranslate();
   const [open, setOpen] = useState(false);
@@ -138,6 +167,43 @@ const RecitationSettings = ({
               );
             })}
           </div>
+
+          {canTranslate && onShowTranslationChange && (
+            <>
+              <p
+                id="recitation-translation-label"
+                className="mt-4 px-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--rt-soft)]"
+              >
+                {t("live_events.recitation_translation")}
+              </p>
+              <div
+                role="radiogroup"
+                aria-labelledby="recitation-translation-label"
+                className="mt-2 grid grid-cols-2 gap-2"
+              >
+                {TRANSLATION_OPTIONS.map(({ show, label, Icon }) => {
+                  const selected = show === showTranslation;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => onShowTranslationChange(show)}
+                      className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-sm font-medium transition ${
+                        selected
+                          ? "border-[var(--rt-accent)] bg-[var(--rt-raised)] text-[var(--rt-ink)]"
+                          : "border-[var(--rt-line)] text-[var(--rt-soft)] hover:bg-[var(--rt-raised)]"
+                      }`}
+                    >
+                      <Icon className="size-5" aria-hidden />
+                      {t(label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
