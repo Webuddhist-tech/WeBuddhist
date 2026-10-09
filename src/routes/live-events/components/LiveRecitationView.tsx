@@ -653,7 +653,7 @@ const LiveRecitationView = ({
                     <img
                       src={verseImage.src}
                       alt={verseImage.alt}
-                      className="max-h-[70dvh] w-auto max-w-full rounded-2xl object-contain md:w-[min(34vw,26rem)]"
+                      className="max-h-[70dvh] w-auto max-w-full rounded-2xl object-contain shadow-[0_0_48px_-6px_var(--rt-glow)] md:w-[min(34vw,26rem)]"
                     />
                   )}
                 </div>
