@@ -2,6 +2,10 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import ChapterHeader from "../../utils/header/ChapterHeader";
 import {
+  SIDEBAR_FEATURES,
+  useReaderOptions,
+} from "@/context/ReaderFeaturesContext.tsx";
+import {
   VIEW_MODES,
   LAYOUT_MODES,
 } from "../../utils/header/view-selector/ViewSelector";
@@ -165,6 +169,11 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { isResourcesPanelOpen, openResourcesPanel, closeResourcesPanel } =
     usePanelContext() as PanelContextValue;
+  // An embed can hide every sidebar feature; the panel would open empty.
+  const { hidden: hiddenFeatures } = useReaderOptions();
+  const hasSidebar = SIDEBAR_FEATURES.some(
+    (feature) => !hiddenFeatures.has(feature),
+  );
   const {
     displayContent,
     transliterationBelow,
@@ -482,7 +491,7 @@ const UseChapterHook: React.FC<UseChapterHookProps> = (props) => {
 
   const handleSegmentClick = (segmentId: string) => {
     setSelectedSegmentId(segmentId);
-    openResourcesPanel();
+    if (hasSidebar) openResourcesPanel();
   };
 
   const createSegmentControlHandlers = (segmentId: string) => {

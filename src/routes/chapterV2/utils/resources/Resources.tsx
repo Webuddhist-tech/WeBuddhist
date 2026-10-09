@@ -19,6 +19,7 @@ import YigchungView from "./components/yigchung/YigchungView.tsx";
 import SegmentChatView from "./components/segment-chat/SegmentChatView.tsx";
 import { useChatTranslate } from "./components/segment-chat/useChatTranslate.ts";
 import { getSegmentInfo } from "@/services/library";
+import { useReaderFeature } from "@/context/ReaderFeaturesContext.tsx";
 
 type PanelContextValue = {
   isResourcesPanelOpen: boolean;
@@ -68,6 +69,13 @@ const Resources = ({
   const [activeView, setActiveView] = useState("main");
   const { t } = useTranslate();
   const chatT = useChatTranslate();
+  const canSearch = useReaderFeature("search");
+  const canAskAi = useReaderFeature("ai");
+  const canShowTranslations = useReaderFeature("translations");
+  const canShowCommentary = useReaderFeature("commentary");
+  const canShowRootText = useReaderFeature("root_text");
+  const canCompare = useReaderFeature("compare");
+  const canShare = useReaderFeature("share");
   const storedLanguage = localStorage.getItem("language");
 
   useEffect(() => {
@@ -97,6 +105,7 @@ const Resources = ({
   };
 
   const renderTranslationsSection = () =>
+    canShowTranslations &&
     counts.translations > 0 && (
       <Button
         type="button"
@@ -110,6 +119,7 @@ const Resources = ({
     );
 
   const renderCommentaryButton = () =>
+    canShowCommentary &&
     counts.commentaries > 0 && (
       <Button
         type="button"
@@ -123,6 +133,7 @@ const Resources = ({
     );
 
   const renderRootTextButton = () =>
+    canShowRootText &&
     counts.rootTexts > 0 && (
       <Button
         type="button"
@@ -136,7 +147,8 @@ const Resources = ({
     );
 
   const renderRelatedTextsSection = () =>
-    (counts.commentaries > 0 || counts.rootTexts > 0) && (
+    ((canShowCommentary && counts.commentaries > 0) ||
+      (canShowRootText && counts.rootTexts > 0)) && (
       <>
         <p className="w-full border-b border-[#f0f0f0] text-sm font-medium text-gray-500">
           {t("text.related_texts")}
@@ -171,50 +183,59 @@ const Resources = ({
     }
   };
 
-  const renderMenuItems = () => (
-    <>
-      <p className="w-full border-b border-[#f0f0f0] text-sm font-medium text-gray-500">
-        {t("connection_panel.tools")}
-      </p>
-      {MENU_ITEMS.map((item) => (
-        <Button
-          type="button"
-          variant="ghost"
-          key={item.label}
-          className="w-full flex justify-start gap-1.5"
-          onClick={() => handleMenuItemClick(item)}
-        >
-          <item.icon className="text-lg" />
-          {t(`${item.label}`)}
-        </Button>
-      ))}
-    </>
+  const menuItems = MENU_ITEMS.filter((item) =>
+    item.label === "common.share" ? canShare : canCompare,
   );
+
+  const renderMenuItems = () =>
+    menuItems.length > 0 && (
+      <>
+        <p className="w-full border-b border-[#f0f0f0] text-sm font-medium text-gray-500">
+          {t("connection_panel.tools")}
+        </p>
+        {menuItems.map((item) => (
+          <Button
+            type="button"
+            variant="ghost"
+            key={item.label}
+            className="w-full flex justify-start gap-1.5"
+            onClick={() => handleMenuItemClick(item)}
+          >
+            <item.icon className="text-lg" />
+            {t(`${item.label}`)}
+          </Button>
+        ))}
+      </>
+    );
 
   const renderMainPanel = () => (
     <>
       <ResourceHeader title={t("panel.resources")} onClose={handleClosePanel} />
       <div className="text-left p-4 space-y-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setActiveView("search")}
-          className="w-full flex justify-start"
-        >
-          <BiSearch
-            className={`text-lg ${storedLanguage === "bo-IN" ? "-translate-y-0.5" : ""}`}
-          />
-          {t("connection_panel.search_in_this_text")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setActiveView("ai_chat")}
-          className="w-full flex justify-start gap-1.5"
-        >
-          <LuSparkles className="text-lg" />
-          {chatT("segment_chat.open")}
-        </Button>
+        {canSearch && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setActiveView("search")}
+            className="w-full flex justify-start"
+          >
+            <BiSearch
+              className={`text-lg ${storedLanguage === "bo-IN" ? "-translate-y-0.5" : ""}`}
+            />
+            {t("connection_panel.search_in_this_text")}
+          </Button>
+        )}
+        {canAskAi && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setActiveView("ai_chat")}
+            className="w-full flex justify-start gap-1.5"
+          >
+            <LuSparkles className="text-lg" />
+            {chatT("segment_chat.open")}
+          </Button>
+        )}
         {canShowTableOfContents && (
           <Button
             type="button"
@@ -254,6 +275,7 @@ const Resources = ({
         return (
           <ShareView
             segmentId={segmentId}
+            textId={textId ?? sidePanelData?.segment_info?.text_id}
             setIsShareView={setActiveView}
             handleNavigate={() => setActiveView("main")}
           />

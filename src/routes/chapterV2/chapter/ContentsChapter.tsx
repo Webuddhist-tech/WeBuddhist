@@ -28,6 +28,10 @@ import {
 import { hasYigchungs, useYigchungs } from "@/hooks/useYigchungs.ts";
 import { useTranslate } from "@tolgee/react";
 import Seo from "@/routes/commons/seo/Seo.tsx";
+import {
+  useReaderFeature,
+  useReaderOptions,
+} from "@/context/ReaderFeaturesContext.tsx";
 
 const fetchContentDetails = async ({ pageParam = null, queryKey }: any) => {
   const [_, textId, , versionId, size, initialSegmentId] = queryKey;
@@ -83,7 +87,18 @@ const ContentsChapter = ({
   setVersionId,
 }: any) => {
   const [viewMode, setViewMode] = useState(VIEW_MODES.SOURCE);
+  // An embedding page can fix what the reader opens with (see
+  // ReaderFeaturesContext); that wins over what this reader last remembered.
+  const readerOptions = useReaderOptions();
+  const canOfferTableOfContents = useReaderFeature("toc");
+  const canOfferYigchungs = useReaderFeature("yigchung");
+  const canOfferSectionTitles = useReaderFeature("section_titles");
   const [layoutMode, setLayoutMode] = useState(() => {
+    if (readerOptions.layout) {
+      return readerOptions.layout === "prose"
+        ? LAYOUT_MODES.PROSE
+        : LAYOUT_MODES.SEGMENTED;
+    }
     const stored = localStorage.getItem(LAYOUT_MODE);
     if (stored === LAYOUT_MODES.PROSE || stored === LAYOUT_MODES.SEGMENTED) {
       return stored;
@@ -91,6 +106,11 @@ const ContentsChapter = ({
     return LAYOUT_MODES.SEGMENTED;
   });
   const [sectionTitleMode, setSectionTitleMode] = useState(() => {
+    if (readerOptions.titles) {
+      return readerOptions.titles === "hidden"
+        ? SECTION_TITLE_MODES.HIDDEN
+        : SECTION_TITLE_MODES.SHOWN;
+    }
     const stored = localStorage.getItem(SECTION_TITLE_MODE);
     return stored === SECTION_TITLE_MODES.HIDDEN
       ? SECTION_TITLE_MODES.HIDDEN
@@ -115,12 +135,14 @@ const ContentsChapter = ({
   const { t } = useTranslate();
 
   useEffect(() => {
+    if (readerOptions.layout) return;
     localStorage.setItem(LAYOUT_MODE, layoutMode);
-  }, [layoutMode]);
+  }, [layoutMode, readerOptions.layout]);
 
   useEffect(() => {
+    if (readerOptions.titles) return;
     localStorage.setItem(SECTION_TITLE_MODE, sectionTitleMode);
-  }, [sectionTitleMode]);
+  }, [sectionTitleMode, readerOptions.titles]);
 
   // Fetched here rather than only inside the panel, because the header has to
   // know whether this text has a table of contents before it can decide to
@@ -221,9 +243,10 @@ const ContentsChapter = ({
   // Whether this text has an outline to offer at all: the resources panel lists
   // it, and the view menu offers to set its titles into the text. Sheets stay
   // out of both, being a pinned excerpt with paging turned off.
-  const canShowTableOfContents =
-    !isFromSheet && hasTableOfContents(tableOfContents);
-  const canShowYigchungs = !isFromSheet && hasYigchungs(yigchungsData);
+  const hasOutline = !isFromSheet && hasTableOfContents(tableOfContents);
+  const canShowTableOfContents = hasOutline && canOfferTableOfContents;
+  const canShowYigchungs =
+    !isFromSheet && hasYigchungs(yigchungsData) && canOfferYigchungs;
 
   // ------------------------ renderers ----------------------
   const renderChapter = () => {
@@ -249,7 +272,7 @@ const ContentsChapter = ({
       canShowTableOfContents,
       canShowYigchungs,
       yigchungCount: yigchungsData?.items?.length ?? 0,
-      canShowSectionTitles: canShowTableOfContents,
+      canShowSectionTitles: hasOutline && canOfferSectionTitles,
       setViewMode,
       setLayoutMode,
       sectionTitleMode,
