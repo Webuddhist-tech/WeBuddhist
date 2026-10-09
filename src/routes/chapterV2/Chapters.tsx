@@ -6,10 +6,15 @@ const Chapters = ({
   initialChapters = null,
   maxChapters = 3,
   renderChapter = null,
+  persistChapters = true,
 }: any) => {
   const [searchParams] = useSearchParams();
   const [chapters, setChapters] = useState(() => {
-    const savedChapters = sessionStorage.getItem("chapters");
+    // A page whose address already names the text opts out: restoring an old
+    // session here would show a different text than the one in the link.
+    const savedChapters = persistChapters
+      ? sessionStorage.getItem("chapters")
+      : null;
     if (savedChapters) {
       const parsedChapters = JSON.parse(savedChapters);
       return parsedChapters.map((chapter: any) => ({
@@ -41,11 +46,12 @@ const Chapters = ({
   });
 
   useEffect(() => {
+    if (!persistChapters) return;
     sessionStorage.setItem("chapters", JSON.stringify(chapters));
     return () => {
       sessionStorage.removeItem("chapters");
     };
-  }, [chapters]);
+  }, [chapters, persistChapters]);
 
   const addChapter = useCallback(
     (chapterInformation: any, currentChapter: any, isFromSheet = false) => {

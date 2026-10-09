@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
 import EditionAudioPlayer from "./EditionAudioPlayer.tsx";
+import { useReaderFeature } from "@/context/ReaderFeaturesContext.tsx";
 
 const ChapterHeader = (props: any) => {
   const {
@@ -42,6 +43,22 @@ const ChapterHeader = (props: any) => {
   } = usePanelContext() as any;
   const navigate = useNavigate();
   const { displayContent, contentClass } = useTransliteration();
+  const showBack = useReaderFeature("back");
+  const showAudio = useReaderFeature("audio");
+  const showViewMenu = useReaderFeature("view_menu");
+  const showViewMode = useReaderFeature("view_mode");
+  const showLayout = useReaderFeature("layout");
+  const showSectionTitles = useReaderFeature("section_titles");
+  const showScript = useReaderFeature("script");
+  const showAutoScroll = useReaderFeature("autoscroll");
+  // A menu with every row hidden would open onto nothing.
+  const hasViewMenuContent =
+    showViewMenu &&
+    ((showViewMode && versionSelected) ||
+      showLayout ||
+      (showSectionTitles && canShowSectionTitles) ||
+      showScript ||
+      showAutoScroll);
 
   const handleBackClick = () => navigate(-1);
   const handleCloseChapter = () => removeChapter(currentChapter);
@@ -72,51 +89,58 @@ const ChapterHeader = (props: any) => {
   return (
     <div className="flex w-full shrink-0 items-center justify-center p-2  border-b border-gray-200 bg-[#f8f8f8]">
       <div className="flex w-full md:max-w-[700px] items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="cursor-pointer"
-          onClick={handleBackClick}
-        >
-          <IoChevronBackSharp size={20} />
-        </Button>
+        {showBack ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="cursor-pointer"
+            onClick={handleBackClick}
+          >
+            <IoChevronBackSharp size={20} />
+          </Button>
+        ) : (
+          // Keeps the title centred where the button would have been.
+          <span className="size-8" aria-hidden />
+        )}
         <p
           className={`min-w-0 w-fit truncate whitespace-nowrap text-lg font-medium ${contentClass(textdetail?.language)}`}
         >
           {displayContent(textdetail?.title)}
         </p>
         <div className="flex items-center gap-1">
-          <EditionAudioPlayer editionId={editionId} />
-          <DropdownMenu
-            open={isViewSelectorOpen}
-            onOpenChange={handleViewSelectorOpenChange}
-          >
-            <DropdownMenuTrigger asChild>
-              <button className="flex cursor-pointer items-center justify-center">
-                <img
-                  src={langicon}
-                  alt="view selector"
-                  className="h-4 w-[17px]"
+          {showAudio && <EditionAudioPlayer editionId={editionId} />}
+          {hasViewMenuContent && (
+            <DropdownMenu
+              open={isViewSelectorOpen}
+              onOpenChange={handleViewSelectorOpenChange}
+            >
+              <DropdownMenuTrigger asChild>
+                <button className="flex cursor-pointer items-center justify-center">
+                  <img
+                    src={langicon}
+                    alt="view selector"
+                    className="h-4 w-[17px]"
+                  />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <ViewSelector
+                  viewMode={viewMode}
+                  setViewMode={setViewMode}
+                  layoutMode={layoutMode}
+                  setLayoutMode={setLayoutMode}
+                  versionSelected={versionSelected}
+                  sectionTitleMode={sectionTitleMode}
+                  setSectionTitleMode={setSectionTitleMode}
+                  canShowSectionTitles={canShowSectionTitles}
+                  isAutoScrolling={isAutoScrolling}
+                  onToggleAutoScroll={handleToggleAutoScroll}
+                  scrollSpeed={scrollSpeed}
+                  setScrollSpeed={setScrollSpeed}
                 />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <ViewSelector
-                viewMode={viewMode}
-                setViewMode={setViewMode}
-                layoutMode={layoutMode}
-                setLayoutMode={setLayoutMode}
-                versionSelected={versionSelected}
-                sectionTitleMode={sectionTitleMode}
-                setSectionTitleMode={setSectionTitleMode}
-                canShowSectionTitles={canShowSectionTitles}
-                isAutoScrolling={isAutoScrolling}
-                onToggleAutoScroll={handleToggleAutoScroll}
-                scrollSpeed={scrollSpeed}
-                setScrollSpeed={setScrollSpeed}
-              />
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 

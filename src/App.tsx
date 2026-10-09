@@ -76,6 +76,7 @@ const DeleteAccount = lazy(
 );
 const AppShare = lazy(() => import("./routes/app-share/AppShare.tsx"));
 const OpenApp = lazy(() => import("./routes/app-open/OpenApp.tsx"));
+const ReaderPage = lazy(() => import("./routes/reader/ReaderPage.tsx"));
 const OpenReader = lazy(() => import("./routes/open-reader/OpenReader.tsx"));
 const LiveEvents = lazy(() => import("./routes/live-events/LiveEvents.tsx"));
 const LiveEventDetail = lazy(
@@ -320,6 +321,10 @@ function App() {
           path="/live/:eventId/recitation"
           element={<LiveRecitationPage />}
         />
+
+        {/* The text reader on its own, named by the text id in the address:
+            every reader feature, none of the site chrome. */}
+        <Route path="/reader/:textId" element={<ReaderPage />} />
 
         {/* Full-height readers in the same shell, minus the footer: the page
             fills the space between the bars and scrolls inside it. */}

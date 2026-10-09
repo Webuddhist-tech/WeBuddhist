@@ -23,6 +23,15 @@ server {
     include /etc/nginx/security-headers.conf;
   }
 
+  # The chromeless reader is meant to be embedded by other sites, so it must
+  # not send X-Frame-Options: SAMEORIGIN like the rest of the app does.
+  # index.html is named as a file rather than as the try_files fallback: a
+  # fallback restarts location matching and would land back in `location /`.
+  location ^~ /reader/ {
+    try_files /index.html =404;
+    include /etc/nginx/security-headers-embeddable.conf;
+  }
+
   location / {
     try_files $uri $uri/ /index.html;
     include /etc/nginx/security-headers.conf;
