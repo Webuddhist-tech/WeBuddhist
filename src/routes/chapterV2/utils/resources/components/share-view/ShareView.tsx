@@ -8,6 +8,9 @@ import axiosInstance from "../../../../../../config/axios-config.ts";
 import ResourceHeader from "../common/ResourceHeader.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { siteName } from "@/utils/constants.ts";
+import { readerOptionsQuery } from "@/context/ReaderFeaturesContext.tsx";
+import type { ReaderOptions } from "@/context/ReaderFeaturesContext.tsx";
+import EmbedCustomizer from "./EmbedCustomizer.tsx";
 
 type ShareViewProps = {
   setIsShareView: (view: string) => void;
@@ -30,18 +33,28 @@ const getURLwithUpdatedSegmentId = (segmentId: string) => {
   return urlObj.toString();
 };
 
-/** The chromeless reader for this text, opened at the chosen segment. */
-const getReaderUrl = (textId: string, segmentId: string) => {
+/**
+ * The chromeless reader for this text, opened at the chosen segment and set
+ * up as `options` ask.
+ */
+const getReaderUrl = (
+  textId: string,
+  segmentId: string,
+  options: ReaderOptions,
+) => {
   const url = new URL(
     `/reader/${encodeURIComponent(textId)}`,
     window.location.origin,
   );
   if (segmentId) url.searchParams.set("segment_id", segmentId);
+  readerOptionsQuery(options).forEach((value, key) =>
+    url.searchParams.set(key, value),
+  );
   return url.toString();
 };
 
 const getEmbedCode = (readerUrl: string, title: string) =>
-  `<iframe src="${readerUrl}" title="${title}" width="100%" height="600" style="border:0" loading="lazy"></iframe>`;
+  `<iframe src="${readerUrl.replace(/&/g, "&amp;")}" title="${title}" width="100%" height="600" style="border:0" loading="lazy"></iframe>`;
 
 const CopyField = ({
   value,
@@ -86,6 +99,9 @@ const ShareView = ({
   handleNavigate,
 }: ShareViewProps) => {
   const [copied, setCopied] = useState(false);
+  const [embedOptions, setEmbedOptions] = useState<ReaderOptions>({
+    hidden: new Set(),
+  });
   const { t } = useTranslate();
   const url = getURLwithUpdatedSegmentId(segmentId);
 
@@ -97,7 +113,7 @@ const ShareView = ({
     },
   );
   const shareLink = shorturldata?.shortUrl ?? url;
-  const readerUrl = textId ? getReaderUrl(textId, segmentId) : "";
+  const readerUrl = textId ? getReaderUrl(textId, segmentId, embedOptions) : "";
 
   const handleCopyLink = () => {
     if (!shareLink) return;
@@ -138,6 +154,10 @@ const ShareView = ({
             <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-medium text-gray-500">
               {t("text.embed")}
             </p>
+            <EmbedCustomizer
+              options={embedOptions}
+              onChange={setEmbedOptions}
+            />
             <CopyField
               value={readerUrl}
               copyLabel="Copy reader link"

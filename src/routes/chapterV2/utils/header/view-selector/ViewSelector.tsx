@@ -12,6 +12,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
 import { useTransliteration } from "@/context/TransliterationContext.tsx";
+import { useReaderFeature } from "@/context/ReaderFeaturesContext.tsx";
 import { MODE_OPTIONS, SCRIPT_OPTIONS } from "@/utils/transliteration.ts";
 import AutoScrollControl, {
   AUTO_SCROLL_SPEEDS,
@@ -120,6 +121,11 @@ const ViewSelector = ({
   const { t } = useTranslate();
   const { script, setScript, mode, setMode, isTransliterating } =
     useTransliteration();
+  const showViewMode = useReaderFeature("view_mode");
+  const showLayout = useReaderFeature("layout");
+  const showSectionTitles = useReaderFeature("section_titles");
+  const showScript = useReaderFeature("script");
+  const showAutoScroll = useReaderFeature("autoscroll");
 
   const renderViewModeOptions = () => {
     return (
@@ -182,28 +188,32 @@ const ViewSelector = ({
 
   return (
     <div className="flex  p-2 space-y-2 flex-col">
-      {versionSelected && renderViewModeOptions()}
-      <DropdownMenuLabel className="text-sm font-medium text-[#676767]">
-        {t("text.reader_option_menu.layout")}
-      </DropdownMenuLabel>
-      <DropdownMenuRadioGroup
-        value={layoutMode}
-        onValueChange={setLayoutMode}
-        className="grid grid-cols-2 gap-2"
-      >
-        {layoutOptions.map((option) => (
-          <DropdownMenuRadioItem
-            key={option.id}
-            value={option.value}
-            className="flex items-center gap-2 rounded-md border px-3 py-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5"
+      {showViewMode && versionSelected && renderViewModeOptions()}
+      {showLayout && (
+        <>
+          <DropdownMenuLabel className="text-sm font-medium text-[#676767]">
+            {t("text.reader_option_menu.layout")}
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={layoutMode}
+            onValueChange={setLayoutMode}
+            className="grid grid-cols-2 gap-2"
           >
-            <span className="text-muted-foreground">{option.icon}</span>
-            <span className="text-sm text-foreground">{option.label}</span>
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
+            {layoutOptions.map((option) => (
+              <DropdownMenuRadioItem
+                key={option.id}
+                value={option.value}
+                className="flex items-center gap-2 rounded-md border px-3 py-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5"
+              >
+                <span className="text-muted-foreground">{option.icon}</span>
+                <span className="text-sm text-foreground">{option.label}</span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </>
+      )}
       {/* Only worth offering where there is an annotation to draw. */}
-      {canShowSectionTitles && setSectionTitleMode && (
+      {showSectionTitles && canShowSectionTitles && setSectionTitleMode && (
         <>
           <DropdownMenuLabel className="text-sm font-medium text-[#676767]">
             {t("text.table_of_contents")}
@@ -228,15 +238,17 @@ const ViewSelector = ({
           </DropdownMenuRadioGroup>
         </>
       )}
-      {renderMenuRow(
-        "text.script.title",
-        "Script",
-        script,
-        setScript,
-        SCRIPT_OPTIONS,
-      )}
+      {showScript &&
+        renderMenuRow(
+          "text.script.title",
+          "Script",
+          script,
+          setScript,
+          SCRIPT_OPTIONS,
+        )}
       {/* Nothing to place while the text is shown as stored. */}
-      {isTransliterating &&
+      {showScript &&
+        isTransliterating &&
         renderMenuRow(
           "text.script.mode",
           "Transliteration",
@@ -244,7 +256,7 @@ const ViewSelector = ({
           setMode,
           MODE_OPTIONS,
         )}
-      {onToggleAutoScroll && setScrollSpeed && (
+      {showAutoScroll && onToggleAutoScroll && setScrollSpeed && (
         <AutoScrollControl
           isAutoScrolling={isAutoScrolling}
           onToggle={onToggleAutoScroll}
