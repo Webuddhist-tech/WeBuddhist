@@ -626,7 +626,7 @@ const LiveRecitationView = ({
           {view === "live" ? (
             <div
               aria-label={t("live_events.recitation_heading")}
-              className="flex min-h-[16rem] flex-1 items-center justify-center overflow-y-auto px-4 py-6 sm:px-6"
+              className="flex min-h-[16rem] flex-1 justify-center overflow-y-auto px-4 py-6 sm:px-6"
             >
               {body || currentLine === null ? (
                 <p className="px-4 py-16 text-center text-sm text-[var(--rt-soft)]">
@@ -634,11 +634,15 @@ const LiveRecitationView = ({
                 </p>
               ) : (
                 <div
-                  className={`flex w-full flex-col items-center gap-6 md:flex-row ${
+                  className={`my-auto flex w-full flex-col items-center md:flex-row md:gap-6 ${
                     verseImage ? "max-w-6xl" : "max-w-3xl"
                   }`}
                 >
-                  <div className="flex min-w-0 w-full flex-1 flex-col">
+                  <div
+                    className={`flex min-w-0 w-full flex-1 flex-col ${
+                      verseImage ? "relative z-10 -mt-[10dvh] md:mt-0" : ""
+                    }`}
+                  >
                     {verseImage && (
                       <div className="mb-2 flex flex-col items-end text-right text-[var(--rt-soft)]">
                         <span className="text-xs font-semibold uppercase tracking-wide">
@@ -666,7 +670,7 @@ const LiveRecitationView = ({
                     <img
                       src={verseImage.src}
                       alt={verseImage.alt}
-                      className="max-h-[70dvh] w-auto max-w-full rounded-2xl object-contain md:w-[min(34vw,26rem)]"
+                      className="order-first max-h-[34dvh] w-auto max-w-full rounded-2xl object-contain [mask-image:linear-gradient(to_bottom,#000_55%,transparent)] md:order-none md:max-h-[70dvh] md:w-[min(34vw,26rem)] md:[mask-image:none]"
                     />
                   )}
                 </div>
