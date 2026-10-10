@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { siteName } from "../../../utils/constants.ts";
 import { getLanguageClass } from "../../../utils/helperFunctions.tsx";
 
 type RecitationTopBarProps = {
@@ -48,22 +47,25 @@ const RecitationTopBar = ({
       className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rt-accent)]"
     >
       <img
-        src="/img/logo.png"
-        alt={siteName}
+        src="/img/dzongsar-logo.png"
+        alt=""
         className="size-[34px] max-[380px]:size-[30px]"
       />
     </Link>
 
+    {/* Tibetan stands taller than its line: vowel signs above and stacks below
+      reach past it, and `truncate` would shear them off. The padding gives
+      them room inside the clip, and the margin takes it back from the layout. */}
     <div className="mr-auto flex min-w-0 flex-col pl-0.5">
       <h1
         id={titleId}
-        className={`truncate text-[15px] font-semibold leading-snug text-[var(--rt-ink)] max-[380px]:text-[13.5px] ${getLanguageClass(titleLanguage)}`}
+        className={`-my-1.5 truncate py-1.5 text-[15px] font-semibold leading-snug text-[var(--rt-ink)] max-[380px]:text-[13.5px] ${getLanguageClass(titleLanguage)}`}
       >
         {title}
       </h1>
       {subtitle && (
         <p
-          className={`truncate text-xs leading-snug text-[var(--rt-soft)] ${getLanguageClass(subtitleLanguage)}`}
+          className={`-my-1.5 truncate py-1.5 text-xs leading-snug text-[var(--rt-soft)] ${getLanguageClass(subtitleLanguage)}`}
         >
           {subtitle}
         </p>

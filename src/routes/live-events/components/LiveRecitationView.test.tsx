@@ -124,6 +124,9 @@ const scrollTo = (top: number) =>
 describe("LiveRecitationView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.removeItem("webuddhist.liveRecitation.translation");
+    localStorage.removeItem("webuddhist.liveRecitation.textSize");
+    localStorage.setItem("webuddhist.liveRecitation.view", "full");
     smoothScrollMock.mockReturnValue(() => {});
     outlineMock.mockResolvedValue([]);
     fetchEventLiturgiesMock.mockResolvedValue([]);
@@ -149,7 +152,37 @@ describe("LiveRecitationView", () => {
     expect(fetchRecitationTextMock).toHaveBeenCalledWith("tara", "en");
     expect(screen.getByText("Tara")).toBeInTheDocument();
     expect(screen.getByText("two (en)")).toBeInTheDocument();
-    expect(smoothScrollMock).toHaveBeenCalled();
+    // The scroll follows the live line in an effect of its own, a beat after
+    // the line is marked.
+    await waitFor(() => expect(smoothScrollMock).toHaveBeenCalled());
+  });
+
+  it("opens on the live line alone, and remembers the reader's choice", async () => {
+    localStorage.removeItem("webuddhist.liveRecitation.view");
+    fetchRecitationTextMock.mockResolvedValue(
+      liturgy("tara", ["one", "two", "three"]),
+    );
+
+    const first = renderView(live({ position: at("tara", "tara-bo-1") }));
+
+    expect(await screen.findByText("two")).toBeInTheDocument();
+    expect(screen.queryByText("one")).not.toBeInTheDocument();
+    expect(screen.queryByText("three")).not.toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_view_full" }),
+    );
+    expect(await screen.findByText("one")).toBeInTheDocument();
+    expect(screen.getByText("three")).toBeInTheDocument();
+    expect(currentLine()).toContain("two");
+    first.unmount();
+
+    renderView(live({ position: at("tara", "tara-bo-1") }));
+    expect(await screen.findByText("three")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "live_events.recitation_view_full" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("lays a verse out by the library's lines, with its yigchung set small", async () => {
@@ -422,10 +455,11 @@ describe("LiveRecitationView", () => {
 
     renderView(live({ position: at("tara", "tara-bo-1") }));
 
-    await waitFor(() => expect(currentLine()).toContain("two"));
-    expect(smoothScrollMock).toHaveBeenCalledWith(
-      scroller(),
-      expect.any(Number),
+    await waitFor(() =>
+      expect(smoothScrollMock).toHaveBeenCalledWith(
+        scroller(),
+        expect.any(Number),
+      ),
     );
   });
 
@@ -511,6 +545,81 @@ describe("LiveRecitationView", () => {
     );
 
     expect(onThemeChange).toHaveBeenCalledWith("light");
+  });
+
+  it("shows the translation, or leaves it out, from the settings", async () => {
+    fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["abcd"]));
+    const { unmount } = renderView(live({ position: at("tara", "tara-bo-0") }));
+    expect(await screen.findByText("abcd (en)")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    expect(
+      screen.getByRole("radio", {
+        name: "live_events.recitation_translation_with",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: "live_events.recitation_translation_without",
+      }),
+    );
+    expect(screen.queryByText("abcd (en)")).not.toBeInTheDocument();
+    expect(screen.getByText("abcd")).toBeInTheDocument();
+
+    // The choice is remembered on this device.
+    unmount();
+    renderView(live({ position: at("tara", "tara-bo-0") }));
+    await screen.findByText("abcd");
+    expect(screen.queryByText("abcd (en)")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: "live_events.recitation_translation_with",
+      }),
+    );
+    expect(screen.getByText("abcd (en)")).toBeInTheDocument();
+  });
+
+  it("makes the text larger or smaller from the settings, and remembers it", async () => {
+    fetchRecitationTextMock.mockResolvedValue(liturgy("tara", ["abcd"]));
+    const size = () =>
+      (screen.getByText("abcd").closest("div[style]") as HTMLElement).style
+        .fontSize;
+    const { unmount } = renderView(live({ position: at("tara", "tara-bo-0") }));
+    await screen.findByText("abcd");
+    expect(size()).toBe("16px");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "live_events.recitation_text_larger",
+      }),
+    );
+    expect(size()).toBe("19.2px");
+
+    unmount();
+    renderView(live({ position: at("tara", "tara-bo-0") }));
+    await screen.findByText("abcd");
+    expect(size()).toBe("19.2px");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "live_events.recitation_settings" }),
+    );
+    const smaller = screen.getByRole("button", {
+      name: "live_events.recitation_text_smaller",
+    });
+    fireEvent.click(smaller);
+    fireEvent.click(smaller);
+    expect(size()).toBe("13.6px");
+    expect(smaller).toBeDisabled();
   });
 
   it("glows down the live line at the pace the room kept over the line before", async () => {

@@ -70,3 +70,73 @@ export const saveRecitationTheme = (theme: RecitationTheme): void => {
     // A private window or blocked storage: the choice lasts for this visit.
   }
 };
+
+/** The whole text, scrolling with the room, or only the line it is on. */
+export type RecitationView = "live" | "full";
+
+const VIEW_STORAGE_KEY = "webuddhist.liveRecitation.view";
+
+/** The reader's last choice on this device; the live line until they make one. */
+export const loadRecitationView = (): RecitationView => {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === "full" ? "full" : "live";
+  } catch {
+    return "live";
+  }
+};
+
+export const saveRecitationView = (view: RecitationView): void => {
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    // A private window or blocked storage: the choice lasts for this visit.
+  }
+};
+
+const TRANSLATION_STORAGE_KEY = "webuddhist.liveRecitation.translation";
+
+/** The reader's last choice on this device; with the translation until they make one. */
+export const loadShowTranslation = (): boolean => {
+  try {
+    return localStorage.getItem(TRANSLATION_STORAGE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+};
+
+export const saveShowTranslation = (show: boolean): void => {
+  try {
+    localStorage.setItem(TRANSLATION_STORAGE_KEY, show ? "on" : "off");
+  } catch {
+    // A private window or blocked storage: the choice lasts for this visit.
+  }
+};
+
+/** The verse's size as a multiple of its usual size, smallest to largest. */
+export const TEXT_SIZES = [0.85, 1, 1.2, 1.4, 1.7];
+export const DEFAULT_TEXT_SIZE = 1;
+
+const TEXT_SIZE_STORAGE_KEY = "webuddhist.liveRecitation.textSize";
+
+/** The reader's last choice (an index into TEXT_SIZES); the usual size until they make one. */
+export const loadTextSize = (): number => {
+  try {
+    const stored = Number(localStorage.getItem(TEXT_SIZE_STORAGE_KEY));
+    const valid =
+      localStorage.getItem(TEXT_SIZE_STORAGE_KEY) !== null &&
+      Number.isInteger(stored) &&
+      stored >= 0 &&
+      stored < TEXT_SIZES.length;
+    return valid ? stored : DEFAULT_TEXT_SIZE;
+  } catch {
+    return DEFAULT_TEXT_SIZE;
+  }
+};
+
+export const saveTextSize = (index: number): void => {
+  try {
+    localStorage.setItem(TEXT_SIZE_STORAGE_KEY, String(index));
+  } catch {
+    // A private window or blocked storage: the choice lasts for this visit.
+  }
+};

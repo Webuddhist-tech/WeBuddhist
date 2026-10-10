@@ -11,6 +11,10 @@ type RecitationVerseProps = {
   /** The reader's language, which the translation is in. */
   readerLanguage: string;
   isCurrent: boolean;
+  /** Set the line larger and airier, for the live view where it stands alone. */
+  spacious?: boolean;
+  /** The reader's text size, as a multiple of the usual one. */
+  scale?: number;
   /**
    * For the live line, once the room's pace is known: when the glow reaches
    * each of its recited lines, and how long it stays.
@@ -85,6 +89,8 @@ const RecitationVerse = ({
   recitedLanguage,
   readerLanguage,
   isCurrent,
+  spacious = false,
+  scale = 1,
   paceTimings,
   paceKey,
 }: RecitationVerseProps) => {
@@ -97,11 +103,17 @@ const RecitationVerse = ({
 
   const recitedClass = `${
     isTibetan
-      ? "text-[22px] leading-[1.75] sm:text-2xl sm:leading-[1.75]"
-      : "text-lg leading-8 sm:text-xl"
+      ? spacious
+        ? "text-[1.625em] leading-[1.7] sm:text-[2em] sm:leading-[1.7]"
+        : "text-[1.375em] leading-[1.75] sm:text-[1.5em] sm:leading-[1.75]"
+      : "text-[1.125em] leading-[1.75] sm:text-[1.25em]"
   } ${FADE} ${isCurrent ? "text-[var(--rt-live-ink)]" : "text-[var(--rt-soft)]"} ${getLanguageClass(recitedLanguage)}`;
 
-  const translationClass = `text-[15px] leading-6 sm:text-base sm:leading-7 ${FADE} ${
+  const translationClass = `${
+    spacious
+      ? "mt-1 text-[1em] leading-[1.75] sm:text-[1.125em]"
+      : "text-[0.9375em] leading-[1.6] sm:text-[1em] sm:leading-[1.75]"
+  } ${FADE} ${
     isCurrent ? "text-[var(--rt-live-soft)]" : "text-[var(--rt-faint)]"
   } ${getLanguageClass(readerLanguage)}`;
 
@@ -141,10 +153,16 @@ const RecitationVerse = ({
   };
 
   return (
-    <div className="text-balance break-words">
+    <div
+      className="text-balance break-words"
+      style={{ fontSize: `${16 * scale}px` }}
+    >
       {interleaved ? (
         recited.map((row, index) => (
-          <div key={index} className={index > 0 ? "mt-2" : undefined}>
+          <div
+            key={index}
+            className={index > 0 ? (spacious ? "mt-5" : "mt-2") : undefined}
+          >
             {recitedLine(row, index)}
             <p className={translationClass}>
               <Runs line={translation[index]} />

@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -23,23 +22,13 @@ vi.mock("./hooks/useLiveViewerCount.ts", () => ({
     useLiveViewerCountMock(eventId, enabled),
 }));
 
-const isMobileMock = vi.fn(() => false);
-vi.mock("@/hooks/use-mobile.ts", () => ({
-  useIsMobile: () => isMobileMock(),
-}));
-
 // The recitation view loads its own text; it has tests of its own. The page's
 // buttons and the stream it hands the view are drawn, so they can be used.
 const liveRecitationViewMock = vi.fn();
 vi.mock("./components/LiveRecitationView.tsx", () => ({
-  default: (props: { actions?: ReactNode; aside?: ReactNode }) => {
+  default: (props: object) => {
     liveRecitationViewMock(props);
-    return (
-      <div data-testid="live-recitation">
-        {props.actions}
-        {props.aside}
-      </div>
-    );
+    return <div data-testid="live-recitation" />;
   },
 }));
 
@@ -97,7 +86,6 @@ const connected = {
 describe("LiveRecitationPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isMobileMock.mockReturnValue(false);
     useLiveViewerCountMock.mockReturnValue(connected);
     vi.setSystemTime(new Date("2026-03-10T11:00:00Z"));
   });
@@ -122,24 +110,7 @@ describe("LiveRecitationPage", () => {
     );
   });
 
-  it("shows the stream beside the text on a wide screen, until put away", () => {
-    mockQuery({ data: event() });
-
-    renderPage();
-
-    expect(screen.getByTitle("live_events.watch_stream")).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "live_events.hide_stream" }),
-    );
-
-    expect(
-      screen.queryByTitle("live_events.watch_stream"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("keeps the stream a tap away on a phone", () => {
-    isMobileMock.mockReturnValue(true);
+  it("leaves the stream to the event's own page", () => {
     mockQuery({ data: event() });
 
     renderPage();
@@ -147,15 +118,9 @@ describe("LiveRecitationPage", () => {
     expect(
       screen.queryByTitle("live_events.watch_stream"),
     ).not.toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "live_events.show_stream" }),
-    );
-
-    expect(screen.getByTitle("live_events.watch_stream")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "live_events.hide_stream" }),
-    ).toHaveAttribute("aria-expanded", "true");
+      screen.queryByRole("button", { name: /live_events.(show|hide)_stream/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("stays off the socket until the event begins", () => {
